@@ -135,6 +135,12 @@ body {
   font-size: .78rem;
   color: var(--text-tertiary);
 }
+.crm-versao {
+  font-size: .68rem;
+  color: #4b5563;
+  margin-top: 4px;
+  opacity: .7;
+}
 
 .main {
   margin-left: var(--sidebar-width);
