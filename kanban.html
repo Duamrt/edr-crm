@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778673003">
+  <link rel="stylesheet" href="css/style.css?cb=1778683548">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -36,9 +36,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778673003"></script>
-  <script src="js/auth.js?cb=1778673003"></script>
-  <script src="js/utils.js?cb=1778673003"></script>
+  <script src="js/supabase.js?cb=1778683548"></script>
+  <script src="js/auth.js?cb=1778683548"></script>
+  <script src="js/utils.js?cb=1778683548"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -67,7 +67,7 @@
       showLoading()
       try {
         const [clientes, imps, tarefas, recusados] = await Promise.all([
-          sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)'),
+          sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,faixa_mcmv,crm_lotes(numero)'),
           sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id'),
           sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo'),
           sbGet('crm_documentos', '?status=eq.recusado&select=cliente_id')
@@ -121,7 +121,7 @@
           card.draggable = true
           card.dataset.id = c.id
           card.innerHTML = `
-            <div class="kanban-card-nome">${c.nome}</div>
+            <div class="kanban-card-nome">${c.nome}${c.faixa_mcmv ? ' <span class="badge badge-blue" style="font-size:.7rem;">F${c.faixa_mcmv}</span>' : ''}</div>
             <div class="kanban-card-lote">${lote}</div>
             ${badges.length ? `<div class="kanban-card-badges">${badges.join('')}</div>` : ''}
             <div class="kanban-card-acao">${tarefa ? '📋 ' + tarefa.descricao.substring(0,35) + ' · ' + fmtData(tarefa.prazo) : '<span class="text-muted">Sem próxima ação</span>'}</div>
@@ -182,6 +182,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778673003"></script>
+  <script src="js/sw-register.js?cb=1778683548"></script>
 </body>
 </html>

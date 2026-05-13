@@ -7,6 +7,7 @@
   /* Verde principal */
   --verde: #2d6a4f;
   --verde-hover: #1b4332;
+  --verde-light: #40916c;
   --verde-surface: #ecfdf5;
   --verde-pale: #d1fae5;
 
@@ -132,14 +133,14 @@ body {
 .sidebar-footer {
   padding: 12px 16px;
   border-top: 1px solid var(--sidebar-border);
-  font-size: .78rem;
+  font-size: .82rem;
   color: var(--text-tertiary);
 }
 .crm-versao {
-  font-size: .68rem;
-  color: #4b5563;
+  font-size: .72rem;
+  color: #6b7280;
   margin-top: 4px;
-  opacity: .7;
+  opacity: .85;
 }
 
 .main {
@@ -635,11 +636,27 @@ tbody tr:hover { background: #f9fafb; }
 .mb-8 { margin-bottom: 8px; }
 .mb-16 { margin-bottom: 16px; }
 
+/* ── Botão outline/ghost ── */
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--cinza-light);
+  color: var(--cinza-dark);
+}
+.btn-outline:hover { background: var(--cinza-light); }
+
+/* ── Docs + Impedimentos: 2 colunas → 1 em tela menor ── */
+.docs-responsivo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 /* ── Responsivo tablet (768px+) ── */
 @media (max-width: 900px) {
   .form-grid { grid-template-columns: 1fr; }
   .form-grid-3 { grid-template-columns: 1fr 1fr; }
   .kanban-col { width: 210px; }
+  .docs-responsivo { grid-template-columns: 1fr; }
 }
 
 /* ── Mobile (max 640px) ── */
