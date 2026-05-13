@@ -681,3 +681,106 @@ tbody tr:hover { background: #f9fafb; }
   .modal { max-height: 95vh; }
   .lotes-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 }
+
+/* === TRIAGEM MCMV (Agente 1) === */
+.triagem-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-left: 5px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.triagem-card[data-cor="verde"] { border-left-color: var(--verde); background: linear-gradient(to right, var(--verde-surface) 0%, var(--surface) 30%); }
+.triagem-card[data-cor="amarelo"] { border-left-color: var(--amarelo); background: linear-gradient(to right, var(--amarelo-pale) 0%, var(--surface) 30%); }
+.triagem-card[data-cor="vermelho"] { border-left-color: var(--vermelho); background: linear-gradient(to right, var(--vermelho-pale) 0%, var(--surface) 30%); }
+
+.triagem-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
+.triagem-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--text-primary);
+}
+.triagem-icone { font-size: 1.15rem; }
+.triagem-status {
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  letter-spacing: .3px;
+}
+.triagem-status.status-verde { background: var(--verde); color: #fff; }
+.triagem-status.status-amarelo { background: var(--amarelo); color: #fff; }
+.triagem-status.status-vermelho { background: var(--vermelho); color: #fff; }
+
+.triagem-body { padding: 14px 18px 16px; }
+.triagem-resumo {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.triagem-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.triagem-label {
+  font-size: .72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.triagem-bloco strong { font-size: 1rem; color: var(--text-primary); }
+.triagem-nota { font-size: .65rem; color: var(--text-tertiary); font-style: italic; }
+
+.triagem-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.triagem-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: .85rem;
+  color: var(--text-primary);
+  padding: 2px 0;
+}
+.triagem-check-icone { flex-shrink: 0; font-size: .95rem; line-height: 1.3; }
+
+.triagem-acoes {
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.triagem-acoes-titulo {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.triagem-acoes ul {
+  margin: 0;
+  padding-left: 22px;
+  font-size: .85rem;
+  color: var(--text-primary);
+}
+.triagem-acoes li { margin-bottom: 3px; }
+
+@media (max-width: 600px) {
+  .triagem-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .triagem-resumo { gap: 14px; }
+  .triagem-checks { grid-template-columns: 1fr; }
+}

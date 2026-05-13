@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778684152">
+  <link rel="stylesheet" href="css/style.css?cb=1778685874">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -34,6 +34,25 @@
       </div>
 
       <div class="page-content">
+        <!-- Triagem MCMV (Agente 1) -->
+        <div id="triagem-card" class="triagem-card hidden">
+          <div class="triagem-header">
+            <div class="triagem-titulo">
+              <span class="triagem-icone">🎯</span>
+              <span>Triagem MCMV</span>
+            </div>
+            <div id="triagem-status" class="triagem-status"></div>
+          </div>
+          <div class="triagem-body">
+            <div class="triagem-resumo" id="triagem-resumo"></div>
+            <div class="triagem-checks" id="triagem-checks"></div>
+            <div class="triagem-acoes hidden" id="triagem-acoes-wrap">
+              <div class="triagem-acoes-titulo">Próximas ações sugeridas:</div>
+              <ul id="triagem-acoes"></ul>
+            </div>
+          </div>
+        </div>
+
         <!-- Resumo -->
         <div class="card">
           <div class="card-header">
@@ -150,9 +169,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778684152"></script>
-  <script src="js/auth.js?cb=1778684152"></script>
-  <script src="js/utils.js?cb=1778684152"></script>
+  <script src="js/supabase.js?cb=1778685874"></script>
+  <script src="js/auth.js?cb=1778685874"></script>
+  <script src="js/utils.js?cb=1778685874"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -184,6 +203,7 @@
 
         _docs = docs
         _imps = imps
+        renderTriagem(_cliente, docs, imps)
         renderResumo(_cliente, lotes)
         renderDocs(docs)
         renderImpedimentos(imps)
@@ -210,6 +230,40 @@
         toast('Erro: ' + err.message, 'error')
       }
       hideLoading()
+    }
+
+    function renderTriagem(cliente, docs, imps) {
+      const t = triagemMCMV(cliente, docs, imps)
+      const card = document.getElementById('triagem-card')
+      card.classList.remove('hidden')
+      card.dataset.cor = t.statusCor
+
+      const statusEl = document.getElementById('triagem-status')
+      statusEl.className = `triagem-status status-${t.statusCor}`
+      statusEl.textContent = t.statusLabel
+
+      const resumo = []
+      if (t.faixaCalculada) {
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong>Faixa ${t.faixaCalculada}</strong></div>`)
+      } else {
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-danger">Fora do MCMV</strong></div>`)
+      }
+      if (t.subsidio > 0) {
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio estimado</span><strong>${fmtMoeda(t.subsidio)}</strong><span class="triagem-nota">aproximado</span></div>`)
+      }
+      document.getElementById('triagem-resumo').innerHTML = resumo.join('')
+
+      document.getElementById('triagem-checks').innerHTML = t.checks.map(c =>
+        `<div class="triagem-check"><span class="triagem-check-icone">${c.icone}</span><span>${c.texto}</span></div>`
+      ).join('')
+
+      const acoesWrap = document.getElementById('triagem-acoes-wrap')
+      if (t.acoes.length) {
+        acoesWrap.classList.remove('hidden')
+        document.getElementById('triagem-acoes').innerHTML = t.acoes.map(a => `<li>${a}</li>`).join('')
+      } else {
+        acoesWrap.classList.add('hidden')
+      }
     }
 
     function renderResumo(c, membros) {
@@ -476,6 +530,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778684152"></script>
+  <script src="js/sw-register.js?cb=1778685874"></script>
 </body>
 </html>

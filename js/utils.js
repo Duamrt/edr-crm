@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778684152'
+const CRM_VERSION = '1778685874'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -85,13 +85,165 @@ function wppAtualizacao(nomeCliente, status) {
   return `Olá ${nomeCliente}! Temos uma atualização do seu processo MCMV: ${status}. Qualquer dúvida, fale comigo! 😊`
 }
 
-// Faixa MCMV a partir da renda
+// Faixa MCMV a partir da renda (tabela MCMV 2024-2025 urbano)
 function calcFaixaMcmv(renda) {
   if (!renda) return null
   if (renda <= 2640) return 1
   if (renda <= 4400) return 2
   if (renda <= 8000) return 3
   return null
+}
+
+// Subsídio estimado (ESTIMATIVA — valor real vem da Caixa pela região)
+function calcSubsidioEstimado(faixa, renda) {
+  if (!faixa || !renda) return 0
+  if (faixa === 1) return 55000
+  if (faixa === 2) {
+    if (renda <= 3200) return 35000
+    if (renda <= 3800) return 25000
+    return 15000
+  }
+  return 0 // Faixa 3 não tem subsídio direto
+}
+
+// === AGENTE 1: TRIADOR DE ELEGIBILIDADE MCMV (determinístico) ===
+// Retorna análise completa: status, faixa, subsídio, checks, ações sugeridas
+function triagemMCMV(cliente, docs = [], impedimentos = []) {
+  const checks = []
+  const acoes = []
+  let pontosNegativos = 0
+  let pontosCriticos = 0
+
+  // Renda
+  const rendaConfirmada = Number(cliente.renda_total_confirmada) || 0
+  const rendaSimulada = Number(cliente.renda_total_simulada) || 0
+  const rendaUsada = rendaConfirmada || rendaSimulada
+  const faixaCalculada = calcFaixaMcmv(rendaUsada)
+  const subsidio = calcSubsidioEstimado(faixaCalculada, rendaUsada)
+
+  if (rendaConfirmada > 0) {
+    checks.push({ icone: '✅', texto: `Renda confirmada: ${fmtMoeda(rendaConfirmada)}` })
+  } else if (rendaSimulada > 0) {
+    checks.push({ icone: '⚠️', texto: `Apenas renda simulada (${fmtMoeda(rendaSimulada)}) — falta confirmar` })
+    acoes.push('Solicitar comprovante de renda para confirmar valor')
+    pontosNegativos++
+  } else {
+    checks.push({ icone: '❌', texto: 'Nenhuma renda informada' })
+    acoes.push('Cadastrar renda (simulada ou confirmada)')
+    pontosCriticos++
+  }
+
+  // Faixa MCMV
+  if (faixaCalculada) {
+    checks.push({ icone: '✅', texto: `Renda enquadra na Faixa ${faixaCalculada} MCMV` })
+    if (cliente.faixa_mcmv && cliente.faixa_mcmv !== faixaCalculada) {
+      checks.push({ icone: '⚠️', texto: `Cadastrada como Faixa ${cliente.faixa_mcmv}, mas renda indica Faixa ${faixaCalculada}` })
+      acoes.push(`Ajustar faixa cadastrada para Faixa ${faixaCalculada}`)
+      pontosNegativos++
+    }
+  } else if (rendaUsada > 0) {
+    checks.push({ icone: '❌', texto: `Renda ${fmtMoeda(rendaUsada)} acima do teto MCMV (R$ 8.000)` })
+    acoes.push('Renda fora do programa — encaminhar para financiamento tradicional')
+    pontosCriticos++
+  }
+
+  // Lote
+  if (cliente.lote_id) {
+    checks.push({ icone: '✅', texto: 'Lote vinculado' })
+  } else {
+    checks.push({ icone: '⚠️', texto: 'Sem lote vinculado' })
+    acoes.push('Vincular lote disponível')
+    pontosNegativos++
+  }
+
+  // Impedimentos (críticos vs recuperáveis)
+  const impAtivos = impedimentos.filter(i => i.ativo)
+  if (impAtivos.length === 0) {
+    checks.push({ icone: '✅', texto: 'Sem impedimentos ativos' })
+  } else {
+    const cadmut = impAtivos.find(i => i.tipo === 'cadmut')
+    const rendaInsuf = impAtivos.find(i => i.tipo === 'renda_insuficiente')
+
+    if (cadmut) {
+      checks.push({ icone: '🚫', texto: 'CADMUT — já foi proprietário (bloqueio definitivo)' })
+      acoes.push('CADMUT é bloqueio definitivo do MCMV — descartar ou encaminhar para financiamento tradicional')
+      pontosCriticos += 2
+    }
+    if (rendaInsuf) {
+      checks.push({ icone: '🚫', texto: 'Renda insuficiente para a faixa' })
+      acoes.push('Renda insuficiente — reavaliar composição familiar ou aguardar melhora')
+      pontosCriticos++
+    }
+
+    impAtivos.filter(i => !['cadmut','renda_insuficiente'].includes(i.tipo)).forEach(i => {
+      const label = IMPEDIMENTO_LABEL[i.tipo] || i.tipo
+      checks.push({ icone: '❌', texto: `Impedimento: ${label}` })
+      pontosNegativos++
+      if (i.tipo === 'score_baixo') acoes.push('Score baixo — aguardar 3-6 meses ou tentar correspondente alternativo')
+      else if (i.tipo === 'nome_sujo') acoes.push('Nome sujo — orientar negociação e quitação das pendências')
+      else if (i.tipo === 'fgts_bloqueado') acoes.push('FGTS bloqueado — verificar motivo no app FGTS / Caixa')
+    })
+  }
+
+  // Documentos
+  const docsRecusados = docs.filter(d => d.status === 'recusado')
+  const docsPendentes = docs.filter(d => d.status === 'pendente')
+  const docsVencidos = docs.filter(d => d.status === 'vencido')
+
+  if (docsRecusados.length) {
+    checks.push({ icone: '🚫', texto: `${docsRecusados.length} documento(s) recusado(s)` })
+    acoes.push(`Resolver docs recusados: ${docsRecusados.map(d => DOC_LABEL[d.tipo] || d.tipo).join(', ')}`)
+    pontosCriticos++
+  }
+  if (docsVencidos.length) {
+    checks.push({ icone: '❌', texto: `${docsVencidos.length} documento(s) vencido(s)` })
+    acoes.push(`Renovar docs vencidos: ${docsVencidos.map(d => DOC_LABEL[d.tipo] || d.tipo).join(', ')}`)
+    pontosNegativos++
+  }
+  if (docsPendentes.length) {
+    checks.push({ icone: '⚠️', texto: `${docsPendentes.length} documento(s) pendente(s)` })
+    acoes.push(`Cobrar docs pendentes: ${docsPendentes.map(d => DOC_LABEL[d.tipo] || d.tipo).slice(0,3).join(', ')}${docsPendentes.length > 3 ? '...' : ''}`)
+    pontosNegativos++
+  }
+  if (!docsPendentes.length && !docsRecusados.length && !docsVencidos.length && docs.length) {
+    checks.push({ icone: '✅', texto: 'Todos os documentos OK' })
+  }
+
+  // Cliente parado
+  const dias = diasDesde(cliente.ultima_atualizacao)
+  if (dias !== null && dias >= 7) {
+    checks.push({ icone: '⚠️', texto: `${dias} dias sem atualização` })
+    acoes.push(`Família parada há ${dias} dias — ligar / mandar WhatsApp`)
+    pontosNegativos++
+  }
+
+  // === SCORE FINAL ===
+  let status, statusLabel, statusCor
+  if (pontosCriticos > 0) {
+    status = 'bloqueado'
+    statusLabel = 'BLOQUEADO'
+    statusCor = 'vermelho'
+  } else if (pontosNegativos >= 2) {
+    status = 'apto_ressalva'
+    statusLabel = 'APTO COM RESSALVA'
+    statusCor = 'amarelo'
+  } else {
+    status = 'apto'
+    statusLabel = 'APTO'
+    statusCor = 'verde'
+  }
+
+  return {
+    status,
+    statusLabel,
+    statusCor,
+    faixaCalculada,
+    subsidio,
+    checks,
+    acoes,
+    pontosNegativos,
+    pontosCriticos
+  }
 }
 
 // Labels amigáveis
