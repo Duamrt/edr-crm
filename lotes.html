@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778669083">
+  <link rel="stylesheet" href="css/style.css?cb=1778669289">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -112,9 +112,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778669083"></script>
-  <script src="js/auth.js?cb=1778669083"></script>
-  <script src="js/utils.js?cb=1778669083"></script>
+  <script src="js/supabase.js?cb=1778669289"></script>
+  <script src="js/auth.js?cb=1778669289"></script>
+  <script src="js/utils.js?cb=1778669289"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -127,7 +127,6 @@
     let _editMode = false
     let _drag = null
 
-    // Posições padrão derivadas do SketchUp export
     const _DEFAULT_POS = {
       A: [{cx:213,cy:207},{cx:256,cy:207},{cx:298,cy:207},{cx:341,cy:207},{cx:384,cy:207},
           {cx:426,cy:207},{cx:469,cy:207},{cx:512,cy:207},{cx:554,cy:207},{cx:597,cy:207},
@@ -137,16 +136,49 @@
           {cx:668,cy:402},{cx:713,cy:402},{cx:759,cy:402},{cx:804,cy:402},{cx:850,cy:402},{cx:895,cy:402}]
     }
 
-    // Carrega posições salvas ou usa padrão
     function loadPos() {
-      try {
-        const s = localStorage.getItem('edr_lotes_pos')
-        return s ? JSON.parse(s) : JSON.parse(JSON.stringify(_DEFAULT_POS))
-      } catch { return JSON.parse(JSON.stringify(_DEFAULT_POS)) }
+      try { const s = localStorage.getItem('edr_lotes_pos'); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(_DEFAULT_POS)) }
+      catch { return JSON.parse(JSON.stringify(_DEFAULT_POS)) }
     }
     let _pos = loadPos()
-
     function savePos() { localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos)) }
+
+    // Drag via setPointerCapture — captura todos os eventos mesmo fora do círculo
+    function initDrag() {
+      const svg = document.getElementById('mapa-svg')
+
+      svg.addEventListener('pointerdown', e => {
+        if (!_editMode) return
+        const g = e.target.closest('g[data-q]')
+        if (!g) return
+        e.preventDefault()
+        svg.setPointerCapture(e.pointerId)
+        const rect = svg.getBoundingClientRect()
+        const q = g.dataset.q, i = parseInt(g.dataset.i)
+        _drag = {
+          q, i,
+          scaleX: 1000 / rect.width,
+          scaleY: 562 / rect.height,
+          startX: e.clientX, startY: e.clientY,
+          origCX: _pos[q][i].cx, origCY: _pos[q][i].cy
+        }
+      })
+
+      svg.addEventListener('pointermove', e => {
+        if (!_drag) return
+        const cx = Math.round(_drag.origCX + (e.clientX - _drag.startX) * _drag.scaleX)
+        const cy = Math.round(_drag.origCY + (e.clientY - _drag.startY) * _drag.scaleY)
+        _pos[_drag.q][_drag.i] = { cx, cy }
+        const g = svg.querySelector(`g[data-q="${_drag.q}"][data-i="${_drag.i}"]`)
+        if (!g) return
+        g.querySelector('circle').setAttribute('cx', cx)
+        g.querySelector('circle').setAttribute('cy', cy)
+        g.querySelectorAll('text').forEach(t => t.setAttribute('x', cx))
+      })
+
+      svg.addEventListener('pointerup', () => { if (_drag) savePos(); _drag = null })
+      svg.addEventListener('pointercancel', () => { _drag = null })
+    }
 
     function toggleEditMode() {
       _editMode = !_editMode
@@ -162,43 +194,6 @@
         toast('Posições salvas', 'success')
       }
       renderLotes()
-      setupDrag()
-    }
-
-    function setupDrag() {
-      const svg = document.getElementById('mapa-svg')
-      svg.onpointermove = null
-      svg.onpointerup = null
-      if (!_editMode) return
-
-      svg.onpointermove = e => {
-        if (!_drag) return
-        const rect = svg.getBoundingClientRect()
-        const scaleX = 1000 / rect.width
-        const scaleY = 562 / rect.height
-        const cx = Math.round(_drag.origCX + (e.clientX - _drag.startX) * scaleX)
-        const cy = Math.round(_drag.origCY + (e.clientY - _drag.startY) * scaleY)
-        _pos[_drag.q][_drag.i] = { cx, cy }
-        // Move o elemento diretamente sem re-render
-        const g = svg.querySelector(`g[data-q="${_drag.q}"][data-i="${_drag.i}"]`)
-        if (g) {
-          g.querySelector('circle').setAttribute('cx', cx)
-          g.querySelector('circle').setAttribute('cy', cy)
-          g.querySelectorAll('text').forEach((t, ti) => {
-            t.setAttribute('x', cx)
-            t.setAttribute('y', ti === 0 ? cy - 4 : cy + 7)
-          })
-        }
-      }
-
-      svg.onpointerup = () => { _drag = null }
-    }
-
-    function startDrag(e, q, i) {
-      if (!_editMode) return
-      e.preventDefault()
-      e.stopPropagation()
-      _drag = { q, i, startX: e.clientX, startY: e.clientY, origCX: _pos[q][i].cx, origCY: _pos[q][i].cy }
     }
 
     async function carregar() {
@@ -218,6 +213,7 @@
         })
         renderLotes()
         atualizarContador()
+        initDrag()
       } catch (err) { toast('Erro: ' + err.message, 'error') }
       hideLoading()
     }
@@ -233,8 +229,7 @@
         const label = `${q}${lote.numero}`
         const nomeAbrev = lote.cliente ? lote.cliente.nome.split(' ')[0].substring(0, 6) : ''
         if (_editMode) {
-          return `<g data-q="${q}" data-i="${i}" style="cursor:grab"
-            onpointerdown="startDrag(event,'${q}',${i})">
+          return `<g data-q="${q}" data-i="${i}" style="cursor:grab">
             <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.75" stroke="white" stroke-width="1.5"/>
             <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
                   fill="white" font-size="8" font-weight="700" font-family="sans-serif"
@@ -362,6 +357,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778669083"></script>
+  <script src="js/sw-register.js?cb=1778669289"></script>
 </body>
 </html>
