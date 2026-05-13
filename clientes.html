@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDR CRM — Famílias</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Auth guard: bloqueia FOUC antes do render
+    document.documentElement.style.visibility = 'hidden'
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        🏠 EDR CRM
+        <span>MCMV Josué</span>
+      </div>
+      <div class="sidebar-nav">
+        <a href="clientes.html" class="active">👥 Famílias</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer" id="sidebar-usuario"></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Famílias cadastradas</span>
+        <div class="flex gap-8">
+          <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
+          <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <!-- Filtros -->
+        <div class="filtros-bar">
+          <input type="search" id="busca" placeholder="🔍 Buscar por nome ou CPF..." oninput="filtrar()">
+          <select id="filtro-status" onchange="filtrar()">
+            <option value="">Todos os status</option>
+            <option value="triagem">Triagem</option>
+            <option value="documentacao">Documentação</option>
+            <option value="correspondente">Com Correspondente</option>
+            <option value="aprovado">Aprovado/Ajustes</option>
+            <option value="prefeitura">Prefeitura/Projetos</option>
+            <option value="assinatura">Assinatura</option>
+            <option value="concluido">Concluído</option>
+            <option value="perdido">Perdido</option>
+          </select>
+          <select id="filtro-impedimento" onchange="filtrar()">
+            <option value="">Com e sem impedimento</option>
+            <option value="sim">Com impedimento ativo</option>
+            <option value="nao">Sem impedimento</option>
+          </select>
+          <span id="contador" class="text-sm text-muted"></span>
+        </div>
+
+        <!-- Tabela -->
+        <div class="card" style="padding:0;">
+          <div class="table-wrap">
+            <table id="tabela-clientes">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF</th>
+                  <th>Telefone</th>
+                  <th>Faixa</th>
+                  <th>Lote</th>
+                  <th>Status</th>
+                  <th>Alerta</th>
+                  <th>Próxima ação</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="vazio" class="hidden text-center text-muted" style="padding:40px;">
+          Nenhuma família encontrada.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden"><div class="spinner"></div></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    // Auth guard
+    if (!authGuard()) throw new Error('not auth')
+    document.documentElement.style.visibility = ''
+
+    const u = getUsuario()
+    document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
+
+    let _todos = []
+
+    async function carregar() {
+      showLoading()
+      try {
+        // Buscar clientes ativos com última tarefa não concluída
+        const clientes = await sbGet('crm_clientes',
+          '?deleted_at=is.null&order=ultima_atualizacao.desc&select=id,nome,cpf,telefone,faixa_mcmv,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)')
+
+        // Buscar impedimentos ativos agrupados por cliente
+        const imps = await sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id')
+        const impSet = new Set(imps.map(i => i.cliente_id))
+
+        // Buscar próximas tarefas não concluídas
+        const tarefas = await sbGet('crm_tarefas',
+          '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo')
+        const tarefaMap = {}
+        tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
+
+        _todos = clientes.map(c => ({
+          ...c,
+          temImpedimento: impSet.has(c.id),
+          tarefa: tarefaMap[c.id] || null
+        }))
+
+        renderTabela(_todos)
+      } catch (err) {
+        toast('Erro ao carregar: ' + err.message, 'error')
+      }
+      hideLoading()
+    }
+
+    function renderTabela(lista) {
+      const tbody = document.getElementById('tbody')
+      const vazio = document.getElementById('vazio')
+      document.getElementById('contador').textContent = lista.length + ' família(s)'
+
+      if (!lista.length) {
+        tbody.innerHTML = ''
+        vazio.classList.remove('hidden')
+        return
+      }
+      vazio.classList.add('hidden')
+
+      tbody.innerHTML = lista.map(c => {
+        const sla = slaBadge(c.ultima_atualizacao)
+        const loteNum = c.crm_lotes?.numero ? `Lote ${c.crm_lotes.numero}` : '—'
+        const tarefa = c.tarefa
+          ? `<span class="${new Date(c.tarefa.prazo) < new Date() ? 'text-danger' : ''}">${c.tarefa.descricao.substring(0,30)} · ${fmtData(c.tarefa.prazo)}</span>`
+          : '<span class="text-muted text-sm">—</span>'
+        const impBadge = c.temImpedimento
+          ? '<span class="badge badge-red">🚨 Trava</span>'
+          : ''
+
+        return `<tr>
+          <td><a href="ficha.html?id=${c.id}" class="font-bold" style="text-decoration:none;color:inherit;">${c.nome}</a></td>
+          <td class="text-sm">${fmtCpf(c.cpf)}</td>
+          <td class="text-sm">${fmtTel(c.telefone)}</td>
+          <td>${c.faixa_mcmv ? '<span class="badge badge-blue">Faixa ' + c.faixa_mcmv + '</span>' : '—'}</td>
+          <td class="text-sm">${loteNum}</td>
+          <td><span class="badge status-${c.status_kanban}">${KANBAN_LABEL[c.status_kanban] || c.status_kanban}</span></td>
+          <td>${sla}${impBadge}</td>
+          <td style="max-width:200px;">${tarefa}</td>
+          <td>
+            <a href="ficha.html?id=${c.id}" class="btn btn-secondary btn-sm">Ver</a>
+            <a href="familia.html?id=${c.id}" class="btn btn-secondary btn-sm">Editar</a>
+          </td>
+        </tr>`
+      }).join('')
+    }
+
+    function filtrar() {
+      const busca = document.getElementById('busca').value.toLowerCase().trim()
+      const status = document.getElementById('filtro-status').value
+      const imp = document.getElementById('filtro-impedimento').value
+
+      let lista = _todos.filter(c => {
+        const matchBusca = !busca
+          || c.nome.toLowerCase().includes(busca)
+          || c.cpf.replace(/\D/g,'').includes(busca.replace(/\D/g,''))
+        const matchStatus = !status || c.status_kanban === status
+        const matchImp = !imp
+          || (imp === 'sim' && c.temImpedimento)
+          || (imp === 'nao' && !c.temImpedimento)
+        return matchBusca && matchStatus && matchImp
+      })
+
+      renderTabela(lista)
+    }
+
+    carregar()
+  </script>
+</body>
+</html>

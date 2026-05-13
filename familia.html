@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDR CRM — Cadastro de Família</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.style.visibility = 'hidden'</script>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-nav">
+        <a href="clientes.html">👥 Famílias</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer" id="sidebar-usuario"></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title" id="page-title">Nova família</span>
+        <div class="flex gap-8">
+          <a href="clientes.html" class="btn btn-secondary btn-sm">← Voltar</a>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <form id="form-familia">
+
+          <!-- Dados do titular -->
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Dados do titular</h3></div>
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>Nome completo *</label>
+                <input type="text" id="nome" required placeholder="Nome do responsável financeiro">
+              </div>
+              <div class="form-group">
+                <label>CPF *</label>
+                <input type="text" id="cpf" required placeholder="000.000.000-00" maxlength="14">
+              </div>
+              <div class="form-group">
+                <label>Telefone (WhatsApp) *</label>
+                <input type="text" id="telefone" required placeholder="(87) 99999-9999" maxlength="15">
+              </div>
+            </div>
+          </div>
+
+          <!-- Renda e enquadramento -->
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Renda e enquadramento MCMV</h3></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Tipo de renda</label>
+                <select id="tipo_renda">
+                  <option value="">Selecione</option>
+                  <option value="formal">Formal (CLT)</option>
+                  <option value="informal">Informal</option>
+                  <option value="autonomo">Autônomo</option>
+                  <option value="misto">Misto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Renda total simulada (R$)</label>
+                <input type="number" id="renda_simulada" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label>Renda total confirmada (R$)</label>
+                <input type="number" id="renda_confirmada" min="0" step="0.01" placeholder="Após análise bancária">
+              </div>
+              <div class="form-group">
+                <label>Faixa MCMV</label>
+                <select id="faixa_mcmv">
+                  <option value="">Calcular automaticamente</option>
+                  <option value="1">Faixa 1 (até R$ 2.640)</option>
+                  <option value="2">Faixa 2 (até R$ 4.400)</option>
+                  <option value="3">Faixa 3 (até R$ 8.000)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tem FGTS?</label>
+                <select id="fgts">
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+              <div class="form-group" id="grupo-fgts-valor" style="display:none;">
+                <label>Valor do FGTS (R$)</label>
+                <input type="number" id="fgts_valor" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label>Subsídio estimado (R$)</label>
+                <input type="number" id="subsidio" min="0" step="0.01" placeholder="0,00">
+              </div>
+            </div>
+          </div>
+
+          <!-- Composição familiar -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Composição familiar (renda)</h3>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addMembro()">+ Membro</button>
+            </div>
+            <div id="membros-lista"></div>
+            <div class="text-sm text-muted mt-8">
+              Renda total composta: <strong id="renda-calculada">R$ 0,00</strong>
+            </div>
+          </div>
+
+          <!-- Lote e status -->
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Vínculo e status</h3></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Lote (Projeto Josué)</label>
+                <select id="lote_id">
+                  <option value="">Sem lote vinculado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Status na esteira</label>
+                <select id="status_kanban">
+                  <option value="triagem">Triagem</option>
+                  <option value="documentacao">Documentação</option>
+                  <option value="correspondente">Com Correspondente</option>
+                  <option value="aprovado">Aprovado/Ajustes</option>
+                  <option value="prefeitura">Prefeitura/Projetos</option>
+                  <option value="assinatura">Assinatura</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="perdido">Perdido</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Data do primeiro contato</label>
+                <input type="date" id="data_contato">
+              </div>
+            </div>
+          </div>
+
+          <!-- Observações -->
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Observações</h3></div>
+            <div class="form-group" style="margin:0;">
+              <textarea id="observacoes" rows="4" placeholder="Complexidade do caso, histórico relevante, informações adicionais..."></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-8" style="justify-content:flex-end;">
+            <a href="clientes.html" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary" id="btn-salvar">Salvar família</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden"><div class="spinner"></div></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    if (!authGuard()) throw new Error('not auth')
+    document.documentElement.style.visibility = ''
+
+    const u = getUsuario()
+    document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const clienteId = urlParams.get('id')
+    let _membrosCount = 0
+    let _clienteAtual = null
+
+    // Mostrar/ocultar campo FGTS valor
+    document.getElementById('fgts').addEventListener('change', function() {
+      document.getElementById('grupo-fgts-valor').style.display = this.value === 'true' ? 'block' : 'none'
+    })
+
+    // Calcular faixa automaticamente quando renda simulada muda
+    document.getElementById('renda_simulada').addEventListener('input', function() {
+      const faixaSelect = document.getElementById('faixa_mcmv')
+      if (!faixaSelect.value) {
+        const f = calcFaixaMcmv(parseFloat(this.value) || 0)
+        if (f) faixaSelect.value = String(f)
+      }
+    })
+
+    // Adicionar membro
+    function addMembro(nome='', parentesco='', renda='') {
+      _membrosCount++
+      const id = 'membro-' + _membrosCount
+      const div = document.createElement('div')
+      div.className = 'familia-membro'
+      div.id = id
+      div.innerHTML = `
+        <div class="form-group" style="margin:0;">
+          <input type="text" placeholder="Nome" value="${nome}" class="membro-nome">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <select class="membro-parentesco">
+            <option value="">Parentesco</option>
+            <option value="Cônjuge" ${parentesco==='Cônjuge'?'selected':''}>Cônjuge</option>
+            <option value="Filho(a)" ${parentesco==='Filho(a)'?'selected':''}>Filho(a)</option>
+            <option value="Pai/Mãe" ${parentesco==='Pai/Mãe'?'selected':''}>Pai/Mãe</option>
+            <option value="Irmão/Irmã" ${parentesco==='Irmão/Irmã'?'selected':''}>Irmão/Irmã</option>
+            <option value="Outro" ${parentesco==='Outro'?'selected':''}>Outro</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <input type="number" placeholder="Renda (R$)" value="${renda}" class="membro-renda" min="0" step="0.01" oninput="calcularRendaTotal()">
+        </div>
+        <button type="button" onclick="removeMembro('${id}')" class="btn btn-danger btn-icon" title="Remover">✕</button>
+      `
+      document.getElementById('membros-lista').appendChild(div)
+      calcularRendaTotal()
+    }
+
+    function removeMembro(id) {
+      document.getElementById(id)?.remove()
+      calcularRendaTotal()
+    }
+
+    function calcularRendaTotal() {
+      const rendas = [...document.querySelectorAll('.membro-renda')].map(i => parseFloat(i.value) || 0)
+      const total = rendas.reduce((a,b) => a+b, 0)
+      document.getElementById('renda-calculada').textContent = fmtMoeda(total)
+    }
+
+    function getMembros() {
+      return [...document.querySelectorAll('.familia-membro')].map(div => ({
+        nome: div.querySelector('.membro-nome').value.trim(),
+        parentesco: div.querySelector('.membro-parentesco').value,
+        renda: parseFloat(div.querySelector('.membro-renda').value) || 0
+      })).filter(m => m.nome)
+    }
+
+    // Carregar lotes disponíveis
+    async function carregarLotes(loteAtual = null) {
+      try {
+        const lotes = await sbGet('crm_lotes', '?order=numero.asc&select=id,numero,quadra,status')
+        // Verificar quais estão ocupados
+        const clientesComLote = await sbGet('crm_clientes',
+          '?deleted_at=is.null&lote_id=not.is.null&select=lote_id,id')
+        const lotesOcupados = new Set(
+          clientesComLote
+            .filter(c => c.id !== clienteId) // excluir o próprio cliente em edição
+            .map(c => c.lote_id)
+        )
+
+        const sel = document.getElementById('lote_id')
+        const current = sel.value
+        lotes.forEach(l => {
+          const opt = document.createElement('option')
+          opt.value = l.id
+          const ocupado = lotesOcupados.has(l.id)
+          const bloqueado = l.status === 'bloqueado'
+          opt.textContent = `Lote ${l.numero} (Quadra ${l.quadra || '?'})${ocupado ? ' — Reservado' : ''}${bloqueado ? ' — Bloqueado' : ''}`
+          opt.disabled = (ocupado || bloqueado) && l.id !== loteAtual
+          if (l.id === loteAtual) opt.selected = true
+          sel.appendChild(opt)
+        })
+      } catch (err) {
+        console.error('Erro lotes:', err)
+      }
+    }
+
+    // Carregar cliente para edição
+    async function carregarCliente(id) {
+      showLoading()
+      try {
+        const rows = await sbGet('crm_clientes', `?id=eq.${id}&select=*`)
+        const c = rows[0]
+        if (!c) { toast('Cliente não encontrado', 'error'); return }
+        _clienteAtual = c
+
+        document.getElementById('page-title').textContent = 'Editar família — ' + c.nome
+        document.getElementById('nome').value = c.nome || ''
+        document.getElementById('cpf').value = fmtCpf(c.cpf) || ''
+        document.getElementById('telefone').value = fmtTel(c.telefone) || ''
+        document.getElementById('tipo_renda').value = c.tipo_renda || ''
+        document.getElementById('renda_simulada').value = c.renda_total_simulada || ''
+        document.getElementById('renda_confirmada').value = c.renda_total_confirmada || ''
+        document.getElementById('faixa_mcmv').value = c.faixa_mcmv || ''
+        document.getElementById('fgts').value = c.fgts ? 'true' : 'false'
+        if (c.fgts) {
+          document.getElementById('grupo-fgts-valor').style.display = 'block'
+          document.getElementById('fgts_valor').value = c.fgts_valor || ''
+        }
+        document.getElementById('subsidio').value = c.subsidio_estimado || ''
+        document.getElementById('status_kanban').value = c.status_kanban || 'triagem'
+        document.getElementById('data_contato').value = c.data_primeiro_contato || ''
+        document.getElementById('observacoes').value = c.observacoes || ''
+
+        // Carregar lotes com lote atual selecionado
+        await carregarLotes(c.lote_id)
+        if (c.lote_id) document.getElementById('lote_id').value = c.lote_id
+
+        // Carregar membros
+        const membros = await sbGet('crm_composicao_familiar', `?cliente_id=eq.${id}&order=created_at.asc`)
+        membros.forEach(m => addMembro(m.nome, m.parentesco, m.renda))
+
+      } catch (err) {
+        toast('Erro ao carregar: ' + err.message, 'error')
+      }
+      hideLoading()
+    }
+
+    // Salvar
+    document.getElementById('form-familia').addEventListener('submit', async function(e) {
+      e.preventDefault()
+      showLoading()
+      const btn = document.getElementById('btn-salvar')
+      btn.disabled = true
+
+      const cpfLimpo = document.getElementById('cpf').value.replace(/\D/g,'')
+      const telLimpo = document.getElementById('telefone').value.replace(/\D/g,'')
+      const loteId = document.getElementById('lote_id').value || null
+
+      const dados = {
+        nome: document.getElementById('nome').value.trim(),
+        cpf: cpfLimpo,
+        telefone: telLimpo,
+        tipo_renda: document.getElementById('tipo_renda').value || null,
+        renda_total_simulada: parseFloat(document.getElementById('renda_simulada').value) || null,
+        renda_total_confirmada: parseFloat(document.getElementById('renda_confirmada').value) || null,
+        faixa_mcmv: parseInt(document.getElementById('faixa_mcmv').value) || null,
+        fgts: document.getElementById('fgts').value === 'true',
+        fgts_valor: parseFloat(document.getElementById('fgts_valor').value) || null,
+        subsidio_estimado: parseFloat(document.getElementById('subsidio').value) || null,
+        status_kanban: document.getElementById('status_kanban').value,
+        lote_id: loteId,
+        data_primeiro_contato: document.getElementById('data_contato').value || null,
+        observacoes: document.getElementById('observacoes').value.trim() || null
+      }
+
+      try {
+        let cId = clienteId
+
+        if (cId) {
+          await sbPatch('crm_clientes', cId, dados)
+          // Registrar no histórico
+          await sbPost('crm_historico', {
+            cliente_id: cId,
+            descricao: 'Cadastro atualizado',
+            tipo: 'acao'
+          })
+        } else {
+          const rows = await sbPost('crm_clientes', dados)
+          cId = Array.isArray(rows) ? rows[0]?.id : rows?.id
+          await sbPost('crm_historico', {
+            cliente_id: cId,
+            descricao: 'Família cadastrada no sistema',
+            tipo: 'sistema'
+          })
+          // Criar checklist de documentos padrão MCMV
+          const docsDefault = ['rg_cpf_titular','rg_cpf_conjuge','certidao','comp_residencia',
+            'comp_renda','ctps','fgts','ir','certidao_negativa','cadunico']
+          await Promise.all(docsDefault.map(tipo =>
+            sbPost('crm_documentos', { cliente_id: cId, tipo, status: 'pendente' })
+          ))
+        }
+
+        // Salvar composição familiar
+        // Deletar membros antigos e reinserir
+        if (cId) {
+          await fetch(`${SUPABASE_URL}/rest/v1/crm_composicao_familiar?cliente_id=eq.${cId}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getToken() }
+          })
+          const membros = getMembros()
+          if (membros.length) {
+            await sbPost('crm_composicao_familiar', membros.map(m => ({ ...m, cliente_id: cId })))
+          }
+        }
+
+        toast(clienteId ? 'Família atualizada!' : 'Família cadastrada!', 'success')
+        setTimeout(() => window.location.replace(`ficha.html?id=${cId}`), 800)
+
+      } catch (err) {
+        toast('Erro ao salvar: ' + err.message, 'error')
+        btn.disabled = false
+        hideLoading()
+      }
+    })
+
+    // Inicializar
+    maskCpf(document.getElementById('cpf'))
+    maskTel(document.getElementById('telefone'))
+    document.getElementById('data_contato').value = new Date().toISOString().split('T')[0]
+
+    if (clienteId) {
+      carregarCliente(clienteId)
+    } else {
+      carregarLotes()
+    }
+  </script>
+</body>
+</html>

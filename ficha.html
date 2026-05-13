@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDR CRM — Ficha da Família</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.style.visibility = 'hidden'</script>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-nav">
+        <a href="clientes.html">👥 Famílias</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer" id="sidebar-usuario"></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="flex-center gap-8">
+          <a href="clientes.html" class="btn btn-secondary btn-sm">← Famílias</a>
+          <span class="topbar-title" id="page-title">—</span>
+          <span id="status-badge"></span>
+        </div>
+        <div class="flex gap-8">
+          <a href="#" id="btn-wpp-cobrar" class="btn btn-whatsapp btn-sm" target="_blank">📱 WhatsApp</a>
+          <a href="#" id="btn-editar" class="btn btn-secondary btn-sm">Editar</a>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <!-- Resumo -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Resumo da família</h3>
+            <div id="impedimento-alerta"></div>
+          </div>
+          <div id="resumo-grid" class="form-grid" style="gap:8px 16px;"></div>
+        </div>
+
+        <!-- Status kanban (alterar inline) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Status na esteira</h3>
+          </div>
+          <div class="flex-center gap-8">
+            <select id="status-select" class="form-group" style="margin:0;width:auto;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;">
+              <option value="triagem">Triagem</option>
+              <option value="documentacao">Documentação</option>
+              <option value="correspondente">Com Correspondente</option>
+              <option value="aprovado">Aprovado/Ajustes</option>
+              <option value="prefeitura">Prefeitura/Projetos</option>
+              <option value="assinatura">Assinatura</option>
+              <option value="concluido">Concluído</option>
+              <option value="perdido">Perdido</option>
+            </select>
+            <button onclick="salvarStatus()" class="btn btn-primary btn-sm">Salvar status</button>
+          </div>
+        </div>
+
+        <!-- Próxima ação -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Próxima ação</h3>
+            <button onclick="toggleFormTarefa()" class="btn btn-secondary btn-sm">+ Adicionar</button>
+          </div>
+          <div id="form-tarefa" class="hidden" style="margin-bottom:12px;">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Descrição *</label>
+                <input type="text" id="tarefa-desc" placeholder="O que precisa ser feito?">
+              </div>
+              <div class="form-group">
+                <label>Prazo *</label>
+                <input type="date" id="tarefa-prazo">
+              </div>
+            </div>
+            <button onclick="salvarTarefa()" class="btn btn-primary btn-sm">Salvar tarefa</button>
+          </div>
+          <div id="lista-tarefas" class="hist-list"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+          <!-- Documentos -->
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Documentos MCMV</h3></div>
+            <div id="lista-docs" class="doc-list"></div>
+          </div>
+
+          <!-- Impedimentos -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Impedimentos</h3>
+              <button onclick="toggleFormImpedimento()" class="btn btn-secondary btn-sm">+ Adicionar</button>
+            </div>
+            <div id="form-impedimento" class="hidden" style="margin-bottom:12px;">
+              <div class="form-group">
+                <label>Tipo</label>
+                <select id="imp-tipo">
+                  <option value="score_baixo">Score baixo</option>
+                  <option value="nome_sujo">Nome sujo (Serasa/SPC)</option>
+                  <option value="cadmut">CADMUT</option>
+                  <option value="fgts_bloqueado">FGTS bloqueado</option>
+                  <option value="renda_insuficiente">Renda insuficiente</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Descrição (opcional)</label>
+                <input type="text" id="imp-desc" placeholder="Detalhes...">
+              </div>
+              <button onclick="salvarImpedimento()" class="btn btn-danger btn-sm">Registrar impedimento</button>
+            </div>
+            <div id="lista-impedimentos" class="imp-list"></div>
+          </div>
+        </div>
+
+        <!-- Histórico -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Histórico</h3>
+          </div>
+          <div id="lista-historico" class="hist-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden"><div class="spinner"></div></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    if (!authGuard()) throw new Error('not auth')
+    document.documentElement.style.visibility = ''
+
+    const u = getUsuario()
+    document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
+
+    const params = new URLSearchParams(window.location.search)
+    const clienteId = params.get('id')
+    if (!clienteId) window.location.replace('clientes.html')
+
+    let _cliente = null
+
+    async function carregar() {
+      showLoading()
+      try {
+        const [rows, docs, imps, tarefas, hist, lotes] = await Promise.all([
+          sbGet('crm_clientes', `?id=eq.${clienteId}&select=*,crm_lotes(numero,quadra)`),
+          sbGet('crm_documentos', `?cliente_id=eq.${clienteId}&order=created_at.asc`),
+          sbGet('crm_impedimentos', `?cliente_id=eq.${clienteId}&order=created_at.desc`),
+          sbGet('crm_tarefas', `?cliente_id=eq.${clienteId}&order=prazo.asc`),
+          sbGet('crm_historico', `?cliente_id=eq.${clienteId}&order=created_at.desc&limit=30`),
+          sbGet('crm_composicao_familiar', `?cliente_id=eq.${clienteId}&order=created_at.asc`)
+        ])
+
+        _cliente = rows[0]
+        if (!_cliente) { window.location.replace('clientes.html'); return }
+
+        renderResumo(_cliente, lotes)
+        renderDocs(docs)
+        renderImpedimentos(imps)
+        renderTarefas(tarefas)
+        renderHistorico(hist)
+
+        document.getElementById('page-title').textContent = _cliente.nome
+        document.getElementById('status-select').value = _cliente.status_kanban
+        document.getElementById('status-badge').innerHTML =
+          `<span class="badge status-${_cliente.status_kanban}">${KANBAN_LABEL[_cliente.status_kanban]}</span>`
+
+        document.getElementById('btn-editar').href = `familia.html?id=${clienteId}`
+
+        // WhatsApp com template cobrança
+        const tel = _cliente.telefone
+        const docPendente = docs.find(d => d.status === 'pendente')
+        const msg = docPendente
+          ? wppCobrarDoc(_cliente.nome, DOC_LABEL[docPendente.tipo] || docPendente.tipo)
+          : wppAtualizacao(_cliente.nome, KANBAN_LABEL[_cliente.status_kanban])
+        document.getElementById('btn-wpp-cobrar').href = linkWhatsapp(tel, msg)
+
+      } catch (err) {
+        toast('Erro: ' + err.message, 'error')
+      }
+      hideLoading()
+    }
+
+    function renderResumo(c, membros) {
+      const loteInfo = c.crm_lotes ? `Lote ${c.crm_lotes.numero} (Quadra ${c.crm_lotes.quadra || '?'})` : 'Sem lote'
+      const dias = diasDesde(c.ultima_atualizacao)
+      const sla = slaBadge(c.ultima_atualizacao)
+
+      document.getElementById('resumo-grid').innerHTML = `
+        <div><span class="text-sm text-muted">CPF</span><br><strong>${fmtCpf(c.cpf)}</strong></div>
+        <div><span class="text-sm text-muted">Telefone</span><br><strong>${fmtTel(c.telefone)}</strong></div>
+        <div><span class="text-sm text-muted">Renda simulada</span><br><strong>${fmtMoeda(c.renda_total_simulada)}</strong></div>
+        <div><span class="text-sm text-muted">Renda confirmada</span><br><strong>${fmtMoeda(c.renda_total_confirmada)}</strong></div>
+        <div><span class="text-sm text-muted">Faixa MCMV</span><br><strong>${c.faixa_mcmv ? 'Faixa ' + c.faixa_mcmv : '—'}</strong></div>
+        <div><span class="text-sm text-muted">Subsídio estimado</span><br><strong>${fmtMoeda(c.subsidio_estimado)}</strong></div>
+        <div><span class="text-sm text-muted">Tipo de renda</span><br><strong>${TIPO_RENDA_LABEL[c.tipo_renda] || '—'}</strong></div>
+        <div><span class="text-sm text-muted">FGTS</span><br><strong>${c.fgts ? fmtMoeda(c.fgts_valor) + ' disponível' : 'Não'}</strong></div>
+        <div><span class="text-sm text-muted">Lote vinculado</span><br><strong>${loteInfo}</strong></div>
+        <div><span class="text-sm text-muted">Primeiro contato</span><br><strong>${fmtData(c.data_primeiro_contato)}</strong></div>
+        <div><span class="text-sm text-muted">Última atualização</span><br><strong>${fmtData(c.ultima_atualizacao)} ${sla}</strong></div>
+        <div class="form-full"><span class="text-sm text-muted">Observações</span><br><span>${c.observacoes || '—'}</span></div>
+      `
+
+      // Alerta de impedimento
+      const impAtivos = document.querySelectorAll('.imp-item:not(.resolvido)').length
+      // será atualizado em renderImpedimentos
+    }
+
+    function renderDocs(docs) {
+      const el = document.getElementById('lista-docs')
+      if (!docs.length) { el.innerHTML = '<p class="text-muted text-sm">Nenhum documento.</p>'; return }
+      el.innerHTML = docs.map(d => {
+        const venc = vencimentoBadge(d.data_vencimento)
+        return `<div class="doc-item status-${d.status}">
+          <div class="doc-nome">${DOC_LABEL[d.tipo] || d.tipo}</div>
+          <div class="doc-status">${venc}</div>
+          <select onchange="atualizarDoc('${d.id}', this.value)" class="btn-sm" style="border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:.78rem;">
+            <option value="pendente" ${d.status==='pendente'?'selected':''}>Pendente</option>
+            <option value="entregue" ${d.status==='entregue'?'selected':''}>Entregue</option>
+            <option value="recusado" ${d.status==='recusado'?'selected':''}>Recusado</option>
+            <option value="vencido" ${d.status==='vencido'?'selected':''}>Vencido</option>
+          </select>
+          ${d.data_vencimento
+            ? `<input type="date" value="${d.data_vencimento}" onchange="atualizarVencimento('${d.id}', this.value)" title="Vencimento" style="font-size:.78rem;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;">`
+            : `<input type="date" placeholder="Vencimento" onchange="atualizarVencimento('${d.id}', this.value)" title="Vencimento" style="font-size:.78rem;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;">`}
+        </div>`
+      }).join('')
+    }
+
+    async function atualizarDoc(id, status) {
+      try {
+        await sbPatch('crm_documentos', id, { status, data_entrega: status === 'entregue' ? new Date().toISOString() : null })
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: `Documento atualizado para: ${status}`, tipo: 'documento' })
+        toast('Documento atualizado', 'success')
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    async function atualizarVencimento(id, data) {
+      try {
+        await sbPatch('crm_documentos', id, { data_vencimento: data })
+        toast('Vencimento salvo', 'success')
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function renderImpedimentos(imps) {
+      const el = document.getElementById('lista-impedimentos')
+      const alertEl = document.getElementById('impedimento-alerta')
+      const ativos = imps.filter(i => i.ativo)
+
+      if (ativos.length) {
+        alertEl.innerHTML = `<span class="badge badge-red">🚨 ${ativos.length} impedimento(s) ativo(s)</span>`
+      } else {
+        alertEl.innerHTML = ''
+      }
+
+      if (!imps.length) { el.innerHTML = '<p class="text-muted text-sm">Nenhum impedimento.</p>'; return }
+      el.innerHTML = imps.map(i => `
+        <div class="imp-item ${i.ativo ? '' : 'resolvido'}">
+          <div class="imp-nome">${IMPEDIMENTO_LABEL[i.tipo] || i.tipo}${i.descricao ? ': ' + i.descricao : ''}</div>
+          ${i.ativo
+            ? `<button onclick="resolverImpedimento('${i.id}')" class="btn btn-secondary btn-sm">Resolver</button>`
+            : '<span class="badge badge-gray text-sm">Resolvido</span>'}
+        </div>
+      `).join('')
+    }
+
+    async function resolverImpedimento(id) {
+      try {
+        await sbPatch('crm_impedimentos', id, { ativo: false })
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: 'Impedimento resolvido', tipo: 'impedimento' })
+        toast('Impedimento resolvido', 'success')
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function toggleFormImpedimento() {
+      document.getElementById('form-impedimento').classList.toggle('hidden')
+    }
+
+    async function salvarImpedimento() {
+      const tipo = document.getElementById('imp-tipo').value
+      const desc = document.getElementById('imp-desc').value.trim()
+      try {
+        await sbPost('crm_impedimentos', { cliente_id: clienteId, tipo, descricao: desc || null, ativo: true })
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: `Impedimento registrado: ${IMPEDIMENTO_LABEL[tipo]}`, tipo: 'impedimento' })
+        toast('Impedimento registrado', 'success')
+        document.getElementById('form-impedimento').classList.add('hidden')
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function renderTarefas(tarefas) {
+      const el = document.getElementById('lista-tarefas')
+      const abertas = tarefas.filter(t => !t.concluida)
+      const fechadas = tarefas.filter(t => t.concluida)
+      const todas = [...abertas, ...fechadas]
+      if (!todas.length) { el.innerHTML = '<p class="text-muted text-sm">Nenhuma tarefa.</p>'; return }
+      el.innerHTML = todas.map(t => {
+        const vencida = !t.concluida && new Date(t.prazo) < new Date()
+        return `<div class="hist-item">
+          <div class="hist-icon">${t.concluida ? '✅' : vencida ? '🔴' : '🔵'}</div>
+          <div class="hist-desc">
+            <strong class="${vencida ? 'text-danger' : ''}">${t.descricao}</strong>
+            <div class="text-sm text-muted">Prazo: ${fmtData(t.prazo)}</div>
+          </div>
+          ${!t.concluida
+            ? `<button onclick="concluirTarefa('${t.id}')" class="btn btn-secondary btn-sm">Concluir</button>`
+            : ''}
+        </div>`
+      }).join('')
+    }
+
+    function toggleFormTarefa() {
+      document.getElementById('form-tarefa').classList.toggle('hidden')
+      document.getElementById('tarefa-prazo').value = new Date().toISOString().split('T')[0]
+    }
+
+    async function salvarTarefa() {
+      const desc = document.getElementById('tarefa-desc').value.trim()
+      const prazo = document.getElementById('tarefa-prazo').value
+      if (!desc || !prazo) { toast('Preencha descrição e prazo', 'error'); return }
+      try {
+        await sbPost('crm_tarefas', {
+          cliente_id: clienteId,
+          descricao: desc,
+          prazo,
+          responsavel: u?.id || null,
+          concluida: false
+        })
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: 'Tarefa criada: ' + desc, tipo: 'acao' })
+        toast('Tarefa criada', 'success')
+        document.getElementById('form-tarefa').classList.add('hidden')
+        document.getElementById('tarefa-desc').value = ''
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    async function concluirTarefa(id) {
+      try {
+        await sbPatch('crm_tarefas', id, { concluida: true })
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: 'Tarefa concluída', tipo: 'acao' })
+        toast('Tarefa concluída!', 'success')
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function renderHistorico(hist) {
+      const el = document.getElementById('lista-historico')
+      if (!hist.length) { el.innerHTML = '<p class="text-muted text-sm">Sem histórico.</p>'; return }
+      const icones = { acao: '🔵', documento: '📄', impedimento: '🚨', sistema: '⚙️', comunicacao: '💬' }
+      el.innerHTML = hist.map(h => `
+        <div class="hist-item">
+          <div class="hist-icon">${icones[h.tipo] || '📌'}</div>
+          <div class="hist-desc">${h.descricao}</div>
+          <div class="hist-data">${fmtData(h.created_at)}</div>
+        </div>
+      `).join('')
+    }
+
+    async function salvarStatus() {
+      const status = document.getElementById('status-select').value
+      try {
+        await sbPatch('crm_clientes', clienteId, { status_kanban: status })
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: `Status alterado para: ${KANBAN_LABEL[status]}`,
+          tipo: 'sistema'
+        })
+        toast('Status atualizado', 'success')
+        document.getElementById('status-badge').innerHTML =
+          `<span class="badge status-${status}">${KANBAN_LABEL[status]}</span>`
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    carregar()
+  </script>
+</body>
+</html>

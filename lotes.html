@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDR CRM — Lotes Projeto Josué</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.style.visibility = 'hidden'</script>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-nav">
+        <a href="clientes.html">👥 Famílias</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html" class="active">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer" id="sidebar-usuario"></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Lotes — Projeto Josué</span>
+        <div id="contador-lotes" class="text-sm text-muted"></div>
+      </div>
+
+      <div class="page-content">
+        <!-- Legenda -->
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;">
+          <span class="badge badge-green">🟢 Disponível</span>
+          <span class="badge badge-yellow">🟡 Reservado (processo em andamento)</span>
+          <span class="badge badge-green" style="background:#d8f3dc;">✅ Vendido (concluído)</span>
+          <span class="badge badge-red">🔴 Bloqueado</span>
+        </div>
+
+        <div id="lotes-grid" class="lotes-grid"></div>
+
+        <!-- Modal detalhe lote -->
+        <div id="modal-lote" class="modal-overlay hidden">
+          <div class="modal">
+            <div class="modal-header">
+              <h3 id="modal-lote-title">Lote</h3>
+              <button class="modal-close" onclick="fecharModal()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div id="modal-lote-body"></div>
+            </div>
+            <div class="modal-footer">
+              <button onclick="fecharModal()" class="btn btn-secondary">Fechar</button>
+              <a href="#" id="modal-btn-cliente" class="btn btn-primary hidden">Ver família</a>
+              <button id="modal-btn-bloquear" class="btn btn-danger hidden" onclick="toggleBloquear()">Bloquear lote</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden"><div class="spinner"></div></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    if (!authGuard()) throw new Error('not auth')
+    document.documentElement.style.visibility = ''
+
+    const u = getUsuario()
+    document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
+
+    let _lotes = []
+    let _loteAtual = null
+
+    async function carregar() {
+      showLoading()
+      try {
+        const lotes = await sbGet('crm_lotes', '?order=numero.asc&select=*')
+        // Verificar ocupação via clientes ativos
+        const clientes = await sbGet('crm_clientes',
+          '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
+        const clienteMap = {}
+        clientes.forEach(c => { clienteMap[c.lote_id] = c })
+
+        _lotes = lotes.map(l => {
+          const cliente = clienteMap[l.id]
+          let statusReal = l.status
+          if (cliente) {
+            statusReal = cliente.status_kanban === 'concluido' ? 'vendido' : 'reservado'
+          }
+          return { ...l, statusReal, cliente }
+        })
+
+        renderLotes()
+        atualizarContador()
+      } catch (err) {
+        toast('Erro: ' + err.message, 'error')
+      }
+      hideLoading()
+    }
+
+    function renderLotes() {
+      const grid = document.getElementById('lotes-grid')
+      grid.innerHTML = _lotes.map(l => {
+        const s = l.statusReal
+        const label = {
+          disponivel: 'Disponível',
+          reservado: 'Reservado',
+          vendido: 'Vendido',
+          bloqueado: 'Bloqueado'
+        }[s] || s
+
+        return `<div class="lote-card ${s}" onclick="abrirLote('${l.id}')">
+          <div class="lote-numero">Lote ${l.numero}</div>
+          <div class="lote-quadra">Quadra ${l.quadra || '?'} · ${l.metragem || '?'}m²</div>
+          ${l.cliente ? `<div class="text-sm mt-4" style="font-weight:500;">${l.cliente.nome.split(' ')[0]}</div>` : ''}
+          ${l.observacao ? `<div class="text-sm text-muted">${l.observacao}</div>` : ''}
+          <div class="lote-status">${label}</div>
+        </div>`
+      }).join('')
+    }
+
+    function atualizarContador() {
+      const disp = _lotes.filter(l => l.statusReal === 'disponivel').length
+      const reserv = _lotes.filter(l => l.statusReal === 'reservado').length
+      const vendidos = _lotes.filter(l => l.statusReal === 'vendido').length
+      document.getElementById('contador-lotes').innerHTML =
+        `<strong>${disp}</strong> disponíveis · <strong>${reserv}</strong> reservados · <strong>${vendidos}</strong> vendidos`
+    }
+
+    function abrirLote(id) {
+      _loteAtual = _lotes.find(l => l.id === id)
+      if (!_loteAtual) return
+
+      document.getElementById('modal-lote-title').textContent = `Lote ${_loteAtual.numero} — Quadra ${_loteAtual.quadra || '?'}`
+
+      const c = _loteAtual.cliente
+      document.getElementById('modal-lote-body').innerHTML = `
+        <div class="form-grid" style="gap:8px 16px;">
+          <div><span class="text-sm text-muted">Metragem</span><br><strong>${_loteAtual.metragem || '?'}m²</strong></div>
+          <div><span class="text-sm text-muted">Quadra</span><br><strong>${_loteAtual.quadra || '?'}</strong></div>
+          <div><span class="text-sm text-muted">Status</span><br><span class="badge status-${_loteAtual.statusReal === 'reservado' ? 'correspondente' : _loteAtual.statusReal === 'vendido' ? 'concluido' : _loteAtual.statusReal === 'bloqueado' ? 'perdido' : 'triagem'}">${_loteAtual.statusReal}</span></div>
+          ${_loteAtual.observacao ? `<div class="form-full"><span class="text-sm text-muted">Observação</span><br>${_loteAtual.observacao}</div>` : ''}
+        </div>
+        ${c ? `<div class="card" style="margin-top:12px;background:#f9fafb;">
+          <div class="text-sm text-muted mb-8">Família vinculada</div>
+          <strong>${c.nome}</strong>
+          <div class="text-sm"><span class="badge status-${c.status_kanban}">${KANBAN_LABEL[c.status_kanban]}</span></div>
+        </div>` : '<p class="text-muted mt-8">Nenhuma família vinculada.</p>'}
+      `
+
+      const btnCliente = document.getElementById('modal-btn-cliente')
+      if (c) {
+        btnCliente.href = `ficha.html?id=${c.id}`
+        btnCliente.classList.remove('hidden')
+      } else {
+        btnCliente.classList.add('hidden')
+      }
+
+      const btnBloquear = document.getElementById('modal-btn-bloquear')
+      if (_loteAtual.statusReal === 'disponivel') {
+        btnBloquear.classList.remove('hidden')
+        btnBloquear.textContent = 'Bloquear lote'
+      } else if (_loteAtual.status === 'bloqueado' && !c) {
+        btnBloquear.classList.remove('hidden')
+        btnBloquear.textContent = 'Desbloquear lote'
+      } else {
+        btnBloquear.classList.add('hidden')
+      }
+
+      document.getElementById('modal-lote').classList.remove('hidden')
+    }
+
+    async function toggleBloquear() {
+      if (!_loteAtual) return
+      const novoStatus = _loteAtual.status === 'bloqueado' ? 'disponivel' : 'bloqueado'
+      try {
+        await sbPatch('crm_lotes', _loteAtual.id, { status: novoStatus })
+        toast(novoStatus === 'bloqueado' ? 'Lote bloqueado' : 'Lote disponível', 'success')
+        fecharModal()
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function fecharModal() {
+      document.getElementById('modal-lote').classList.add('hidden')
+      _loteAtual = null
+    }
+
+    carregar()
+  </script>
+</body>
+</html>

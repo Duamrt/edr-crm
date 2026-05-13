@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDR CRM — Kanban Esteira MCMV</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.style.visibility = 'hidden'</script>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-nav">
+        <a href="clientes.html">👥 Famílias</a>
+        <a href="kanban.html" class="active">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer" id="sidebar-usuario"></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Esteira MCMV</span>
+        <div class="flex gap-8">
+          <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
+          <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
+        </div>
+      </div>
+
+      <div class="page-content" style="padding-bottom:32px;">
+        <div class="kanban-wrap" id="kanban-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden"><div class="spinner"></div></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    if (!authGuard()) throw new Error('not auth')
+    document.documentElement.style.visibility = ''
+
+    const u = getUsuario()
+    document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
+
+    const COLUNAS = [
+      { id: 'triagem', label: 'Triagem' },
+      { id: 'documentacao', label: 'Documentação' },
+      { id: 'correspondente', label: 'Com Correspondente' },
+      { id: 'aprovado', label: 'Aprovado/Ajustes' },
+      { id: 'prefeitura', label: 'Prefeitura/Projetos' },
+      { id: 'assinatura', label: 'Assinatura' },
+      { id: 'concluido', label: 'Concluído' },
+      { id: 'perdido', label: 'Perdido' }
+    ]
+
+    let _dragging = null
+
+    async function carregar() {
+      showLoading()
+      try {
+        const clientes = await sbGet('crm_clientes',
+          '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)')
+        const imps = await sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id')
+        const impSet = new Set(imps.map(i => i.cliente_id))
+        const tarefas = await sbGet('crm_tarefas',
+          '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo')
+        const tarefaMap = {}
+        tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
+
+        renderKanban(clientes, impSet, tarefaMap)
+      } catch (err) {
+        toast('Erro ao carregar: ' + err.message, 'error')
+      }
+      hideLoading()
+    }
+
+    function renderKanban(clientes, impSet, tarefaMap) {
+      const wrap = document.getElementById('kanban-wrap')
+      wrap.innerHTML = ''
+
+      COLUNAS.forEach(col => {
+        const cards = clientes.filter(c => c.status_kanban === col.id)
+
+        const colEl = document.createElement('div')
+        colEl.className = 'kanban-col'
+        colEl.dataset.status = col.id
+        colEl.innerHTML = `
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">${col.label}</span>
+            <span class="kanban-count">${cards.length}</span>
+          </div>
+        `
+
+        cards.forEach(c => {
+          const hasImp = impSet.has(c.id)
+          const tarefa = tarefaMap[c.id]
+          const dias = diasDesde(c.ultima_atualizacao)
+          const slaClass = dias >= 7 ? 'sla-red' : dias >= 3 ? 'sla-yellow' : ''
+          const lote = c.crm_lotes?.numero ? `Lote ${c.crm_lotes.numero}` : '—'
+
+          const badges = []
+          if (hasImp) badges.push('<span class="badge badge-red">🚨 Trava</span>')
+          if (dias >= 7) badges.push(`<span class="badge badge-red">⏱ ${dias}d</span>`)
+          else if (dias >= 3) badges.push(`<span class="badge badge-yellow">⏱ ${dias}d</span>`)
+
+          const card = document.createElement('div')
+          card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${slaClass}`
+          card.draggable = true
+          card.dataset.id = c.id
+          card.innerHTML = `
+            <div class="kanban-card-nome">${c.nome}</div>
+            <div class="kanban-card-lote">${lote}</div>
+            ${badges.length ? `<div class="kanban-card-badges">${badges.join('')}</div>` : ''}
+            <div class="kanban-card-acao">${tarefa ? '📋 ' + tarefa.descricao.substring(0,35) + ' · ' + fmtData(tarefa.prazo) : '<span class="text-muted">Sem próxima ação</span>'}</div>
+          `
+
+          card.addEventListener('click', () => {
+            window.location.href = `ficha.html?id=${c.id}`
+          })
+
+          card.addEventListener('dragstart', e => {
+            _dragging = c.id
+            card.classList.add('dragging')
+            e.dataTransfer.effectAllowed = 'move'
+          })
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging')
+            _dragging = null
+          })
+
+          colEl.appendChild(card)
+        })
+
+        // Drop zone
+        colEl.addEventListener('dragover', e => {
+          e.preventDefault()
+          colEl.classList.add('drag-over')
+        })
+        colEl.addEventListener('dragleave', () => colEl.classList.remove('drag-over'))
+        colEl.addEventListener('drop', async e => {
+          e.preventDefault()
+          colEl.classList.remove('drag-over')
+          if (!_dragging) return
+          const novoStatus = colEl.dataset.status
+          try {
+            await sbPatch('crm_clientes', _dragging, { status_kanban: novoStatus })
+            await sbPost('crm_historico', {
+              cliente_id: _dragging,
+              descricao: `Movido para: ${KANBAN_LABEL[novoStatus]}`,
+              tipo: 'sistema'
+            })
+            carregar()
+          } catch (err) {
+            toast('Erro ao mover: ' + err.message, 'error')
+          }
+        })
+
+        wrap.appendChild(colEl)
+      })
+    }
+
+    carregar()
+  </script>
+</body>
+</html>
