@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778664016">
+  <link rel="stylesheet" href="css/style.css?cb=1778664616">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -26,15 +26,23 @@
       </div>
 
       <div class="page-content">
+
         <!-- Legenda -->
-        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;">
-          <span class="badge badge-green">🟢 Disponível</span>
-          <span class="badge badge-yellow">🟡 Reservado (processo em andamento)</span>
-          <span class="badge badge-green" style="background:#d8f3dc;">✅ Vendido (concluído)</span>
-          <span class="badge badge-red">🔴 Bloqueado</span>
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center;">
+          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#22c55e;border-radius:3px;opacity:.85;"></span>Disponível</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#f59e0b;border-radius:3px;opacity:.85;"></span>Reservado</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#6b7280;border-radius:3px;opacity:.85;"></span>Vendido</span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#ef4444;border-radius:3px;opacity:.85;"></span>Bloqueado</span>
         </div>
 
-        <div id="lotes-grid" class="lotes-grid"></div>
+        <!-- Mapa SVG interativo -->
+        <div style="overflow-x:auto;background:#f9fafb;border-radius:12px;padding:16px;">
+          <svg id="mapa-svg" viewBox="0 0 920 300"
+               style="width:100%;min-width:600px;max-width:920px;display:block;"
+               xmlns="http://www.w3.org/2000/svg">
+            <!-- renderizado pelo JS -->
+          </svg>
+        </div>
 
         <!-- Modal detalhe lote -->
         <div id="modal-lote" class="modal-overlay hidden">
@@ -101,9 +109,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778664016"></script>
-  <script src="js/auth.js?cb=1778664016"></script>
-  <script src="js/utils.js?cb=1778664016"></script>
+  <script src="js/supabase.js?cb=1778664616"></script>
+  <script src="js/auth.js?cb=1778664616"></script>
+  <script src="js/utils.js?cb=1778664616"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -118,7 +126,7 @@
       showLoading()
       try {
         const [lotes, clientes] = await Promise.all([
-          sbGet('crm_lotes', '?order=numero.asc&select=*'),
+          sbGet('crm_lotes', '?order=quadra.asc,numero.asc&select=*'),
           sbGet('crm_clientes', '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
         ])
         const clienteMap = {}
@@ -142,39 +150,95 @@
     }
 
     function renderLotes() {
-      const grid = document.getElementById('lotes-grid')
-      grid.innerHTML = _lotes.map(l => {
-        const s = l.statusReal
-        const label = {
-          disponivel: 'Disponível',
-          reservado: 'Reservado',
-          vendido: 'Vendido',
-          bloqueado: 'Bloqueado'
-        }[s] || s
+      const quadraA = _lotes.filter(l => l.quadra === 'A').sort((a, b) => a.numero - b.numero)
+      const quadraB = _lotes.filter(l => l.quadra === 'B').sort((a, b) => a.numero - b.numero)
 
-        return `<div class="lote-card ${s}" onclick="abrirLote('${l.id}')">
-          <div class="lote-numero">Lote ${l.numero}</div>
-          <div class="lote-quadra">Quadra ${l.quadra || '?'} · ${l.metragem || '?'}m²</div>
-          ${l.cliente ? `<div class="text-sm mt-4" style="font-weight:500;">${l.cliente.nome.split(' ')[0]}</div>` : ''}
-          ${l.observacao ? `<div class="text-sm text-muted">${l.observacao}</div>` : ''}
-          <div class="lote-status">${label}</div>
-        </div>`
-      }).join('')
+      const lotW = 48, lotH = 90, gap = 4
+      const startAX = 20, startAY = 55
+
+      const totalAW = quadraA.length * (lotW + gap) - gap
+      const totalBW = quadraB.length * (lotW + gap) - gap
+
+      // Quadra B alinhada à direita em relação à Quadra A
+      const startBX = startAX + totalAW - totalBW
+      const roadY   = startAY + lotH + 10
+      const startBY = roadY + 28
+      const svgH    = startBY + lotH + 20
+      const svgW    = startAX + totalAW + startAX
+
+      const CORES = { disponivel: '#22c55e', reservado: '#f59e0b', vendido: '#6b7280', bloqueado: '#ef4444' }
+      const OPC   = { disponivel: '0.65',   reservado: '0.75',    vendido: '0.85',    bloqueado: '0.75'  }
+
+      function lotSVG(lote, x, y, prefix) {
+        const s   = lote.statusReal
+        const cor = CORES[s] || '#94a3b8'
+        const op  = OPC[s]   || '0.7'
+        const cx  = x + lotW / 2
+        const cy  = y + lotH / 2
+        const nomeAbrev = lote.cliente ? lote.cliente.nome.split(' ')[0].substring(0, 6) : ''
+        return `<g onclick="abrirLote('${lote.id}')" style="cursor:pointer">
+          <rect x="${x}" y="${y}" width="${lotW}" height="${lotH}" fill="${cor}" opacity="${op}" rx="4"
+                onmouseover="this.setAttribute('opacity',1)"
+                onmouseout="this.setAttribute('opacity','${op}')"/>
+          <text x="${cx}" y="${cy - (nomeAbrev ? 10 : 4)}" text-anchor="middle" fill="white" font-size="12"
+                font-weight="700" font-family="sans-serif" pointer-events="none">${prefix}${lote.numero}</text>
+          ${nomeAbrev
+            ? `<text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="rgba(255,255,255,.9)" font-size="8"
+                     font-family="sans-serif" pointer-events="none">${nomeAbrev}</text>
+               <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="8"
+                     font-family="sans-serif" pointer-events="none">120m²</text>`
+            : `<text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="9"
+                     font-family="sans-serif" pointer-events="none">120m²</text>`
+          }
+        </g>`
+      }
+
+      let s = ''
+
+      // Fundo geral
+      s += `<rect width="${svgW}" height="${svgH}" fill="#f0f7f0" rx="8"/>`
+
+      // Imagem de fundo do empreendimento (descomentar quando disponível)
+      // s += `<image href="img/mapa-lotes.png" width="${svgW}" height="${svgH}" preserveAspectRatio="xMidYMid slice" opacity="0.25"/>`
+
+      // Rua entre as quadras
+      s += `<rect x="0" y="${roadY}" width="${svgW}" height="22" fill="#94a3b8" opacity="0.25"/>`
+      s += `<text x="${svgW / 2}" y="${roadY + 15}" text-anchor="middle" fill="#6b7280"
+                  font-size="10" font-family="sans-serif">Rua</text>`
+
+      // Quadra A
+      s += `<text x="${startAX}" y="${startAY - 8}" fill="#1f2937" font-size="13" font-weight="600"
+                  font-family="sans-serif">Quadra A — ${quadraA.length} lotes</text>`
+      quadraA.forEach((lote, i) => {
+        s += lotSVG(lote, startAX + i * (lotW + gap), startAY, 'A')
+      })
+
+      // Quadra B
+      s += `<text x="${startBX}" y="${startBY - 8}" fill="#1f2937" font-size="13" font-weight="600"
+                  font-family="sans-serif">Quadra B — ${quadraB.length} lotes</text>`
+      quadraB.forEach((lote, i) => {
+        s += lotSVG(lote, startBX + i * (lotW + gap), startBY, 'B')
+      })
+
+      const el = document.getElementById('mapa-svg')
+      el.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`)
+      el.innerHTML = s
     }
 
     function atualizarContador() {
-      const disp = _lotes.filter(l => l.statusReal === 'disponivel').length
+      const disp   = _lotes.filter(l => l.statusReal === 'disponivel').length
       const reserv = _lotes.filter(l => l.statusReal === 'reservado').length
-      const vendidos = _lotes.filter(l => l.statusReal === 'vendido').length
+      const vend   = _lotes.filter(l => l.statusReal === 'vendido').length
       document.getElementById('contador-lotes').innerHTML =
-        `<strong>${disp}</strong> disponíveis · <strong>${reserv}</strong> reservados · <strong>${vendidos}</strong> vendidos`
+        `<strong>${disp}</strong> disponíveis · <strong>${reserv}</strong> reservados · <strong>${vend}</strong> vendidos`
     }
 
     function abrirLote(id) {
       _loteAtual = _lotes.find(l => l.id === id)
       if (!_loteAtual) return
 
-      document.getElementById('modal-lote-title').textContent = `Lote ${_loteAtual.numero} — Quadra ${_loteAtual.quadra || '?'}`
+      document.getElementById('modal-lote-title').textContent =
+        `Lote ${_loteAtual.numero} — Quadra ${_loteAtual.quadra || '?'}`
 
       const c = _loteAtual.cliente
       document.getElementById('modal-lote-body').innerHTML = `
@@ -263,6 +327,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778664016"></script>
+  <script src="js/sw-register.js?cb=1778664616"></script>
 </body>
 </html>
