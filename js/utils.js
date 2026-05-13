@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778686484'
+const CRM_VERSION = '1778687079'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -90,6 +90,20 @@ const MCMV_LIMITES = { faixa1_max: 2640, faixa2_max: 4400, faixa3_max: 8000 }
 
 // Limiar de dias sem interação real antes de virar pendência operacional
 const MCMV_DIAS_PARADO = 7
+
+// Docs essenciais por etapa do kanban — travam avanço
+const MCMV_DOCS_ESSENCIAIS_CORRESPONDENTE = ['rg_cpf_titular','comp_residencia','comp_renda','cadunico']
+const MCMV_DOCS_TODOS = ['rg_cpf_titular','rg_cpf_conjuge','certidao','comp_residencia','comp_renda','ctps','fgts','ir','certidao_negativa','cadunico']
+const MCMV_DOCS_POR_ETAPA = {
+  triagem: [],
+  documentacao: [],
+  correspondente: MCMV_DOCS_ESSENCIAIS_CORRESPONDENTE,
+  aprovado: MCMV_DOCS_TODOS,
+  prefeitura: MCMV_DOCS_TODOS,
+  assinatura: MCMV_DOCS_TODOS,
+  concluido: [],
+  perdido: []
+}
 
 // Faixa MCMV a partir da renda (tabela MCMV 2024-2025 urbano)
 function calcFaixaMcmv(renda) {
@@ -250,6 +264,126 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
     faixaCalculada,
     grupos,
     positivos,
+    acoes
+  }
+}
+
+// === AGENTE 2: AUDITOR DE DOCUMENTOS MCMV (determinístico) ===
+// Detecta docs irrelevantes ao perfil (devem virar nao_aplicavel)
+function detectarNaoAplicaveis(cliente, membros = []) {
+  const naoAplicaveis = []
+  const temConjuge = membros.some(m => (m.parentesco || '') === 'Cônjuge')
+  if (!temConjuge) naoAplicaveis.push('rg_cpf_conjuge')
+  if (cliente.fgts === false || cliente.fgts === null) naoAplicaveis.push('fgts')
+  return naoAplicaveis
+}
+
+// Cruza dados cadastrais com status dos docs em busca de inconsistências
+function detectarInconsistencias(cliente, docs, membros = []) {
+  const inc = []
+  const docPorTipo = {}
+  docs.forEach(d => { docPorTipo[d.tipo] = d })
+
+  if (cliente.fgts === true && docPorTipo.fgts && docPorTipo.fgts.status === 'pendente') {
+    inc.push({ tipo: 'fgts', msg: 'Cliente tem FGTS, mas extrato segue pendente' })
+  }
+  if (cliente.tipo_renda === 'formal' && docPorTipo.ctps && docPorTipo.ctps.status === 'pendente') {
+    inc.push({ tipo: 'ctps', msg: 'Renda formal (CLT), mas CTPS pendente' })
+  }
+  if (docPorTipo.comp_renda && docPorTipo.comp_renda.status === 'entregue' && !cliente.renda_total_confirmada) {
+    inc.push({ tipo: 'comp_renda', msg: 'Comprovante de renda entregue, mas renda confirmada não foi preenchida no cadastro' })
+  }
+  const temConjuge = membros.some(m => (m.parentesco || '') === 'Cônjuge')
+  if (temConjuge && docPorTipo.rg_cpf_conjuge && docPorTipo.rg_cpf_conjuge.status === 'pendente') {
+    inc.push({ tipo: 'rg_cpf_conjuge', msg: 'Cônjuge na composição, mas RG/CPF do cônjuge pendente' })
+  }
+  return inc
+}
+
+function auditarDocumentos(cliente, docs = [], membros = []) {
+  const resolvidos = docs.filter(d => d.status === 'entregue' || d.status === 'nao_aplicavel')
+  const pendentes = docs.filter(d => d.status === 'pendente')
+  const recusados = docs.filter(d => d.status === 'recusado')
+  const naoAplicaveis = docs.filter(d => d.status === 'nao_aplicavel')
+
+  const completude = docs.length ? Math.round((resolvidos.length / docs.length) * 100) : 0
+
+  // Sugestões de N/A — docs ainda 'pendente' que deveriam virar nao_aplicavel
+  const sugestoesNA = detectarNaoAplicaveis(cliente, membros)
+    .map(tipo => docs.find(d => d.tipo === tipo && d.status === 'pendente'))
+    .filter(Boolean)
+
+  const inconsistencias = detectarInconsistencias(cliente, docs, membros)
+
+  // Etapa atual e próxima — pra calcular docs que travam avanço
+  const ETAPAS_FLUXO = ['triagem','documentacao','correspondente','aprovado','prefeitura','assinatura','concluido']
+  const idxAtual = ETAPAS_FLUXO.indexOf(cliente.status_kanban)
+  const proximaEtapa = idxAtual >= 0 ? ETAPAS_FLUXO[idxAtual + 1] : null
+  const essenciaisProxima = (proximaEtapa && MCMV_DOCS_POR_ETAPA[proximaEtapa]) || []
+
+  const docsTravando = pendentes.filter(d => essenciaisProxima.includes(d.tipo))
+
+  // Vencendo em <15 dias (inclui pendentes com vencimento e entregues com renovação próxima)
+  const vencendo = docs.filter(d => {
+    if (!d.data_vencimento) return false
+    if (!['pendente','entregue'].includes(d.status)) return false
+    const dias = diasAte(d.data_vencimento)
+    return dias !== null && dias >= 0 && dias <= 15
+  })
+
+  const grupos = { bloqueadores: [], riscos: [], operacionais: [] }
+  const acoes = []
+  const tiposListados = new Set()
+
+  // Bloqueadores: recusados (sempre) + pendentes que travam próxima etapa
+  recusados.forEach(d => {
+    if (tiposListados.has(d.tipo)) return
+    tiposListados.add(d.tipo)
+    grupos.bloqueadores.push({ icone: '🚫', texto: `${DOC_LABEL[d.tipo] || d.tipo} (recusado)`, tipo: d.tipo })
+    acoes.push(`Resolver doc recusado: ${DOC_LABEL[d.tipo] || d.tipo}`)
+  })
+  docsTravando.forEach(d => {
+    if (tiposListados.has(d.tipo)) return
+    tiposListados.add(d.tipo)
+    const proxLabel = KANBAN_LABEL[proximaEtapa] || proximaEtapa
+    grupos.bloqueadores.push({ icone: '🛑', texto: `${DOC_LABEL[d.tipo] || d.tipo} (bloqueia ${proxLabel})`, tipo: d.tipo })
+  })
+
+  // Riscos: vencendo + inconsistências
+  vencendo.forEach(d => {
+    if (tiposListados.has(d.tipo)) return
+    tiposListados.add(d.tipo)
+    const dias = diasAte(d.data_vencimento)
+    grupos.riscos.push({ icone: '⚠️', texto: `${DOC_LABEL[d.tipo] || d.tipo} vence em ${dias}d`, tipo: d.tipo })
+  })
+  inconsistencias.forEach(i => {
+    if (tiposListados.has(i.tipo)) return
+    tiposListados.add(i.tipo)
+    grupos.riscos.push({ icone: '⚠️', texto: i.msg, tipo: i.tipo })
+    acoes.push(i.msg)
+  })
+
+  // Operacionais: demais pendentes (exclui sugestões de N/A — vão pro bloco N/A)
+  const tiposNaSugeridos = new Set(sugestoesNA.map(d => d.tipo))
+  pendentes.forEach(d => {
+    if (tiposListados.has(d.tipo) || tiposNaSugeridos.has(d.tipo)) return
+    tiposListados.add(d.tipo)
+    grupos.operacionais.push({ icone: '⚪', texto: DOC_LABEL[d.tipo] || d.tipo, tipo: d.tipo })
+  })
+
+  if (grupos.bloqueadores.length || grupos.riscos.length) {
+    acoes.unshift('Cobrar via WhatsApp os docs urgentes desta família')
+  }
+
+  return {
+    completude,
+    total: docs.length,
+    resolvidos: resolvidos.length,
+    pendentes: pendentes.length,
+    proximaEtapa,
+    grupos,
+    sugestoesNA,
+    naoAplicaveis,
     acoes
   }
 }

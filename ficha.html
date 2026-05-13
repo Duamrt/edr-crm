@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778686484">
+  <link rel="stylesheet" href="css/style.css?cb=1778687079">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -49,6 +49,34 @@
             <div class="triagem-acoes hidden" id="triagem-acoes-wrap">
               <div class="triagem-acoes-titulo">Próximas ações sugeridas:</div>
               <ul id="triagem-acoes"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auditoria de Documentos (Agente 2) -->
+        <div id="auditoria-card" class="auditoria-card hidden">
+          <div class="auditoria-header">
+            <div class="auditoria-titulo">
+              <span class="auditoria-icone">🗂️</span>
+              <span>Auditoria de documentos</span>
+            </div>
+            <div class="auditoria-completude">
+              <div class="auditoria-progresso"><div id="auditoria-barra"></div></div>
+              <span id="auditoria-percent">0%</span>
+              <span class="auditoria-frac text-sm text-muted" id="auditoria-frac"></span>
+            </div>
+          </div>
+          <div class="auditoria-body">
+            <div id="auditoria-checks"></div>
+            <div id="auditoria-na-wrap" class="auditoria-na hidden">
+              <div class="auditoria-na-titulo">
+                🚫 <span id="auditoria-na-contagem">0</span> doc(s) sugeridos como N/A para este perfil
+                <button onclick="aplicarNaAutomaticos()" id="btn-aplicar-na" class="btn btn-secondary btn-sm">Aplicar N/A automaticamente</button>
+              </div>
+              <div id="auditoria-na-lista" class="auditoria-na-lista"></div>
+            </div>
+            <div class="auditoria-acoes hidden" id="auditoria-acoes-wrap">
+              <button onclick="cobrarPendentesWpp()" class="btn btn-whatsapp btn-sm">📱 Cobrar pendentes</button>
             </div>
           </div>
         </div>
@@ -169,9 +197,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778686484"></script>
-  <script src="js/auth.js?cb=1778686484"></script>
-  <script src="js/utils.js?cb=1778686484"></script>
+  <script src="js/supabase.js?cb=1778687079"></script>
+  <script src="js/auth.js?cb=1778687079"></script>
+  <script src="js/utils.js?cb=1778687079"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -184,7 +212,8 @@
     if (!clienteId) window.location.replace('clientes.html')
 
     let _cliente = null
-    let _docs = [], _imps = []
+    let _docs = [], _imps = [], _membros = []
+    let _auditoria = null
 
     async function carregar() {
       showLoading()
@@ -203,7 +232,9 @@
 
         _docs = docs
         _imps = imps
+        _membros = lotes
         renderTriagem(_cliente, docs, imps, hist)
+        renderAuditoria(_cliente, docs, lotes)
         renderResumo(_cliente, lotes)
         renderDocs(docs)
         renderImpedimentos(imps)
@@ -294,6 +325,99 @@
       </div>`
     }
 
+    function renderAuditoria(cliente, docs, membros) {
+      _auditoria = auditarDocumentos(cliente, docs, membros || [])
+      const card = document.getElementById('auditoria-card')
+      card.classList.remove('hidden')
+
+      // Barra de progresso
+      document.getElementById('auditoria-barra').style.width = _auditoria.completude + '%'
+      document.getElementById('auditoria-percent').textContent = _auditoria.completude + '%'
+      document.getElementById('auditoria-frac').textContent = `(${_auditoria.resolvidos}/${_auditoria.total})`
+      card.dataset.completo = _auditoria.completude >= 100 ? 'true' : 'false'
+
+      // Grupos categorizados (reusa renderGrupo do Triador)
+      const blocos = []
+      if (_auditoria.grupos.bloqueadores.length) {
+        blocos.push(renderGrupo('bloqueador', '🛑 Bloqueadores', _auditoria.grupos.bloqueadores))
+      }
+      if (_auditoria.grupos.riscos.length) {
+        blocos.push(renderGrupo('risco', '💳 Vencendo / Inconsistências', _auditoria.grupos.riscos))
+      }
+      if (_auditoria.grupos.operacionais.length) {
+        blocos.push(renderGrupo('operacional', '📋 Próximos pendentes', _auditoria.grupos.operacionais))
+      }
+      if (!blocos.length && _auditoria.completude >= 100) {
+        blocos.push(`<div class="triagem-grupo" data-tipo="positivo"><div class="triagem-grupo-titulo">✅ Pasta documental completa</div></div>`)
+      }
+      document.getElementById('auditoria-checks').innerHTML = blocos.join('')
+
+      // Bloco N/A sugerido (UPDATE em batch via botão)
+      const naWrap = document.getElementById('auditoria-na-wrap')
+      if (_auditoria.sugestoesNA.length) {
+        naWrap.classList.remove('hidden')
+        document.getElementById('auditoria-na-contagem').textContent = _auditoria.sugestoesNA.length
+        const motivos = _auditoria.sugestoesNA.map(d => {
+          if (d.tipo === 'rg_cpf_conjuge') return `${DOC_LABEL[d.tipo]} — sem cônjuge na composição`
+          if (d.tipo === 'fgts') return `${DOC_LABEL[d.tipo]} — cliente sem FGTS`
+          return DOC_LABEL[d.tipo] || d.tipo
+        })
+        document.getElementById('auditoria-na-lista').innerHTML = motivos.map(m =>
+          `<div class="auditoria-na-item">• ${m}</div>`
+        ).join('')
+      } else {
+        naWrap.classList.add('hidden')
+      }
+
+      // Ações
+      const acoesWrap = document.getElementById('auditoria-acoes-wrap')
+      if (_auditoria.grupos.bloqueadores.length || _auditoria.grupos.riscos.length || _auditoria.grupos.operacionais.length) {
+        acoesWrap.classList.remove('hidden')
+      } else {
+        acoesWrap.classList.add('hidden')
+      }
+    }
+
+    async function aplicarNaAutomaticos() {
+      if (!_auditoria || !_auditoria.sugestoesNA.length) return
+      const btn = document.getElementById('btn-aplicar-na')
+      btn.disabled = true
+      btn.textContent = '⏳ Aplicando...'
+      try {
+        const motivos = _auditoria.sugestoesNA.map(d => DOC_LABEL[d.tipo] || d.tipo).join(', ')
+        for (const doc of _auditoria.sugestoesNA) {
+          await sbPatch('crm_documentos', doc.id, { status: 'nao_aplicavel' })
+        }
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: `🤖 Auditor marcou como N/A: ${motivos}`,
+          tipo: 'sistema'
+        })
+        toast(`${_auditoria.sugestoesNA.length} doc(s) marcado(s) como N/A`, 'success')
+        carregar()
+      } catch (err) {
+        toast('Erro: ' + err.message, 'error')
+        btn.disabled = false
+        btn.textContent = 'Aplicar N/A automaticamente'
+      }
+    }
+
+    function cobrarPendentesWpp() {
+      if (!_cliente || !_auditoria) return
+      const docsUrgentes = [
+        ..._auditoria.grupos.bloqueadores.map(b => b.tipo),
+        ..._auditoria.grupos.riscos.map(r => r.tipo)
+      ]
+      const docsOperacionais = _auditoria.grupos.operacionais.map(o => o.tipo)
+      const lista = [...new Set([...docsUrgentes, ...docsOperacionais])]
+        .map(tipo => DOC_LABEL[tipo] || tipo)
+      if (!lista.length) { toast('Nenhum doc pendente pra cobrar', 'info'); return }
+
+      const linhas = lista.map(l => `• ${l}`).join('\n')
+      const msg = `Olá ${_cliente.nome}! 👋 Sou Elyda da EDR Engenharia. Para dar continuidade ao seu processo MCMV, ainda preciso dos seguintes documentos:\n\n${linhas}\n\nPode me enviar pelo WhatsApp ou trazer na nossa sede. Qualquer dúvida, estou à disposição! 🙏`
+      window.open(linkWhatsapp(_cliente.telefone, msg), '_blank')
+    }
+
     function renderResumo(c, membros) {
       const loteInfo = c.crm_lotes ? `Lote ${c.crm_lotes.numero} (Quadra ${c.crm_lotes.quadra || '?'})` : 'Sem lote'
       const dias = diasDesde(c.ultima_atualizacao)
@@ -332,6 +456,7 @@
             <option value="entregue" ${d.status==='entregue'?'selected':''}>Entregue</option>
             <option value="recusado" ${d.status==='recusado'?'selected':''}>Recusado</option>
             <option value="vencido" ${d.status==='vencido'?'selected':''}>Vencido</option>
+            <option value="nao_aplicavel" ${d.status==='nao_aplicavel'?'selected':''}>N/A</option>
           </select>
           ${d.data_vencimento
             ? `<input type="date" value="${d.data_vencimento}" onchange="atualizarVencimento('${d.id}', this.value)" title="Vencimento" style="font-size:.78rem;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;">`
@@ -558,6 +683,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778686484"></script>
+  <script src="js/sw-register.js?cb=1778687079"></script>
 </body>
 </html>
