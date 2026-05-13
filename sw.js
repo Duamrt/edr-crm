@@ -1,4 +1,4 @@
-const VERSION = '1778664853'
+const VERSION = '1778664956'
 const CACHE = 'edr-crm-v' + VERSION
 
 const ASSETS = [
