@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778662464">
+  <link rel="stylesheet" href="css/style.css?cb=1778663304">
   <script>
     // Auth guard: bloqueia FOUC antes do render
     document.documentElement.style.visibility = 'hidden'
@@ -86,9 +86,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778662464"></script>
-  <script src="js/auth.js?cb=1778662464"></script>
-  <script src="js/utils.js?cb=1778662464"></script>
+  <script src="js/supabase.js?cb=1778663304"></script>
+  <script src="js/auth.js?cb=1778663304"></script>
+  <script src="js/utils.js?cb=1778663304"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -116,6 +116,14 @@
           temImpedimento: impSet.has(c.id),
           tarefa: tarefaMap[c.id] || null
         }))
+
+        // Prioridade: ativos primeiro → inativos 5d+ → bloqueados por impedimento
+        _todos.sort((a, b) => {
+          const pa = a.temImpedimento ? 2 : (diasDesde(a.ultima_atualizacao) >= 5 ? 1 : 0)
+          const pb = b.temImpedimento ? 2 : (diasDesde(b.ultima_atualizacao) >= 5 ? 1 : 0)
+          if (pa !== pb) return pa - pb
+          return new Date(b.ultima_atualizacao) - new Date(a.ultima_atualizacao)
+        })
 
         renderTabela(_todos)
       } catch (err) {
@@ -184,6 +192,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778662464"></script>
+  <script src="js/sw-register.js?cb=1778663304"></script>
 </body>
 </html>

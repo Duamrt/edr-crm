@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778662464">
+  <link rel="stylesheet" href="css/style.css?cb=1778663304">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -133,9 +133,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778662464"></script>
-  <script src="js/auth.js?cb=1778662464"></script>
-  <script src="js/utils.js?cb=1778662464"></script>
+  <script src="js/supabase.js?cb=1778663304"></script>
+  <script src="js/auth.js?cb=1778663304"></script>
+  <script src="js/utils.js?cb=1778663304"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -169,6 +169,7 @@
         renderImpedimentos(imps)
         renderTarefas(tarefas)
         renderHistorico(hist)
+        await criarTarefasVencimento(docs, tarefas)
 
         document.getElementById('page-title').textContent = _cliente.nome
         document.getElementById('status-select').value = _cliente.status_kanban
@@ -383,8 +384,30 @@
       } catch (err) { toast('Erro: ' + err.message, 'error') }
     }
 
+    // Automação: cria tarefa automaticamente se doc vence em ≤ 15 dias
+    async function criarTarefasVencimento(docs, tarefasExistentes) {
+      const hoje = new Date()
+      const em15 = new Date(); em15.setDate(hoje.getDate() + 15)
+      const descExistentes = new Set(tarefasExistentes.filter(t => !t.concluida).map(t => t.descricao))
+
+      const vencendo = docs.filter(d => {
+        if (!d.data_vencimento || ['vencido','entregue'].includes(d.status)) return false
+        const v = new Date(d.data_vencimento + 'T12:00:00')
+        return v >= hoje && v <= em15
+      })
+
+      for (const doc of vencendo) {
+        const desc = `Renovar: ${DOC_LABEL[doc.tipo] || doc.tipo}`
+        if (descExistentes.has(desc)) continue
+        try {
+          await sbPost('crm_tarefas', { cliente_id: clienteId, descricao: desc, prazo: doc.data_vencimento, concluida: false })
+          await sbPost('crm_historico', { cliente_id: clienteId, descricao: `⚠️ Tarefa automática: ${desc}`, tipo: 'sistema' })
+        } catch {}
+      }
+    }
+
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778662464"></script>
+  <script src="js/sw-register.js?cb=1778663304"></script>
 </body>
 </html>

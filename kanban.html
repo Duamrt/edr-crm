@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778662464">
+  <link rel="stylesheet" href="css/style.css?cb=1778663304">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -36,9 +36,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778662464"></script>
-  <script src="js/auth.js?cb=1778662464"></script>
-  <script src="js/utils.js?cb=1778662464"></script>
+  <script src="js/supabase.js?cb=1778663304"></script>
+  <script src="js/auth.js?cb=1778663304"></script>
+  <script src="js/utils.js?cb=1778663304"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -58,16 +58,22 @@
     ]
 
     let _dragging = null
+    let _recusadoSet = new Set()
+
+    // Etapas que exigem documentos ok para avançar
+    const ETAPAS_BLOQUEADAS = ['correspondente','aprovado','prefeitura','assinatura','concluido']
 
     async function carregar() {
       showLoading()
       try {
-        const [clientes, imps, tarefas] = await Promise.all([
+        const [clientes, imps, tarefas, recusados] = await Promise.all([
           sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)'),
           sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id'),
-          sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo')
+          sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo'),
+          sbGet('crm_documentos', '?status=eq.recusado&select=cliente_id')
         ])
         const impSet = new Set(imps.map(i => i.cliente_id))
+        _recusadoSet = new Set(recusados.map(d => d.cliente_id))
         const tarefaMap = {}
         tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
 
@@ -97,6 +103,7 @@
 
         cards.forEach(c => {
           const hasImp = impSet.has(c.id)
+          const hasRecusado = _recusadoSet.has(c.id)
           const tarefa = tarefaMap[c.id]
           const dias = diasDesde(c.ultima_atualizacao)
           const slaClass = dias >= 7 ? 'sla-red' : dias >= 3 ? 'sla-yellow' : ''
@@ -104,11 +111,13 @@
 
           const badges = []
           if (hasImp) badges.push('<span class="badge badge-red">🚨 Trava</span>')
+          if (hasRecusado) badges.push('<span class="badge badge-red">🚫 Doc recusado</span>')
+          if (col.id === 'correspondente' && dias >= 2) badges.push(`<span class="badge badge-yellow">⚡ Cobrar correspondente</span>`)
           if (dias >= 7) badges.push(`<span class="badge badge-red">⏱ ${dias}d</span>`)
           else if (dias >= 3) badges.push(`<span class="badge badge-yellow">⏱ ${dias}d</span>`)
 
           const card = document.createElement('div')
-          card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${slaClass}`
+          card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${hasRecusado ? 'has-recusado' : ''} ${slaClass}`
           card.draggable = true
           card.dataset.id = c.id
           card.innerHTML = `
@@ -144,9 +153,16 @@
         colEl.addEventListener('drop', async e => {
           e.preventDefault()
           colEl.classList.remove('drag-over')
-          const clienteId = _dragging  // captura antes de qualquer await
+          const clienteId = _dragging
           if (!clienteId) return
           const novoStatus = colEl.dataset.status
+
+          // Bloquear avanço se tem documento recusado
+          if (ETAPAS_BLOQUEADAS.includes(novoStatus) && _recusadoSet.has(clienteId)) {
+            toast('🚫 Documento recusado — resolva antes de avançar nessa etapa.', 'error')
+            return
+          }
+
           try {
             await sbPatch('crm_clientes', clienteId, { status_kanban: novoStatus })
             await sbPost('crm_historico', {
@@ -166,6 +182,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778662464"></script>
+  <script src="js/sw-register.js?cb=1778663304"></script>
 </body>
 </html>
