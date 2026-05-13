@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778685874">
+  <link rel="stylesheet" href="css/style.css?cb=1778686484">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -169,9 +169,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778685874"></script>
-  <script src="js/auth.js?cb=1778685874"></script>
-  <script src="js/utils.js?cb=1778685874"></script>
+  <script src="js/supabase.js?cb=1778686484"></script>
+  <script src="js/auth.js?cb=1778686484"></script>
+  <script src="js/utils.js?cb=1778686484"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -203,7 +203,7 @@
 
         _docs = docs
         _imps = imps
-        renderTriagem(_cliente, docs, imps)
+        renderTriagem(_cliente, docs, imps, hist)
         renderResumo(_cliente, lotes)
         renderDocs(docs)
         renderImpedimentos(imps)
@@ -232,31 +232,49 @@
       hideLoading()
     }
 
-    function renderTriagem(cliente, docs, imps) {
-      const t = triagemMCMV(cliente, docs, imps)
+    function renderTriagem(cliente, docs, imps, hist) {
+      const t = triagemMCMV(cliente, docs, imps, hist || [])
       const card = document.getElementById('triagem-card')
       card.classList.remove('hidden')
       card.dataset.cor = t.statusCor
 
       const statusEl = document.getElementById('triagem-status')
       statusEl.className = `triagem-status status-${t.statusCor}`
-      statusEl.textContent = t.statusLabel
+      statusEl.textContent = t.motivoRessalva
+        ? `${t.statusLabel} · ${t.motivoRessalva}`
+        : t.statusLabel
 
+      // Resumo: faixa + subsídio honesto
       const resumo = []
       if (t.faixaCalculada) {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong>Faixa ${t.faixaCalculada}</strong></div>`)
       } else {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-danger">Fora do MCMV</strong></div>`)
       }
-      if (t.subsidio > 0) {
-        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio estimado</span><strong>${fmtMoeda(t.subsidio)}</strong><span class="triagem-nota">aproximado</span></div>`)
-      }
+      resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio</span><strong style="font-weight:500;font-size:.88rem;color:var(--text-secondary)">Confirmar com correspondente</strong></div>`)
       document.getElementById('triagem-resumo').innerHTML = resumo.join('')
 
-      document.getElementById('triagem-checks').innerHTML = t.checks.map(c =>
-        `<div class="triagem-check"><span class="triagem-check-icone">${c.icone}</span><span>${c.texto}</span></div>`
-      ).join('')
+      // Checks agrupados por gravidade
+      const checksEl = document.getElementById('triagem-checks')
+      const blocos = []
 
+      if (t.grupos.bloqueadores.length) {
+        blocos.push(renderGrupo('bloqueador', '🛑 Bloqueadores', t.grupos.bloqueadores))
+      }
+      if (t.grupos.riscos.length) {
+        blocos.push(renderGrupo('risco', '💳 Riscos de crédito', t.grupos.riscos))
+      }
+      if (t.grupos.operacionais.length) {
+        blocos.push(renderGrupo('operacional', '📋 Pendências operacionais', t.grupos.operacionais))
+      }
+      if (!blocos.length && t.positivos.length) {
+        // Família 100% apta — mostra positivos compactos
+        blocos.push(renderGrupo('positivo', '✅ Tudo OK', t.positivos))
+      }
+
+      checksEl.innerHTML = blocos.join('')
+
+      // Ações
       const acoesWrap = document.getElementById('triagem-acoes-wrap')
       if (t.acoes.length) {
         acoesWrap.classList.remove('hidden')
@@ -264,6 +282,16 @@
       } else {
         acoesWrap.classList.add('hidden')
       }
+    }
+
+    function renderGrupo(tipo, titulo, itens) {
+      const checks = itens.map(c =>
+        `<div class="triagem-check"><span class="triagem-check-icone">${c.icone}</span><span>${c.texto}</span></div>`
+      ).join('')
+      return `<div class="triagem-grupo" data-tipo="${tipo}">
+        <div class="triagem-grupo-titulo">${titulo} <span class="triagem-grupo-contagem">${itens.length}</span></div>
+        <div class="triagem-grupo-itens">${checks}</div>
+      </div>`
     }
 
     function renderResumo(c, membros) {
@@ -530,6 +558,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778685874"></script>
+  <script src="js/sw-register.js?cb=1778686484"></script>
 </body>
 </html>
