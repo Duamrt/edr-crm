@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778663486">
+  <link rel="stylesheet" href="css/style.css?cb=1778664016">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -28,6 +28,7 @@
         </div>
         <div class="flex gap-8">
           <a href="#" id="btn-wpp-cobrar" class="btn btn-whatsapp btn-sm" target="_blank">📱 WhatsApp</a>
+          <button onclick="gerarMensagem()" id="btn-gerar-wpp" class="btn btn-ai btn-sm">🤖 Gerar mensagem</button>
           <a href="#" id="btn-editar" class="btn btn-secondary btn-sm">Editar</a>
         </div>
       </div>
@@ -131,11 +132,27 @@
     </div>
   </div>
 
+  <!-- Modal IA -->
+  <div id="modal-ai" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:24px;width:min(520px,94vw);box-shadow:0 8px 32px rgba(0,0,0,.18);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:1rem;font-weight:700;">🤖 Mensagem gerada por IA</h3>
+        <button onclick="document.getElementById('modal-ai').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#6b7280;">✕</button>
+      </div>
+      <textarea id="ai-mensagem" rows="8" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:12px;font-size:.9rem;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+        <button onclick="copiarMensagemAI()" class="btn btn-secondary btn-sm">📋 Copiar</button>
+        <a id="btn-enviar-ai-wpp" href="#" target="_blank" class="btn btn-whatsapp btn-sm">📱 Abrir WhatsApp</a>
+      </div>
+      <p style="font-size:.78rem;color:#9ca3af;margin:8px 0 0;">Revise antes de enviar. IA pode cometer erros.</p>
+    </div>
+  </div>
+
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778663486"></script>
-  <script src="js/auth.js?cb=1778663486"></script>
-  <script src="js/utils.js?cb=1778663486"></script>
+  <script src="js/supabase.js?cb=1778664016"></script>
+  <script src="js/auth.js?cb=1778664016"></script>
+  <script src="js/utils.js?cb=1778664016"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -148,6 +165,7 @@
     if (!clienteId) window.location.replace('clientes.html')
 
     let _cliente = null
+    let _docs = [], _imps = []
 
     async function carregar() {
       showLoading()
@@ -164,6 +182,8 @@
         _cliente = rows[0]
         if (!_cliente) { window.location.replace('clientes.html'); return }
 
+        _docs = docs
+        _imps = imps
         renderResumo(_cliente, lotes)
         renderDocs(docs)
         renderImpedimentos(imps)
@@ -406,8 +426,56 @@
       }
     }
 
+    async function gerarMensagem() {
+      if (!_cliente) return
+      const btn = document.getElementById('btn-gerar-wpp')
+      btn.textContent = '⏳ Gerando...'
+      btn.disabled = true
+      try {
+        const docsPendentes = _docs.filter(d => d.status === 'pendente').map(d => DOC_LABEL[d.tipo] || d.tipo)
+        const docsRecusados = _docs.filter(d => d.status === 'recusado').map(d => DOC_LABEL[d.tipo] || d.tipo)
+        const impsAtivos = _imps.filter(i => i.ativo).map(i => IMPEDIMENTO_LABEL[i.tipo] || i.tipo)
+        const diasParado = diasDesde(_cliente.ultima_atualizacao) || 0
+
+        const resp = await fetch('https://mepzoxoahpwcvvlymlfh.supabase.co/functions/v1/gerar-mensagem-wpp', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + getToken(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nome: _cliente.nome,
+            status_kanban: _cliente.status_kanban,
+            docs_pendentes: docsPendentes,
+            docs_recusados: docsRecusados,
+            impedimentos: impsAtivos,
+            dias_parado: diasParado
+          })
+        })
+        const data = await resp.json()
+        if (!resp.ok) throw new Error(data.error || 'Erro na IA')
+
+        document.getElementById('ai-mensagem').value = data.mensagem
+        const tel = _cliente.telefone.replace(/\D/g, '')
+        document.getElementById('btn-enviar-ai-wpp').href =
+          `https://wa.me/55${tel}?text=${encodeURIComponent(data.mensagem)}`
+        document.getElementById('modal-ai').classList.remove('hidden')
+
+        await sbPost('crm_historico', { cliente_id: clienteId, descricao: '🤖 Mensagem IA gerada', tipo: 'comunicacao' })
+      } catch (err) {
+        toast('Erro ao gerar: ' + err.message, 'error')
+      }
+      btn.textContent = '🤖 Gerar mensagem'
+      btn.disabled = false
+    }
+
+    function copiarMensagemAI() {
+      const txt = document.getElementById('ai-mensagem').value
+      navigator.clipboard.writeText(txt).then(() => toast('Copiado!', 'success'))
+    }
+
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778663486"></script>
+  <script src="js/sw-register.js?cb=1778664016"></script>
 </body>
 </html>
