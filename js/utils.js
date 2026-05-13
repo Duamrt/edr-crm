@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778687079'
+const CRM_VERSION = '1778687297'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -269,12 +269,35 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
 }
 
 // === AGENTE 2: AUDITOR DE DOCUMENTOS MCMV (determinístico) ===
+
+// Tiers fixos de criticidade — ordena cobrança dentro do grupo Operacional
+// (independente da etapa: o que pesa mais no funil bancário cobra primeiro)
+const MCMV_DOC_TIER = {
+  // Tier 1 — Crítica (rodar simulação básica)
+  rg_cpf_titular: 1,
+  comp_renda: 1,
+  certidao: 1,
+  // Tier 2 — Média (validar capacidade de compra)
+  fgts: 2,
+  ctps: 2,
+  ir: 2,
+  // Tier 3 — Baixa (juntar pro contrato final)
+  comp_residencia: 3,
+  cadunico: 3,
+  certidao_negativa: 3,
+  rg_cpf_conjuge: 3
+}
+
 // Detecta docs irrelevantes ao perfil (devem virar nao_aplicavel)
 function detectarNaoAplicaveis(cliente, membros = []) {
   const naoAplicaveis = []
   const temConjuge = membros.some(m => (m.parentesco || '') === 'Cônjuge')
   if (!temConjuge) naoAplicaveis.push('rg_cpf_conjuge')
   if (cliente.fgts === false || cliente.fgts === null) naoAplicaveis.push('fgts')
+  // CTPS só é exigida pra renda formal (CLT). Informal/autônomo não tem CTPS ativa.
+  if (cliente.tipo_renda && cliente.tipo_renda !== 'formal' && cliente.tipo_renda !== 'misto') {
+    naoAplicaveis.push('ctps')
+  }
   return naoAplicaveis
 }
 
@@ -301,12 +324,17 @@ function detectarInconsistencias(cliente, docs, membros = []) {
 }
 
 function auditarDocumentos(cliente, docs = [], membros = []) {
-  const resolvidos = docs.filter(d => d.status === 'entregue' || d.status === 'nao_aplicavel')
+  const entregues = docs.filter(d => d.status === 'entregue')
   const pendentes = docs.filter(d => d.status === 'pendente')
   const recusados = docs.filter(d => d.status === 'recusado')
   const naoAplicaveis = docs.filter(d => d.status === 'nao_aplicavel')
+  const relevantesTotal = docs.length - naoAplicaveis.length  // só conta o que importa
 
-  const completude = docs.length ? Math.round((resolvidos.length / docs.length) * 100) : 0
+  // Completude honesta: % dos docs RELEVANTES que estão entregues
+  // (N/A sai do denominador — pasta solteira sem FGTS chega a 100% real)
+  const completude = relevantesTotal > 0
+    ? Math.round((entregues.length / relevantesTotal) * 100)
+    : 100
 
   // Sugestões de N/A — docs ainda 'pendente' que deveriam virar nao_aplicavel
   const sugestoesNA = detectarNaoAplicaveis(cliente, membros)
@@ -364,23 +392,40 @@ function auditarDocumentos(cliente, docs = [], membros = []) {
   })
 
   // Operacionais: demais pendentes (exclui sugestões de N/A — vão pro bloco N/A)
+  // Ordenados por tier fixo de criticidade (Crítica → Média → Baixa)
   const tiposNaSugeridos = new Set(sugestoesNA.map(d => d.tipo))
-  pendentes.forEach(d => {
-    if (tiposListados.has(d.tipo) || tiposNaSugeridos.has(d.tipo)) return
-    tiposListados.add(d.tipo)
-    grupos.operacionais.push({ icone: '⚪', texto: DOC_LABEL[d.tipo] || d.tipo, tipo: d.tipo })
-  })
+  const TIER_LABEL = { 1: 'Crítica', 2: 'Média', 3: 'Baixa' }
+  const TIER_ICONE = { 1: '🔴', 2: '🟡', 3: '⚪' }
+  pendentes
+    .filter(d => !tiposListados.has(d.tipo) && !tiposNaSugeridos.has(d.tipo))
+    .sort((a, b) => (MCMV_DOC_TIER[a.tipo] || 99) - (MCMV_DOC_TIER[b.tipo] || 99))
+    .forEach(d => {
+      tiposListados.add(d.tipo)
+      const tier = MCMV_DOC_TIER[d.tipo] || 3
+      const sufixo = TIER_LABEL[tier] ? ` · ${TIER_LABEL[tier]}` : ''
+      grupos.operacionais.push({
+        icone: TIER_ICONE[tier] || '⚪',
+        texto: `${DOC_LABEL[d.tipo] || d.tipo}${sufixo}`,
+        tipo: d.tipo,
+        tier
+      })
+    })
 
   if (grupos.bloqueadores.length || grupos.riscos.length) {
     acoes.unshift('Cobrar via WhatsApp os docs urgentes desta família')
   }
 
+  // Pasta pronta = 100% dos docs relevantes entregues
+  const pastaPronta = completude >= 100 && relevantesTotal > 0
+
   return {
     completude,
     total: docs.length,
-    resolvidos: resolvidos.length,
+    relevantesTotal,
+    entregues: entregues.length,
     pendentes: pendentes.length,
     proximaEtapa,
+    pastaPronta,
     grupos,
     sugestoesNA,
     naoAplicaveis,
