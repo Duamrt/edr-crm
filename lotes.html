@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778665341">
+  <link rel="stylesheet" href="css/style.css?cb=1778667711">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -109,9 +109,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778665341"></script>
-  <script src="js/auth.js?cb=1778665341"></script>
-  <script src="js/utils.js?cb=1778665341"></script>
+  <script src="js/supabase.js?cb=1778667711"></script>
+  <script src="js/auth.js?cb=1778667711"></script>
+  <script src="js/utils.js?cb=1778667711"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -153,11 +153,11 @@
       const quadraA = _lotes.filter(l => l.quadra === 'A').sort((a, b) => a.numero - b.numero)
       const quadraB = _lotes.filter(l => l.quadra === 'B').sort((a, b) => a.numero - b.numero)
 
-      // Coordenadas calibradas para o render (viewBox 1000x562, escala 1000/1456 × 562/816)
-      // Quadra A: fileira superior, 17 lotes, x 148→992, y 121→296
-      // Quadra B: fileira inferior direita, 11 lotes, x 337→989, y 310→500
-      const A = { x0: 148, y0: 121, y1: 296, x1: 992 }
-      const B = { x0: 337, y0: 310, y1: 500, x1: 989 }
+      // Coordenadas calibradas para o render (viewBox 1000x562)
+      // Quadra A: fileira superior, 17 lotes — começa após a rua diagonal, termina antes da bússola
+      // Quadra B: fileira inferior, 11 lotes — começa após a rua diagonal da B, termina antes da bússola
+      const A = { x0: 368, y0: 120, y1: 293, x1: 952 }
+      const B = { x0: 553, y0: 308, y1: 496, x1: 952 }
 
       const lotWA = (A.x1 - A.x0) / quadraA.length
       const lotHA = A.y1 - A.y0
@@ -313,6 +313,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778665341"></script>
+  <script src="js/sw-register.js?cb=1778667711"></script>
 </body>
 </html>
