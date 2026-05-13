@@ -22,6 +22,9 @@ for file in *.html; do
   sed -i "s/\.css\"/\.css\?cb=${TIMESTAMP}\"/g" "$file"
 done
 
+# Atualiza versão do Service Worker
+sed -i "s/const VERSION = '[0-9]*'/const VERSION = '${TIMESTAMP}'/g" sw.js
+
 # Commit e push dev
 git add .
 git commit -m "$COMMIT_MSG"
