@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778667711'
+const CRM_VERSION = '1778667811'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -32,7 +32,7 @@ function fmtMoeda(v) {
 // Formatar data: dd/mm/aaaa
 function fmtData(v) {
   if (!v) return '—'
-  const d = new Date(v + 'T12:00:00')
+  const d = v.includes('T') ? new Date(v) : new Date(v + 'T12:00:00')
   return d.toLocaleDateString('pt-BR')
 }
 
