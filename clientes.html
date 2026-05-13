@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?cb=1778661727">
   <script>
     // Auth guard: bloqueia FOUC antes do render
     document.documentElement.style.visibility = 'hidden'
@@ -14,10 +14,7 @@
   <div class="app-shell">
     <!-- Sidebar -->
     <nav class="sidebar">
-      <div class="sidebar-logo">
-        🏠 EDR CRM
-        <span>Gestão MCMV</span>
-      </div>
+      <div class="sidebar-logo"><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div>
       <div class="sidebar-nav">
         <a href="clientes.html" class="active">👥 Famílias</a>
         <a href="kanban.html">📋 Kanban</a>
@@ -89,9 +86,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/utils.js"></script>
+  <script src="js/supabase.js?cb=1778661727"></script>
+  <script src="js/auth.js?cb=1778661727"></script>
+  <script src="js/utils.js?cb=1778661727"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
