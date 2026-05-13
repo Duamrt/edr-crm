@@ -1,4 +1,13 @@
 // EDR CRM — Utilitários
+const CRM_VERSION = '1778663486'
+
+document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date(parseInt(CRM_VERSION) * 1000)
+  const v = `v${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`
+  const el = document.getElementById('crm-versao-footer')
+  if (el) el.textContent = v
+  console.log(`%c EDR CRM ${v} `, 'background:#2d6a4f;color:#fff;font-weight:bold;padding:4px 8px;border-radius:4px;')
+})
 
 // Formatar CPF: 000.000.000-00
 function fmtCpf(v) {

@@ -25,6 +25,9 @@ done
 # Atualiza versão do Service Worker
 sed -i "s/const VERSION = '[0-9]*'/const VERSION = '${TIMESTAMP}'/g" sw.js
 
+# Atualiza versão do CRM
+sed -i "s/const CRM_VERSION = '[0-9]*'/const CRM_VERSION = '${TIMESTAMP}'/g" js/utils.js
+
 # Commit e push dev
 git add .
 git commit -m "$COMMIT_MSG"
