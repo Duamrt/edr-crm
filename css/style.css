@@ -204,6 +204,8 @@ h3 { font-size: 1rem; font-weight: 600; }
 .btn-danger:hover { background: #fca5a5; }
 .btn-whatsapp { background: #22c55e; color: var(--branco); }
 .btn-whatsapp:hover { background: #16a34a; }
+.btn-ai { background: #7c3aed; color: var(--branco); }
+.btn-ai:hover { background: #6d28d9; }
 .btn-sm { padding: 6px 12px; font-size: .82rem; }
 .btn-icon { padding: 8px; border-radius: var(--raio); }
 
