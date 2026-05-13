@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778668837">
+  <link rel="stylesheet" href="css/style.css?cb=1778669083">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -22,7 +22,10 @@
     <div class="main">
       <div class="topbar">
         <span class="topbar-title">Lotes — MCMV</span>
-        <div id="contador-lotes" class="text-sm text-muted"></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div id="contador-lotes" class="text-sm text-muted"></div>
+          <button id="btn-ajustar" class="btn btn-secondary" onclick="toggleEditMode()" style="font-size:.8rem;padding:4px 10px;">⚙️ Ajustar</button>
+        </div>
       </div>
 
       <div class="page-content">
@@ -109,9 +112,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778668837"></script>
-  <script src="js/auth.js?cb=1778668837"></script>
-  <script src="js/utils.js?cb=1778668837"></script>
+  <script src="js/supabase.js?cb=1778669083"></script>
+  <script src="js/auth.js?cb=1778669083"></script>
+  <script src="js/utils.js?cb=1778669083"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -121,6 +124,82 @@
 
     let _lotes = []
     let _loteAtual = null
+    let _editMode = false
+    let _drag = null
+
+    // Posições padrão derivadas do SketchUp export
+    const _DEFAULT_POS = {
+      A: [{cx:213,cy:207},{cx:256,cy:207},{cx:298,cy:207},{cx:341,cy:207},{cx:384,cy:207},
+          {cx:426,cy:207},{cx:469,cy:207},{cx:512,cy:207},{cx:554,cy:207},{cx:597,cy:207},
+          {cx:640,cy:207},{cx:682,cy:207},{cx:725,cy:207},{cx:768,cy:207},{cx:810,cy:207},
+          {cx:853,cy:207},{cx:895,cy:207}],
+      B: [{cx:440,cy:402},{cx:486,cy:402},{cx:531,cy:402},{cx:577,cy:402},{cx:622,cy:402},
+          {cx:668,cy:402},{cx:713,cy:402},{cx:759,cy:402},{cx:804,cy:402},{cx:850,cy:402},{cx:895,cy:402}]
+    }
+
+    // Carrega posições salvas ou usa padrão
+    function loadPos() {
+      try {
+        const s = localStorage.getItem('edr_lotes_pos')
+        return s ? JSON.parse(s) : JSON.parse(JSON.stringify(_DEFAULT_POS))
+      } catch { return JSON.parse(JSON.stringify(_DEFAULT_POS)) }
+    }
+    let _pos = loadPos()
+
+    function savePos() { localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos)) }
+
+    function toggleEditMode() {
+      _editMode = !_editMode
+      const btn = document.getElementById('btn-ajustar')
+      if (_editMode) {
+        btn.textContent = '✓ Salvar'
+        btn.className = 'btn btn-primary'
+        toast('Arraste os marcadores para posicionar', 'info')
+      } else {
+        btn.textContent = '⚙️ Ajustar'
+        btn.className = 'btn btn-secondary'
+        savePos()
+        toast('Posições salvas', 'success')
+      }
+      renderLotes()
+      setupDrag()
+    }
+
+    function setupDrag() {
+      const svg = document.getElementById('mapa-svg')
+      svg.onpointermove = null
+      svg.onpointerup = null
+      if (!_editMode) return
+
+      svg.onpointermove = e => {
+        if (!_drag) return
+        const rect = svg.getBoundingClientRect()
+        const scaleX = 1000 / rect.width
+        const scaleY = 562 / rect.height
+        const cx = Math.round(_drag.origCX + (e.clientX - _drag.startX) * scaleX)
+        const cy = Math.round(_drag.origCY + (e.clientY - _drag.startY) * scaleY)
+        _pos[_drag.q][_drag.i] = { cx, cy }
+        // Move o elemento diretamente sem re-render
+        const g = svg.querySelector(`g[data-q="${_drag.q}"][data-i="${_drag.i}"]`)
+        if (g) {
+          g.querySelector('circle').setAttribute('cx', cx)
+          g.querySelector('circle').setAttribute('cy', cy)
+          g.querySelectorAll('text').forEach((t, ti) => {
+            t.setAttribute('x', cx)
+            t.setAttribute('y', ti === 0 ? cy - 4 : cy + 7)
+          })
+        }
+      }
+
+      svg.onpointerup = () => { _drag = null }
+    }
+
+    function startDrag(e, q, i) {
+      if (!_editMode) return
+      e.preventDefault()
+      e.stopPropagation()
+      _drag = { q, i, startX: e.clientX, startY: e.clientY, origCX: _pos[q][i].cx, origCY: _pos[q][i].cy }
+    }
 
     async function carregar() {
       showLoading()
@@ -131,61 +210,53 @@
         ])
         const clienteMap = {}
         clientes.forEach(c => { clienteMap[c.lote_id] = c })
-
         _lotes = lotes.map(l => {
           const cliente = clienteMap[l.id]
           let statusReal = l.status
-          if (cliente) {
-            statusReal = cliente.status_kanban === 'concluido' ? 'vendido' : 'reservado'
-          }
+          if (cliente) statusReal = cliente.status_kanban === 'concluido' ? 'vendido' : 'reservado'
           return { ...l, statusReal, cliente }
         })
-
         renderLotes()
         atualizarContador()
-      } catch (err) {
-        toast('Erro: ' + err.message, 'error')
-      }
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
       hideLoading()
     }
 
     function renderLotes() {
       const quadraA = _lotes.filter(l => l.quadra === 'A').sort((a, b) => a.numero - b.numero)
       const quadraB = _lotes.filter(l => l.quadra === 'B').sort((a, b) => a.numero - b.numero)
-
-      // Posições X derivadas do export SketchUp 1000px (top-down, escala 1:1 horizontal)
-      // Y fixo por quadra, calibrado visualmente no render
-      const CX_A = [213,256,298,341,384,426,469,512,554,597,640,682,725,768,810,853,895]
-      const CX_B = [440,486,531,577,622,668,713,759,804,850,895]
-      const CY_A = 207
-      const CY_B = 402
-
       const CORES = { disponivel: '#22c55e', reservado: '#f59e0b', vendido: '#6b7280', bloqueado: '#ef4444' }
 
-      function badge(lote, cx, cy, prefix) {
+      function badge(lote, pos, q, i) {
+        const { cx, cy } = pos
         const cor = CORES[lote.statusReal] || '#94a3b8'
-        const label = `${prefix}${lote.numero}`
+        const label = `${q}${lote.numero}`
         const nomeAbrev = lote.cliente ? lote.cliente.nome.split(' ')[0].substring(0, 6) : ''
+        if (_editMode) {
+          return `<g data-q="${q}" data-i="${i}" style="cursor:grab"
+            onpointerdown="startDrag(event,'${q}',${i})">
+            <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.75" stroke="white" stroke-width="1.5"/>
+            <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
+                  fill="white" font-size="8" font-weight="700" font-family="sans-serif"
+                  pointer-events="none">${label}</text>
+          </g>`
+        }
         return `<g onclick="abrirLote('${lote.id}')" style="cursor:pointer"
-          onmouseover="this.querySelector('circle').setAttribute('r','21');this.querySelector('circle').setAttribute('opacity','1')"
-          onmouseout="this.querySelector('circle').setAttribute('r','17');this.querySelector('circle').setAttribute('opacity','0.90')">
-          <circle cx="${cx}" cy="${cy}" r="17" fill="${cor}" opacity="0.90"/>
-          <text x="${cx}" y="${nomeAbrev ? cy - 4 : cy}"
-                text-anchor="middle" dominant-baseline="middle"
-                fill="white" font-size="9" font-weight="700" font-family="sans-serif"
+          onmouseover="this.querySelector('circle').setAttribute('r','15');this.querySelector('circle').setAttribute('opacity','1')"
+          onmouseout="this.querySelector('circle').setAttribute('r','12');this.querySelector('circle').setAttribute('opacity','0.90')">
+          <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.90"/>
+          <text x="${cx}" y="${nomeAbrev ? cy - 3 : cy}" text-anchor="middle" dominant-baseline="middle"
+                fill="white" font-size="8" font-weight="700" font-family="sans-serif"
                 pointer-events="none">${label}</text>
-          ${nomeAbrev ? `<text x="${cx}" y="${cy + 7}"
-                text-anchor="middle" dominant-baseline="middle"
-                fill="rgba(255,255,255,.85)" font-size="7.5" font-family="sans-serif"
+          ${nomeAbrev ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" dominant-baseline="middle"
+                fill="rgba(255,255,255,.85)" font-size="6.5" font-family="sans-serif"
                 pointer-events="none">${nomeAbrev}</text>` : ''}
         </g>`
       }
 
       let s = `<image href="img/mapa-lotes.png" x="0" y="0" width="1000" height="562" preserveAspectRatio="xMidYMid meet"/>`
-
-      quadraA.forEach((lote, i) => { s += badge(lote, CX_A[i] ?? 500, CY_A, 'A') })
-      quadraB.forEach((lote, i) => { s += badge(lote, CX_B[i] ?? 700, CY_B, 'B') })
-
+      quadraA.forEach((lote, i) => { s += badge(lote, _pos.A[i] || {cx:500,cy:207}, 'A', i) })
+      quadraB.forEach((lote, i) => { s += badge(lote, _pos.B[i] || {cx:700,cy:402}, 'B', i) })
       document.getElementById('mapa-svg').innerHTML = s
     }
 
@@ -291,6 +362,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778668837"></script>
+  <script src="js/sw-register.js?cb=1778669083"></script>
 </body>
 </html>
