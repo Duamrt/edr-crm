@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778665004'
+const CRM_VERSION = '1778665341'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -155,6 +155,38 @@ function maskTel(input) {
     this.value = v
   })
 }
+
+// ESC fecha o modal mais recente aberto na página
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return
+
+  // Modal IA (ficha.html)
+  const modalAI = document.getElementById('modal-ai')
+  if (modalAI && !modalAI.classList.contains('hidden')) {
+    modalAI.classList.add('hidden')
+    return
+  }
+
+  // Modal edição de lote (lotes.html) — fecha primeiro, depois o de detalhe
+  const modalEdit = document.getElementById('modal-editar-lote')
+  if (modalEdit && !modalEdit.classList.contains('hidden')) {
+    if (typeof fecharEdicao === 'function') fecharEdicao()
+    else modalEdit.classList.add('hidden')
+    return
+  }
+
+  // Modal detalhe de lote (lotes.html)
+  const modalLote = document.getElementById('modal-lote')
+  if (modalLote && !modalLote.classList.contains('hidden')) {
+    if (typeof fecharModal === 'function') fecharModal()
+    else modalLote.classList.add('hidden')
+    return
+  }
+
+  // Qualquer outro .modal-overlay aberto (futuras páginas)
+  const overlay = document.querySelector('.modal-overlay:not(.hidden)')
+  if (overlay) overlay.classList.add('hidden')
+})
 
 // Toast simples
 function toast(msg, tipo = 'info') {

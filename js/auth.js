@@ -18,8 +18,8 @@ function authGuard() {
 function sessionGet() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY)) } catch { return null }
 }
-function sessionSet(token, usuario) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, usuario }))
+function sessionSet(token, usuario, refresh_token = null) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, usuario, refresh_token }))
 }
 function sessionClear() {
   localStorage.removeItem(SESSION_KEY)
@@ -28,6 +28,23 @@ function sessionClear() {
 }
 
 function getUsuario() { return _usuario }
+
+async function refreshSession() {
+  const s = sessionGet()
+  if (!s?.refresh_token) { sessionClear(); window.location.replace('index.html'); return false }
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    })
+    if (!r.ok) { sessionClear(); window.location.replace('index.html'); return false }
+    const data = await r.json()
+    setToken(data.access_token)
+    sessionSet(data.access_token, s.usuario, data.refresh_token)
+    return true
+  } catch { return false }
+}
 
 async function login(email, senha) {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -51,7 +68,7 @@ async function login(email, senha) {
     perfil = { id: data.user.id, nome: data.user.email, role: 'operador' }
   }
 
-  sessionSet(data.access_token, { ...data.user, ...perfil })
+  sessionSet(data.access_token, { ...data.user, ...perfil }, data.refresh_token)
   return perfil
 }
 
