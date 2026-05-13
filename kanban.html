@@ -10,7 +10,7 @@
 <body>
   <div class="app-shell">
     <nav class="sidebar">
-      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-logo"><div class="logo-title">🏠 EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div>
       <div class="sidebar-nav">
         <a href="clientes.html">👥 Famílias</a>
         <a href="kanban.html" class="active">📋 Kanban</a>
@@ -144,12 +144,13 @@
         colEl.addEventListener('drop', async e => {
           e.preventDefault()
           colEl.classList.remove('drag-over')
-          if (!_dragging) return
+          const clienteId = _dragging  // captura antes de qualquer await
+          if (!clienteId) return
           const novoStatus = colEl.dataset.status
           try {
-            await sbPatch('crm_clientes', _dragging, { status_kanban: novoStatus })
+            await sbPatch('crm_clientes', clienteId, { status_kanban: novoStatus })
             await sbPost('crm_historico', {
-              cliente_id: _dragging,
+              cliente_id: clienteId,
               descricao: `Movido para: ${KANBAN_LABEL[novoStatus]}`,
               tipo: 'sistema'
             })

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EDR CRM — Lotes Projeto Josué</title>
+  <title>EDR CRM — Lotes MCMV</title>
   <link rel="stylesheet" href="css/style.css">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
   <div class="app-shell">
     <nav class="sidebar">
-      <div class="sidebar-logo">🏠 EDR CRM<span>MCMV Josué</span></div>
+      <div class="sidebar-logo"><div class="logo-title">🏠 EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div>
       <div class="sidebar-nav">
         <a href="clientes.html">👥 Famílias</a>
         <a href="kanban.html">📋 Kanban</a>
@@ -21,7 +21,7 @@
 
     <div class="main">
       <div class="topbar">
-        <span class="topbar-title">Lotes — Projeto Josué</span>
+        <span class="topbar-title">Lotes — MCMV</span>
         <div id="contador-lotes" class="text-sm text-muted"></div>
       </div>
 
@@ -48,8 +48,50 @@
             </div>
             <div class="modal-footer">
               <button onclick="fecharModal()" class="btn btn-secondary">Fechar</button>
+              <button id="modal-btn-editar" class="btn btn-secondary" onclick="abrirEdicao()">✏️ Editar</button>
               <a href="#" id="modal-btn-cliente" class="btn btn-primary hidden">Ver família</a>
               <button id="modal-btn-bloquear" class="btn btn-danger hidden" onclick="toggleBloquear()">Bloquear lote</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal edição lote -->
+        <div id="modal-editar-lote" class="modal-overlay hidden">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>Editar lote</h3>
+              <button class="modal-close" onclick="fecharEdicao()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número</label>
+                  <input type="number" id="edit-numero" min="1">
+                </div>
+                <div class="form-group">
+                  <label>Metragem (m²)</label>
+                  <input type="number" id="edit-metragem" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label>Quadra</label>
+                  <input type="text" id="edit-quadra" maxlength="10">
+                </div>
+                <div class="form-group">
+                  <label>Status manual</label>
+                  <select id="edit-status">
+                    <option value="disponivel">Disponível</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
+                </div>
+                <div class="form-group form-full">
+                  <label>Observação</label>
+                  <input type="text" id="edit-observacao" maxlength="100">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button onclick="fecharEdicao()" class="btn btn-secondary">Cancelar</button>
+              <button onclick="salvarEdicao()" class="btn btn-primary">Salvar</button>
             </div>
           </div>
         </div>
@@ -185,6 +227,38 @@
     function fecharModal() {
       document.getElementById('modal-lote').classList.add('hidden')
       _loteAtual = null
+    }
+
+    function abrirEdicao() {
+      if (!_loteAtual) return
+      document.getElementById('edit-numero').value = _loteAtual.numero || ''
+      document.getElementById('edit-metragem').value = _loteAtual.metragem || ''
+      document.getElementById('edit-quadra').value = _loteAtual.quadra || ''
+      document.getElementById('edit-status').value = _loteAtual.status || 'disponivel'
+      document.getElementById('edit-observacao').value = _loteAtual.observacao || ''
+      document.getElementById('modal-editar-lote').classList.remove('hidden')
+    }
+
+    function fecharEdicao() {
+      document.getElementById('modal-editar-lote').classList.add('hidden')
+    }
+
+    async function salvarEdicao() {
+      if (!_loteAtual) return
+      const payload = {
+        numero: parseInt(document.getElementById('edit-numero').value),
+        metragem: parseFloat(document.getElementById('edit-metragem').value) || null,
+        quadra: document.getElementById('edit-quadra').value.trim() || null,
+        status: document.getElementById('edit-status').value,
+        observacao: document.getElementById('edit-observacao').value.trim() || null
+      }
+      try {
+        await sbPatch('crm_lotes', _loteAtual.id, payload)
+        toast('Lote atualizado', 'success')
+        fecharEdicao()
+        fecharModal()
+        carregar()
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
     }
 
     carregar()
