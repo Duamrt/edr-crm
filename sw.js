@@ -1,4 +1,4 @@
-const VERSION = '1778683735'
+const VERSION = '1778684152'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Somente assets estáticos com cache-buster — HTML nunca entra no precache
