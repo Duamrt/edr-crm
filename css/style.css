@@ -745,9 +745,9 @@ tbody tr:hover { background: #f9fafb; }
 .triagem-nota { font-size: .65rem; color: var(--text-tertiary); font-style: italic; }
 
 .triagem-checks {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 12px;
 }
 .triagem-check {
@@ -759,6 +759,53 @@ tbody tr:hover { background: #f9fafb; }
   padding: 2px 0;
 }
 .triagem-check-icone { flex-shrink: 0; font-size: .95rem; line-height: 1.3; }
+
+/* Grupos categorizados por gravidade */
+.triagem-grupo {
+  border-left: 3px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  background: rgba(0,0,0,.02);
+}
+.triagem-grupo[data-tipo="bloqueador"] { border-left-color: var(--vermelho); background: rgba(220,38,38,.05); }
+.triagem-grupo[data-tipo="risco"] { border-left-color: var(--amarelo); background: rgba(217,119,6,.05); }
+.triagem-grupo[data-tipo="operacional"] { border-left-color: var(--text-tertiary); background: rgba(107,114,128,.04); }
+.triagem-grupo[data-tipo="positivo"] { border-left-color: var(--verde); background: rgba(45,106,79,.04); }
+
+.triagem-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.triagem-grupo-contagem {
+  background: rgba(0,0,0,.08);
+  color: var(--text-secondary);
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.triagem-grupo[data-tipo="bloqueador"] .triagem-grupo-contagem { background: var(--vermelho); color: #fff; }
+.triagem-grupo[data-tipo="risco"] .triagem-grupo-contagem { background: var(--amarelo); color: #fff; }
+.triagem-grupo[data-tipo="positivo"] .triagem-grupo-contagem { background: var(--verde); color: #fff; }
+
+.triagem-grupo-itens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2px 12px;
+}
+
+/* Input readonly (auto-calculado) */
+.input-readonly {
+  background: #f3f4f6 !important;
+  color: var(--text-secondary) !important;
+  cursor: not-allowed;
+  border-color: var(--border-light) !important;
+}
 
 .triagem-acoes {
   border-top: 1px solid var(--border-light);

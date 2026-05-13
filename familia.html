@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778685874">
+  <link rel="stylesheet" href="css/style.css?cb=1778686484">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -64,8 +64,8 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>Renda total simulada (R$)</label>
-                <input type="number" id="renda_simulada" min="0" step="0.01" placeholder="0,00">
+                <label>Renda total simulada (R$) <span class="text-muted text-sm">— soma automática</span></label>
+                <input type="number" id="renda_simulada" min="0" step="0.01" placeholder="0,00" class="input-readonly" readonly title="Calculado automaticamente da composição familiar">
               </div>
               <div class="form-group">
                 <label>Renda total confirmada (R$)</label>
@@ -159,9 +159,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778685874"></script>
-  <script src="js/auth.js?cb=1778685874"></script>
-  <script src="js/utils.js?cb=1778685874"></script>
+  <script src="js/supabase.js?cb=1778686484"></script>
+  <script src="js/auth.js?cb=1778686484"></script>
+  <script src="js/utils.js?cb=1778686484"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -179,14 +179,7 @@
       document.getElementById('grupo-fgts-valor').style.display = this.value === 'true' ? 'block' : 'none'
     })
 
-    // Calcular faixa automaticamente quando renda simulada muda
-    document.getElementById('renda_simulada').addEventListener('input', function() {
-      const faixaSelect = document.getElementById('faixa_mcmv')
-      if (!faixaSelect.value) {
-        const f = calcFaixaMcmv(parseFloat(this.value) || 0)
-        if (f) faixaSelect.value = String(f)
-      }
-    })
+    // Faixa MCMV é recalculada dentro de calcularRendaTotal() quando composição muda
 
     // Adicionar membro
     function addMembro(nome='', parentesco='', renda='') {
@@ -202,6 +195,7 @@
         <div class="form-group" style="margin:0;">
           <select class="membro-parentesco">
             <option value="">Parentesco</option>
+            <option value="Titular" ${parentesco==='Titular'?'selected':''}>Titular</option>
             <option value="Cônjuge" ${parentesco==='Cônjuge'?'selected':''}>Cônjuge</option>
             <option value="Filho(a)" ${parentesco==='Filho(a)'?'selected':''}>Filho(a)</option>
             <option value="Pai/Mãe" ${parentesco==='Pai/Mãe'?'selected':''}>Pai/Mãe</option>
@@ -227,6 +221,13 @@
       const rendas = [...document.querySelectorAll('.membro-renda')].map(i => parseFloat(i.value) || 0)
       const total = rendas.reduce((a,b) => a+b, 0)
       document.getElementById('renda-calculada').textContent = fmtMoeda(total)
+      // Auto-preenche renda simulada (campo readonly)
+      document.getElementById('renda_simulada').value = total > 0 ? total.toFixed(2) : ''
+      // Recalcula faixa MCMV se não tiver override manual
+      const faixaSelect = document.getElementById('faixa_mcmv')
+      const faixaCalc = calcFaixaMcmv(total)
+      // Sempre atualiza pra refletir a renda atual da composição
+      faixaSelect.value = faixaCalc ? String(faixaCalc) : ''
     }
 
     function getMembros() {
@@ -395,8 +396,17 @@
       carregarCliente(clienteId)
     } else {
       carregarLotes()
+      // Família nova: já adiciona linha pro titular (auto-vincula renda quando atendente preencher nome)
+      addMembro('', 'Titular', '')
+      // Quando o atendente digitar o nome do titular no campo principal, espelha pra primeira linha de membro
+      document.getElementById('nome').addEventListener('input', function() {
+        const primeiroMembro = document.querySelector('.familia-membro .membro-nome')
+        if (primeiroMembro && !primeiroMembro.dataset.editadoManual) {
+          primeiroMembro.value = this.value
+        }
+      })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778685874"></script>
+  <script src="js/sw-register.js?cb=1778686484"></script>
 </body>
 </html>
