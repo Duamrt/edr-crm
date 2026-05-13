@@ -1,18 +1,22 @@
-const VERSION = '1778688345'
+const VERSION = '1778689016'
 const CACHE = 'edr-crm-v' + VERSION
 
-// Somente assets estáticos com cache-buster — HTML nunca entra no precache
+// Assets pré-cacheados na instalação do SW
 const ASSETS = [
   'css/style.css?cb=' + VERSION,
   'js/supabase.js?cb=' + VERSION,
   'js/auth.js?cb=' + VERSION,
-  'js/utils.js?cb=' + VERSION
+  'js/utils.js?cb=' + VERSION,
+  'img/mapa-lotes.jpg'  // imagem pesada — fica em cache desde o primeiro load
 ]
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(ASSETS))
+      .then(cache => cache.addAll(ASSETS).catch(err => {
+        // Falha em algum asset não bloqueia a instalação (img pode estar 404)
+        console.warn('SW precache parcial:', err)
+      }))
       .then(() => self.skipWaiting())
   )
 })
@@ -33,20 +37,27 @@ self.addEventListener('fetch', e => {
   const isHtml = url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname === ''
 
   if (isHtml) {
-    // HTML: network-first — sempre busca versão fresca; cache só como fallback offline
+    // HTML: stale-while-revalidate
+    // Devolve cache imediato (tela instantânea) + atualiza em background pra próxima visita
     e.respondWith(
-      fetch(e.request)
-        .then(response => {
-          const clone = response.clone()
-          caches.open(CACHE).then(c => c.put(e.request, clone))
-          return response
+      caches.open(CACHE).then(cache =>
+        cache.match(e.request).then(cached => {
+          const networkFetch = fetch(e.request)
+            .then(response => {
+              if (response && response.status === 200) {
+                cache.put(e.request, response.clone())
+              }
+              return response
+            })
+            .catch(() => cached)  // offline: usa cache
+          return cached || networkFetch
         })
-        .catch(() => caches.match(e.request))
+      )
     )
     return
   }
 
-  // JS/CSS/imagens: cache-first (já têm ?cb= para invalidar na próxima versão)
+  // JS/CSS/imagens: cache-first
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request))
   )
