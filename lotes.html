@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778672904">
+  <link rel="stylesheet" href="css/style.css?cb=1778673003">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -112,9 +112,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778672904"></script>
-  <script src="js/auth.js?cb=1778672904"></script>
-  <script src="js/utils.js?cb=1778672904"></script>
+  <script src="js/supabase.js?cb=1778673003"></script>
+  <script src="js/auth.js?cb=1778673003"></script>
+  <script src="js/utils.js?cb=1778673003"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -275,7 +275,7 @@
         </g>`
       }
 
-      let s = `<image href="img/mapa-lotes.png" x="0" y="0" width="1000" height="562" preserveAspectRatio="xMidYMid meet"/>`
+      let s = `<image href="img/mapa-lotes.jpg" x="0" y="0" width="1000" height="562" preserveAspectRatio="xMidYMid meet"/>`
       quadraA.forEach((lote, i) => { s += badge(lote, _pos.A[i] || {cx:500,cy:207}, 'A', i) })
       quadraB.forEach((lote, i) => { s += badge(lote, _pos.B[i] || {cx:700,cy:402}, 'B', i) })
       document.getElementById('mapa-svg').innerHTML = s
@@ -383,6 +383,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778672904"></script>
+  <script src="js/sw-register.js?cb=1778673003"></script>
 </body>
 </html>
