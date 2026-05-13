@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778687079">
+  <link rel="stylesheet" href="css/style.css?cb=1778687297">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -197,9 +197,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778687079"></script>
-  <script src="js/auth.js?cb=1778687079"></script>
-  <script src="js/utils.js?cb=1778687079"></script>
+  <script src="js/supabase.js?cb=1778687297"></script>
+  <script src="js/auth.js?cb=1778687297"></script>
+  <script src="js/utils.js?cb=1778687297"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -330,14 +330,17 @@
       const card = document.getElementById('auditoria-card')
       card.classList.remove('hidden')
 
-      // Barra de progresso
+      // Barra de progresso (denominador = docs relevantes, N/A não conta)
       document.getElementById('auditoria-barra').style.width = _auditoria.completude + '%'
       document.getElementById('auditoria-percent').textContent = _auditoria.completude + '%'
-      document.getElementById('auditoria-frac').textContent = `(${_auditoria.resolvidos}/${_auditoria.total})`
-      card.dataset.completo = _auditoria.completude >= 100 ? 'true' : 'false'
+      document.getElementById('auditoria-frac').textContent = `(${_auditoria.entregues}/${_auditoria.relevantesTotal} relevantes)`
+      card.dataset.completo = _auditoria.pastaPronta ? 'true' : 'false'
 
       // Grupos categorizados (reusa renderGrupo do Triador)
       const blocos = []
+      if (_auditoria.pastaPronta) {
+        blocos.push(`<div class="auditoria-selo">📤 Pasta Pronta para Envio ao Correspondente</div>`)
+      }
       if (_auditoria.grupos.bloqueadores.length) {
         blocos.push(renderGrupo('bloqueador', '🛑 Bloqueadores', _auditoria.grupos.bloqueadores))
       }
@@ -345,10 +348,7 @@
         blocos.push(renderGrupo('risco', '💳 Vencendo / Inconsistências', _auditoria.grupos.riscos))
       }
       if (_auditoria.grupos.operacionais.length) {
-        blocos.push(renderGrupo('operacional', '📋 Próximos pendentes', _auditoria.grupos.operacionais))
-      }
-      if (!blocos.length && _auditoria.completude >= 100) {
-        blocos.push(`<div class="triagem-grupo" data-tipo="positivo"><div class="triagem-grupo-titulo">✅ Pasta documental completa</div></div>`)
+        blocos.push(renderGrupo('operacional', '📋 Próximos pendentes (ordem de cobrança)', _auditoria.grupos.operacionais))
       }
       document.getElementById('auditoria-checks').innerHTML = blocos.join('')
 
@@ -683,6 +683,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778687079"></script>
+  <script src="js/sw-register.js?cb=1778687297"></script>
 </body>
 </html>
