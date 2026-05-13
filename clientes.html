@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778688345">
+  <link rel="stylesheet" href="css/style.css?cb=1778689016">
+  <link rel="prefetch" href="kanban.html">
+  <link rel="prefetch" href="lotes.html">
+  <link rel="prefetch" href="familia.html">
   <script>
     // Auth guard: bloqueia FOUC antes do render
     document.documentElement.style.visibility = 'hidden'
@@ -86,9 +89,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778688345"></script>
-  <script src="js/auth.js?cb=1778688345"></script>
-  <script src="js/utils.js?cb=1778688345"></script>
+  <script src="js/supabase.js?cb=1778689016"></script>
+  <script src="js/auth.js?cb=1778689016"></script>
+  <script src="js/utils.js?cb=1778689016"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -192,6 +195,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778688345"></script>
+  <script src="js/sw-register.js?cb=1778689016"></script>
 </body>
 </html>
