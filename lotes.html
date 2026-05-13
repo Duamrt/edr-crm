@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778669289">
+  <link rel="stylesheet" href="css/style.css?cb=1778670001">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -112,9 +112,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778669289"></script>
-  <script src="js/auth.js?cb=1778669289"></script>
-  <script src="js/utils.js?cb=1778669289"></script>
+  <script src="js/supabase.js?cb=1778670001"></script>
+  <script src="js/auth.js?cb=1778670001"></script>
+  <script src="js/utils.js?cb=1778670001"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -136,12 +136,37 @@
           {cx:668,cy:402},{cx:713,cy:402},{cx:759,cy:402},{cx:804,cy:402},{cx:850,cy:402},{cx:895,cy:402}]
     }
 
-    function loadPos() {
-      try { const s = localStorage.getItem('edr_lotes_pos'); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(_DEFAULT_POS)) }
-      catch { return JSON.parse(JSON.stringify(_DEFAULT_POS)) }
+    let _pos = JSON.parse(JSON.stringify(_DEFAULT_POS))
+
+    async function loadPos() {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/crm_config?chave=eq.lotes_posicoes&select=valor`, { headers: _headers() })
+        if (r.ok) {
+          const data = await r.json()
+          if (data[0]?.valor) {
+            _pos = data[0].valor
+            localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
+            return
+          }
+        }
+      } catch(e) { console.warn('loadPos DB error, usando localStorage:', e) }
+      const cached = localStorage.getItem('edr_lotes_pos')
+      if (cached) try { _pos = JSON.parse(cached) } catch {}
     }
-    let _pos = loadPos()
-    function savePos() { localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos)) }
+
+    async function savePos() {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/crm_config?chave=eq.lotes_posicoes`, {
+          method: 'PATCH',
+          headers: { ..._headers(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ valor: _pos, updated_at: new Date().toISOString() })
+        })
+        localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
+      } catch(e) {
+        localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
+        console.warn('savePos fallback localStorage:', e)
+      }
+    }
 
     // Drag via setPointerCapture — captura todos os eventos mesmo fora do círculo
     function initDrag() {
@@ -180,7 +205,7 @@
       svg.addEventListener('pointercancel', () => { _drag = null })
     }
 
-    function toggleEditMode() {
+    async function toggleEditMode() {
       _editMode = !_editMode
       const btn = document.getElementById('btn-ajustar')
       if (_editMode) {
@@ -190,7 +215,7 @@
       } else {
         btn.textContent = '⚙️ Ajustar'
         btn.className = 'btn btn-secondary'
-        savePos()
+        await savePos()
         toast('Posições salvas', 'success')
       }
       renderLotes()
@@ -199,6 +224,7 @@
     async function carregar() {
       showLoading()
       try {
+        await loadPos()
         const [lotes, clientes] = await Promise.all([
           sbGet('crm_lotes', '?order=quadra.asc,numero.asc&select=*'),
           sbGet('crm_clientes', '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
@@ -357,6 +383,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778669289"></script>
+  <script src="js/sw-register.js?cb=1778670001"></script>
 </body>
 </html>
