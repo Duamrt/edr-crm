@@ -305,20 +305,67 @@ tbody tr:hover { background: #f9fafb; }
 /* ── Kanban ── */
 .kanban-wrap {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 16px;
+  gap: 10px;
+  overflow-x: scroll;
+  padding-bottom: 8px;
   align-items: flex-start;
-  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
+.kanban-wrap::-webkit-scrollbar { height: 10px; }
+.kanban-wrap::-webkit-scrollbar-track { background: transparent; }
+.kanban-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+.kanban-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Legenda discreta no topo do board */
+.kanban-legenda {
+  display: flex;
+  gap: 18px;
+  padding: 0 0 12px;
+  font-size: .72rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.legenda-item { display: flex; align-items: center; gap: 6px; }
+.legenda-cor {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-top: 1px solid rgba(0,0,0,.08);
+  border-right: 1px solid rgba(0,0,0,.08);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.legenda-impedimento { background: #fef2f2; border-left-color: #dc2626; }
+.legenda-recusado { background: #fff7ed; border-left-color: #ea580c; }
+.legenda-sla { background: #fffbeb; border-left-color: #d97706; }
 
 .kanban-col {
   flex-shrink: 0;
-  width: 240px;
-  background: #f9fafb;
+  width: 200px;
+  background: #f1f5f9;
   border-radius: var(--raio);
-  padding: 10px;
+  padding: 12px 10px;
   min-height: 200px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+.kanban-col[data-status="concluido"],
+.kanban-col[data-status="perdido"] {
+  width: 130px;
+  background: #f3f4f6;
+  opacity: .85;
+}
+.kanban-col[data-status="perdido"] { border: 1px dashed #d1d5db; }
+.kanban-col[data-status="concluido"] .kanban-card-lote,
+.kanban-col[data-status="concluido"] .kanban-card-badges,
+.kanban-col[data-status="concluido"] .kanban-card-acao,
+.kanban-col[data-status="perdido"] .kanban-card-lote,
+.kanban-col[data-status="perdido"] .kanban-card-badges,
+.kanban-col[data-status="perdido"] .kanban-card-acao {
+  display: none;
 }
 
 .kanban-col-header {
@@ -330,61 +377,93 @@ tbody tr:hover { background: #f9fafb; }
 }
 
 .kanban-col-title {
-  font-size: .85rem;
-  font-weight: 600;
-  color: var(--cinza-dark);
+  font-size: .72rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .6px;
 }
 
 .kanban-count {
-  background: var(--cinza-light);
+  background: #1f2937;
+  color: #fff;
   border-radius: 10px;
-  padding: 1px 7px;
-  font-size: .75rem;
-  font-weight: 600;
+  padding: 2px 8px;
+  font-size: .7rem;
+  font-weight: 700;
+  min-width: 22px;
+  text-align: center;
 }
 
 .kanban-card {
   background: var(--branco);
   border-radius: var(--raio);
   padding: 12px;
-  margin-bottom: 8px;
-  box-shadow: var(--sombra);
-  cursor: pointer;
-  border-left: 3px solid transparent;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(0,0,0,.06);
+  cursor: grab;
+  border-left: 4px solid transparent;
   transition: box-shadow .15s, transform .1s;
 }
-.kanban-card:hover { box-shadow: var(--sombra-md); transform: translateY(-1px); }
-.kanban-card.has-impedimento { border-left-color: var(--vermelho); }
-.kanban-card.has-recusado { border-left-color: #f97316; background: #fff7ed; }
-.kanban-card.sla-yellow { border-left-color: var(--amarelo); }
-.kanban-card.sla-red { border-left-color: var(--vermelho); }
+.kanban-card:active { cursor: grabbing; }
+.kanban-card:hover { box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
+
+/* Estados com gravidade — fundo tintado + border 4px (impedimento > recusado > sla) */
+.kanban-card.sla-yellow { border-left-color: #d97706; background: #fffbeb; }
+.kanban-card.sla-red { border-left-color: #dc2626; background: #fef2f2; }
+.kanban-card.has-recusado {
+  border-left-color: #ea580c;
+  background: #fff7ed;
+  box-shadow: 0 0 0 1px rgba(234,88,12,.15), 0 1px 3px rgba(0,0,0,.08);
+}
+.kanban-card.has-impedimento {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+  box-shadow: 0 0 0 1px rgba(220,38,38,.15), 0 1px 3px rgba(0,0,0,.08);
+}
 
 .kanban-card-nome {
-  font-weight: 600;
-  font-size: .9rem;
-  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.25;
+  color: #111827;
+  margin-bottom: 8px;
 }
 .kanban-card-lote {
-  font-size: .78rem;
-  color: var(--cinza);
-  margin-bottom: 6px;
+  font-size: .68rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
 }
 .kanban-card-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .kanban-card-acao {
-  font-size: .78rem;
-  color: var(--cinza-dark);
+  font-size: .8rem;
+  color: #4b5563;
+  line-height: 1.4;
+  padding-top: 8px;
+  border-top: 1px solid #f3f4f6;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.kanban-col.drag-over { background: #ecfdf5; outline: 2px dashed var(--verde-light); }
-.kanban-card.dragging { opacity: .5; }
+.kanban-col.drag-over {
+  background: #d1fae5;
+  outline: 2px dashed var(--verde);
+  outline-offset: -4px;
+}
+.kanban-card.dragging {
+  opacity: .6;
+  transform: rotate(1.5deg) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
 
 /* ── Checklist docs ── */
 .doc-list { display: flex; flex-direction: column; gap: 8px; }
@@ -655,7 +734,9 @@ tbody tr:hover { background: #f9fafb; }
 @media (max-width: 900px) {
   .form-grid { grid-template-columns: 1fr; }
   .form-grid-3 { grid-template-columns: 1fr 1fr; }
-  .kanban-col { width: 210px; }
+  .kanban-col { width: 180px; }
+  .kanban-col[data-status="concluido"],
+  .kanban-col[data-status="perdido"] { width: 120px; }
   .docs-responsivo { grid-template-columns: 1fr; }
 }
 

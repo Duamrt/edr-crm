@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778687297">
+  <link rel="stylesheet" href="css/style.css?cb=1778688065">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -29,6 +29,12 @@
       </div>
 
       <div class="page-content" style="padding-bottom:32px;">
+        <div class="kanban-legenda">
+          <span class="legenda-item"><span class="legenda-cor legenda-impedimento"></span> 🚨 Impedimento ativo</span>
+          <span class="legenda-item"><span class="legenda-cor legenda-recusado"></span> 🚫 Documento recusado</span>
+          <span class="legenda-item"><span class="legenda-cor legenda-sla"></span> ⏱ SLA vencendo</span>
+          <span class="legenda-item text-muted">· Arraste cards entre colunas pra mover na esteira</span>
+        </div>
         <div class="kanban-wrap" id="kanban-wrap"></div>
       </div>
     </div>
@@ -36,9 +42,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778687297"></script>
-  <script src="js/auth.js?cb=1778687297"></script>
-  <script src="js/utils.js?cb=1778687297"></script>
+  <script src="js/supabase.js?cb=1778688065"></script>
+  <script src="js/auth.js?cb=1778688065"></script>
+  <script src="js/utils.js?cb=1778688065"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -182,6 +188,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778687297"></script>
+  <script src="js/sw-register.js?cb=1778688065"></script>
 </body>
 </html>
