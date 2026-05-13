@@ -807,6 +807,106 @@ tbody tr:hover { background: #f9fafb; }
   border-color: var(--border-light) !important;
 }
 
+/* === AUDITORIA DE DOCUMENTOS (Agente 2) === */
+.auditoria-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-left: 5px solid var(--azul);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.auditoria-card[data-completo="true"] {
+  border-left-color: var(--verde);
+  background: linear-gradient(to right, var(--verde-surface) 0%, var(--surface) 30%);
+}
+
+.auditoria-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.auditoria-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--text-primary);
+}
+.auditoria-icone { font-size: 1.15rem; }
+
+.auditoria-completude {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+}
+.auditoria-progresso {
+  flex: 1;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 120px;
+}
+.auditoria-progresso > div {
+  height: 100%;
+  background: var(--azul);
+  transition: width .3s ease;
+}
+.auditoria-card[data-completo="true"] .auditoria-progresso > div { background: var(--verde); }
+#auditoria-percent { font-weight: 700; font-size: .9rem; color: var(--text-primary); min-width: 36px; text-align: right; }
+.auditoria-frac { font-size: .75rem; }
+
+.auditoria-body { padding: 14px 18px 16px; }
+
+#auditoria-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auditoria-na {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(107,114,128,.06);
+  border-radius: 8px;
+  border-left: 3px solid var(--text-tertiary);
+}
+.auditoria-na-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.auditoria-na-lista {
+  margin-top: 6px;
+  font-size: .82rem;
+  color: var(--text-secondary);
+}
+.auditoria-na-item { padding: 1px 0; }
+
+.auditoria-acoes {
+  border-top: 1px solid var(--border-light);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .auditoria-header { flex-direction: column; align-items: flex-start; }
+  .auditoria-completude { width: 100%; }
+}
+
 .triagem-acoes {
   border-top: 1px solid var(--border-light);
   padding-top: 10px;
