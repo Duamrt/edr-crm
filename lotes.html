@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778661727">
+  <link rel="stylesheet" href="css/style.css?cb=1778662017">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -101,9 +101,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778661727"></script>
-  <script src="js/auth.js?cb=1778661727"></script>
-  <script src="js/utils.js?cb=1778661727"></script>
+  <script src="js/supabase.js?cb=1778662017"></script>
+  <script src="js/auth.js?cb=1778662017"></script>
+  <script src="js/utils.js?cb=1778662017"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -117,10 +117,10 @@
     async function carregar() {
       showLoading()
       try {
-        const lotes = await sbGet('crm_lotes', '?order=numero.asc&select=*')
-        // Verificar ocupação via clientes ativos
-        const clientes = await sbGet('crm_clientes',
-          '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
+        const [lotes, clientes] = await Promise.all([
+          sbGet('crm_lotes', '?order=numero.asc&select=*'),
+          sbGet('crm_clientes', '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
+        ])
         const clienteMap = {}
         clientes.forEach(c => { clienteMap[c.lote_id] = c })
 

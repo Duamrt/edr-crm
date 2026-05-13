@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778661727">
+  <link rel="stylesheet" href="css/style.css?cb=1778662017">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -36,9 +36,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778661727"></script>
-  <script src="js/auth.js?cb=1778661727"></script>
-  <script src="js/utils.js?cb=1778661727"></script>
+  <script src="js/supabase.js?cb=1778662017"></script>
+  <script src="js/auth.js?cb=1778662017"></script>
+  <script src="js/utils.js?cb=1778662017"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -62,12 +62,12 @@
     async function carregar() {
       showLoading()
       try {
-        const clientes = await sbGet('crm_clientes',
-          '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)')
-        const imps = await sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id')
+        const [clientes, imps, tarefas] = await Promise.all([
+          sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,crm_lotes(numero)'),
+          sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id'),
+          sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo')
+        ])
         const impSet = new Set(imps.map(i => i.cliente_id))
-        const tarefas = await sbGet('crm_tarefas',
-          '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo')
         const tarefaMap = {}
         tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
 
