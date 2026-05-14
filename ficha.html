@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778781792">
+  <link rel="stylesheet" href="css/style.css?cb=1778793399">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -225,11 +225,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778781792"></script>
-  <script src="js/auth.js?cb=1778781792"></script>
-  <script src="js/utils.js?cb=1778781792"></script>
-  <script src="js/data/clientes.js?cb=1778781792"></script>
-  <script src="js/data/documentos.js?cb=1778781792"></script>
+  <script src="js/supabase.js?cb=1778793399"></script>
+  <script src="js/auth.js?cb=1778793399"></script>
+  <script src="js/utils.js?cb=1778793399"></script>
+  <script src="js/data/clientes.js?cb=1778793399"></script>
+  <script src="js/data/documentos.js?cb=1778793399"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -671,10 +671,13 @@
 
     async function salvarStatus() {
       const status = document.getElementById('status-select').value
-      // Validação unificada: doc recusado ou impedimento ativo bloqueiam avanço
+      // Validação unificada: doc recusado, impedimento ativo, OU triagem bloqueada (pra Documentação)
       const temDocRecusado = _docs.some(d => d.status === 'recusado')
       const temImpedimentoAtivo = _imps.some(i => i.ativo)
-      const check = podeAvancarEtapa(status, { temDocRecusado, temImpedimentoAtivo })
+      const triagemBloqueada = _auditoria  // se ficha já rodou, usa o triador
+        ? triagemMCMV(_cliente, _docs, _imps, []).status === 'bloqueado'
+        : false
+      const check = podeAvancarEtapa(status, { temDocRecusado, temImpedimentoAtivo, triagemBloqueada })
       if (!check.ok) {
         toast(check.motivo, 'error')
         document.getElementById('status-select').value = _cliente.status_kanban
@@ -762,6 +765,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778781792"></script>
+  <script src="js/sw-register.js?cb=1778793399"></script>
 </body>
 </html>
