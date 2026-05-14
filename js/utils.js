@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778781165'
+const CRM_VERSION = '1778781792'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -401,51 +401,51 @@ function auditarDocumentos(cliente, docs = [], membros = []) {
 
   const grupos = { bloqueadores: [], riscos: [], operacionais: [] }
   const acoes = []
-  const tiposListados = new Set()
+  const idsListados = new Set()
+  // Helper: prioriza descricao customizada quando existe (caso de docs avulsos com tipo='outro')
+  const labelDoc = d => d.descricao || DOC_LABEL[d.tipo] || d.tipo
 
   // Bloqueadores: recusados (sempre) + pendentes que travam próxima etapa
   recusados.forEach(d => {
-    if (tiposListados.has(d.tipo)) return
-    tiposListados.add(d.tipo)
-    grupos.bloqueadores.push({ icone: '🚫', texto: `${DOC_LABEL[d.tipo] || d.tipo} (recusado)`, tipo: d.tipo })
-    acoes.push(`Resolver doc recusado: ${DOC_LABEL[d.tipo] || d.tipo}`)
+    if (idsListados.has(d.id)) return
+    idsListados.add(d.id)
+    grupos.bloqueadores.push({ icone: '🚫', texto: `${labelDoc(d)} (recusado)`, tipo: d.tipo })
+    acoes.push(`Resolver doc recusado: ${labelDoc(d)}`)
   })
   docsTravando.forEach(d => {
-    if (tiposListados.has(d.tipo)) return
-    tiposListados.add(d.tipo)
+    if (idsListados.has(d.id)) return
+    idsListados.add(d.id)
     const proxLabel = KANBAN_LABEL[proximaEtapa] || proximaEtapa
-    grupos.bloqueadores.push({ icone: '🛑', texto: `${DOC_LABEL[d.tipo] || d.tipo} (bloqueia ${proxLabel})`, tipo: d.tipo })
+    grupos.bloqueadores.push({ icone: '🛑', texto: `${labelDoc(d)} (bloqueia ${proxLabel})`, tipo: d.tipo })
   })
 
   // Riscos: vencendo + inconsistências
   vencendo.forEach(d => {
-    if (tiposListados.has(d.tipo)) return
-    tiposListados.add(d.tipo)
+    if (idsListados.has(d.id)) return
+    idsListados.add(d.id)
     const dias = diasAte(d.data_vencimento)
-    grupos.riscos.push({ icone: '⚠️', texto: `${DOC_LABEL[d.tipo] || d.tipo} vence em ${dias}d`, tipo: d.tipo })
+    grupos.riscos.push({ icone: '⚠️', texto: `${labelDoc(d)} vence em ${dias}d`, tipo: d.tipo })
   })
   inconsistencias.forEach(i => {
-    if (tiposListados.has(i.tipo)) return
-    tiposListados.add(i.tipo)
     grupos.riscos.push({ icone: '⚠️', texto: i.msg, tipo: i.tipo })
     acoes.push(i.msg)
   })
 
   // Operacionais: demais pendentes (exclui sugestões de N/A — vão pro bloco N/A)
   // Ordenados por tier fixo de criticidade (Crítica → Média → Baixa)
-  const tiposNaSugeridos = new Set(sugestoesNA.map(d => d.tipo))
+  const idsNaSugeridos = new Set(sugestoesNA.map(d => d.id))
   const TIER_LABEL = { 1: 'Crítica', 2: 'Média', 3: 'Baixa' }
   const TIER_ICONE = { 1: '🔴', 2: '🟡', 3: '⚪' }
   pendentes
-    .filter(d => !tiposListados.has(d.tipo) && !tiposNaSugeridos.has(d.tipo))
+    .filter(d => !idsListados.has(d.id) && !idsNaSugeridos.has(d.id))
     .sort((a, b) => (MCMV_DOC_TIER[a.tipo] || 99) - (MCMV_DOC_TIER[b.tipo] || 99))
     .forEach(d => {
-      tiposListados.add(d.tipo)
+      idsListados.add(d.id)
       const tier = MCMV_DOC_TIER[d.tipo] || 3
       const sufixo = TIER_LABEL[tier] ? ` · ${TIER_LABEL[tier]}` : ''
       grupos.operacionais.push({
         icone: TIER_ICONE[tier] || '⚪',
-        texto: `${DOC_LABEL[d.tipo] || d.tipo}${sufixo}`,
+        texto: `${labelDoc(d)}${sufixo}`,
         tipo: d.tipo,
         tier
       })
