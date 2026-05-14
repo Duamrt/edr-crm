@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778781165">
+  <link rel="stylesheet" href="css/style.css?cb=1778781792">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -138,7 +138,33 @@
 
           <!-- Documentos -->
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Documentos MCMV</h3></div>
+            <div class="card-header">
+              <h3 class="card-title">Documentos MCMV</h3>
+              <button onclick="toggleFormDocAvulso()" class="btn btn-secondary btn-sm">+ Documento</button>
+            </div>
+            <div id="form-doc-avulso" class="hidden" style="margin-bottom:12px;padding:12px;background:#f9fafb;border-radius:8px;">
+              <div class="form-grid">
+                <div class="form-group form-full">
+                  <label>Descrição do documento *</label>
+                  <input type="text" id="doc-avulso-descricao" maxlength="120" placeholder="ex: RG do filho João, Extrato bancário cônjuge, Declaração testemunha...">
+                </div>
+                <div class="form-group">
+                  <label>Status inicial</label>
+                  <select id="doc-avulso-status">
+                    <option value="pendente">Pendente</option>
+                    <option value="entregue">Entregue</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Vencimento (opcional)</label>
+                  <input type="date" id="doc-avulso-vencimento">
+                </div>
+              </div>
+              <div class="flex gap-8" style="margin-top:8px;">
+                <button onclick="salvarDocAvulso()" class="btn btn-primary btn-sm">Salvar documento</button>
+                <button onclick="toggleFormDocAvulso()" class="btn btn-secondary btn-sm">Cancelar</button>
+              </div>
+            </div>
             <div id="lista-docs" class="doc-list"></div>
           </div>
 
@@ -199,11 +225,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778781165"></script>
-  <script src="js/auth.js?cb=1778781165"></script>
-  <script src="js/utils.js?cb=1778781165"></script>
-  <script src="js/data/clientes.js?cb=1778781165"></script>
-  <script src="js/data/documentos.js?cb=1778781165"></script>
+  <script src="js/supabase.js?cb=1778781792"></script>
+  <script src="js/auth.js?cb=1778781792"></script>
+  <script src="js/utils.js?cb=1778781792"></script>
+  <script src="js/data/clientes.js?cb=1778781792"></script>
+  <script src="js/data/documentos.js?cb=1778781792"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -459,8 +485,9 @@
       if (!docs.length) { el.innerHTML = '<p class="text-muted text-sm">Nenhum documento.</p>'; return }
       el.innerHTML = docs.map(d => {
         const venc = vencimentoBadge(d.data_vencimento)
+        const label = d.descricao || DOC_LABEL[d.tipo] || d.tipo
         return `<div class="doc-item status-${d.status}">
-          <div class="doc-nome">${DOC_LABEL[d.tipo] || d.tipo}</div>
+          <div class="doc-nome">${label}</div>
           <div class="doc-status">${venc}</div>
           <select onchange="atualizarDoc('${d.id}', this.value)" class="btn-sm" style="border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:.78rem;">
             <option value="pendente" ${d.status==='pendente'?'selected':''}>Pendente</option>
@@ -480,6 +507,42 @@
       try {
         await atualizarStatusDoc(id, clienteId, status)
         toast('Documento atualizado', 'success')
+      } catch (err) { toast('Erro: ' + err.message, 'error') }
+    }
+
+    function toggleFormDocAvulso() {
+      const form = document.getElementById('form-doc-avulso')
+      form.classList.toggle('hidden')
+      if (!form.classList.contains('hidden')) {
+        document.getElementById('doc-avulso-descricao').value = ''
+        document.getElementById('doc-avulso-status').value = 'pendente'
+        document.getElementById('doc-avulso-vencimento').value = ''
+        document.getElementById('doc-avulso-descricao').focus()
+      }
+    }
+
+    async function salvarDocAvulso() {
+      const descricao = document.getElementById('doc-avulso-descricao').value.trim()
+      if (!descricao) { toast('Digite a descrição do documento', 'error'); return }
+      const status = document.getElementById('doc-avulso-status').value
+      const vencimento = document.getElementById('doc-avulso-vencimento').value || null
+      try {
+        await sbPost('crm_documentos', {
+          cliente_id: clienteId,
+          tipo: 'outro',
+          descricao,
+          status,
+          data_vencimento: vencimento,
+          data_entrega: status === 'entregue' ? new Date().toISOString() : null
+        })
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: `Documento adicionado: ${descricao}`,
+          tipo: 'documento'
+        })
+        toast('Documento adicionado', 'success')
+        toggleFormDocAvulso()
+        carregar()
       } catch (err) { toast('Erro: ' + err.message, 'error') }
     }
 
@@ -699,6 +762,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778781165"></script>
+  <script src="js/sw-register.js?cb=1778781792"></script>
 </body>
 </html>
