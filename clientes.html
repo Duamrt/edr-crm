@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778772285">
+  <link rel="stylesheet" href="css/style.css?cb=1778773385">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -90,9 +90,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778772285"></script>
-  <script src="js/auth.js?cb=1778772285"></script>
-  <script src="js/utils.js?cb=1778772285"></script>
+  <script src="js/supabase.js?cb=1778773385"></script>
+  <script src="js/auth.js?cb=1778773385"></script>
+  <script src="js/utils.js?cb=1778773385"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -170,9 +170,26 @@
           <td>
             <a href="ficha.html?id=${c.id}" class="btn btn-secondary btn-sm">Ver</a>
             <a href="familia.html?id=${c.id}" class="btn btn-secondary btn-sm">Editar</a>
+            <button onclick="excluirFamilia('${c.id}', this.dataset.nome)" data-nome="${c.nome.replace(/"/g,'&quot;')}" class="btn btn-danger btn-sm" title="Arquivar família">🗑️</button>
           </td>
         </tr>`
       }).join('')
+    }
+
+    async function excluirFamilia(id, nome) {
+      if (!confirm(`Arquivar família "${nome}"?\n\nA família sai da lista, libera o lote automaticamente e a pasta no Google Drive é preservada. Pode ser recuperada depois via banco se precisar.`)) return
+      try {
+        await sbPatch('crm_clientes', id, { deleted_at: new Date().toISOString() })
+        await sbPost('crm_historico', {
+          cliente_id: id,
+          descricao: `Família arquivada por ${getUsuario()?.nome || 'usuário'}`,
+          tipo: 'sistema'
+        })
+        toast('Família arquivada', 'success')
+        carregar()
+      } catch (err) {
+        toast('Erro ao arquivar: ' + err.message, 'error')
+      }
     }
 
     function filtrar() {
@@ -196,6 +213,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778772285"></script>
+  <script src="js/sw-register.js?cb=1778773385"></script>
 </body>
 </html>
