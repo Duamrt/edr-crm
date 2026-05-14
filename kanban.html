@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778781792">
+  <link rel="stylesheet" href="css/style.css?cb=1778793399">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -46,10 +46,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778781792"></script>
-  <script src="js/auth.js?cb=1778781792"></script>
-  <script src="js/utils.js?cb=1778781792"></script>
-  <script src="js/data/clientes.js?cb=1778781792"></script>
+  <script src="js/supabase.js?cb=1778793399"></script>
+  <script src="js/auth.js?cb=1778793399"></script>
+  <script src="js/utils.js?cb=1778793399"></script>
+  <script src="js/data/clientes.js?cb=1778793399"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -71,19 +71,32 @@
     let _dragging = null
     let _recusadoSet = new Set()
     let _impSet = new Set()
+    let _triagemBloqSet = new Set()  // clientes BLOQUEADOS pelo Triador (CADMUT, renda fora, sem renda)
     // ETAPAS_BLOQUEADAS_AVANCO e podeAvancarEtapa() agora vivem em utils.js (fonte única)
 
     async function carregar() {
       showLoading()
       try {
         const [clientes, imps, tarefas, recusados] = await Promise.all([
-          sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,faixa_mcmv,crm_lotes(numero)'),
-          sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id'),
+          sbGet('crm_clientes', '?deleted_at=is.null&order=ultima_atualizacao.asc&select=id,nome,status_kanban,ultima_atualizacao,lote_id,faixa_mcmv,renda_total_confirmada,renda_total_simulada,crm_lotes(numero)'),
+          sbGet('crm_impedimentos', '?ativo=eq.true&select=cliente_id,tipo'),
           sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo'),
           sbGet('crm_documentos', '?status=eq.recusado&select=cliente_id')
         ])
         _impSet = new Set(imps.map(i => i.cliente_id))
         _recusadoSet = new Set(recusados.map(d => d.cliente_id))
+
+        // Triador BLOQUEADO = CADMUT ativo OU renda_insuficiente OU renda fora teto MCMV OU sem renda
+        const cadmutSet = new Set(imps.filter(i => i.tipo === 'cadmut').map(i => i.cliente_id))
+        const rendaInsufSet = new Set(imps.filter(i => i.tipo === 'renda_insuficiente').map(i => i.cliente_id))
+        _triagemBloqSet = new Set()
+        clientes.forEach(c => {
+          const renda = Number(c.renda_total_confirmada) || Number(c.renda_total_simulada) || 0
+          if (cadmutSet.has(c.id) || rendaInsufSet.has(c.id) || renda === 0 || renda > MCMV_LIMITES.faixa3_max) {
+            _triagemBloqSet.add(c.id)
+          }
+        })
+
         const tarefaMap = {}
         tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
 
@@ -170,10 +183,11 @@
           if (!clienteId) return
           const novoStatus = colEl.dataset.status
 
-          // Validação unificada: doc recusado OU impedimento ativo bloqueia avanço
+          // Validação unificada: doc recusado, impedimento ativo, OU triagem bloqueada (pra Documentação)
           const check = podeAvancarEtapa(novoStatus, {
             temDocRecusado: _recusadoSet.has(clienteId),
-            temImpedimentoAtivo: _impSet.has(clienteId)
+            temImpedimentoAtivo: _impSet.has(clienteId),
+            triagemBloqueada: _triagemBloqSet.has(clienteId)
           })
           if (!check.ok) { toast(check.motivo, 'error'); return }
 
@@ -191,6 +205,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778781792"></script>
+  <script src="js/sw-register.js?cb=1778793399"></script>
 </body>
 </html>

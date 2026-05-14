@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778781792'
+const CRM_VERSION = '1778793399'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -100,7 +100,12 @@ const ETAPAS_BLOQUEADAS_AVANCO = ['correspondente','aprovado','prefeitura','assi
 
 // Validação unificada: pode avançar pra essa etapa?
 // Usada por kanban (drop) e ficha (salvarStatus) — fonte única de verdade
-function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo }) {
+function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, triagemBloqueada } = {}) {
+  // Triagem → Documentação: Triador (Agente 1) não pode dizer BLOQUEADO
+  // Evita Elyda perder tempo cobrando docs de lead que nunca vai aprovar
+  if (novoStatus === 'documentacao' && triagemBloqueada) {
+    return { ok: false, motivo: '🛑 Triador detectou BLOQUEIO (CADMUT, renda fora MCMV, etc). Lead não vai aprovar — mova pra Perdido ou resolva o impedimento antes.' }
+  }
   if (!ETAPAS_BLOQUEADAS_AVANCO.includes(novoStatus)) return { ok: true }
   if (temDocRecusado) {
     return { ok: false, motivo: '🚫 Documento recusado — resolva antes de avançar nessa etapa.' }
