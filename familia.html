@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778774275">
+  <link rel="stylesheet" href="css/style.css?cb=1778780095">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -156,10 +156,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778774275"></script>
-  <script src="js/auth.js?cb=1778774275"></script>
-  <script src="js/utils.js?cb=1778774275"></script>
-  <script src="js/data/clientes.js?cb=1778774275"></script>
+  <script src="js/supabase.js?cb=1778780095"></script>
+  <script src="js/auth.js?cb=1778780095"></script>
+  <script src="js/utils.js?cb=1778780095"></script>
+  <script src="js/data/clientes.js?cb=1778780095"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -348,7 +348,17 @@
           // Atualização — patch + histórico via data layer
           await atualizarCliente(cId, dados)
         } else {
-          // Cadastro novo — cria família + 10 docs MCMV padrão + histórico (1 chamada)
+          // Cadastro novo — checar duplicata de CPF ANTES de tentar inserir
+          const existentes = await sbGet('crm_clientes', `?deleted_at=is.null&cpf=eq.${cpfLimpo}&select=id,nome`)
+          if (existentes.length) {
+            const exist = existentes[0]
+            const irParaFicha = confirm(`CPF já cadastrado para "${exist.nome}".\n\nDeseja abrir a ficha dessa família?`)
+            btn.disabled = false
+            hideLoading()
+            if (irParaFicha) window.location.replace(`ficha.html?id=${exist.id}`)
+            return
+          }
+          // CPF livre — cria família + 10 docs MCMV padrão + pasta Drive (1 chamada)
           cId = await criarFamiliaComChecklist(dados)
         }
 
@@ -397,6 +407,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778774275"></script>
+  <script src="js/sw-register.js?cb=1778780095"></script>
 </body>
 </html>
