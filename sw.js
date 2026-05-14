@@ -1,4 +1,4 @@
-const VERSION = '1778767285'
+const VERSION = '1778769704'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW
@@ -9,7 +9,8 @@ const ASSETS = [
   'js/utils.js?cb=' + VERSION,
   'js/data/clientes.js?cb=' + VERSION,
   'js/data/documentos.js?cb=' + VERSION,
-  'img/mapa-lotes.jpg'  // imagem pesada — fica em cache desde o primeiro load
+  'img/mapa-lotes.jpg',  // imagem pesada — fica em cache desde o primeiro load
+  'favicon.svg'
 ]
 
 self.addEventListener('install', e => {
