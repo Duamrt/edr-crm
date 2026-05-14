@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743535">
+  <link rel="stylesheet" href="css/style.css?cb=1778743783">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -45,10 +45,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743535"></script>
-  <script src="js/auth.js?cb=1778743535"></script>
-  <script src="js/utils.js?cb=1778743535"></script>
-  <script src="js/data/clientes.js?cb=1778743535"></script>
+  <script src="js/supabase.js?cb=1778743783"></script>
+  <script src="js/auth.js?cb=1778743783"></script>
+  <script src="js/utils.js?cb=1778743783"></script>
+  <script src="js/data/clientes.js?cb=1778743783"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -121,16 +121,12 @@
           const hasImp = impSet.has(c.id)
           const hasRecusado = _recusadoSet.has(c.id)
           const tarefa = tarefaMap[c.id]
-          const dias = diasDesde(c.ultima_atualizacao)
-          const slaClass = dias >= 7 ? 'sla-red' : dias >= 3 ? 'sla-yellow' : ''
           const lote = c.crm_lotes?.numero ? `Lote ${c.crm_lotes.numero}` : '—'
 
-          const badges = []
-          if (hasImp) badges.push('<span class="badge badge-red">🚨 Trava</span>')
-          if (hasRecusado) badges.push('<span class="badge badge-red">🚫 Doc recusado</span>')
-          if (col.id === 'correspondente' && dias >= 2) badges.push(`<span class="badge badge-yellow">⚡ Cobrar correspondente</span>`)
-          if (dias >= 7) badges.push(`<span class="badge badge-red">⏱ ${dias}d</span>`)
-          else if (dias >= 3) badges.push(`<span class="badge badge-yellow">⏱ ${dias}d</span>`)
+          // Classifica SLA + badges via função única (compartilhada com clientes.html)
+          const sla = classificarSlaCard(c, { temImpedimento: hasImp, temRecusado: hasRecusado, contexto: 'kanban' })
+          const slaClass = sla.slaClass
+          const badges = sla.badges.map(b => `<span class="badge badge-${b.tipo}">${b.texto}</span>`)
 
           const card = document.createElement('div')
           card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${hasRecusado ? 'has-recusado' : ''} ${slaClass}`
@@ -194,6 +190,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778743535"></script>
+  <script src="js/sw-register.js?cb=1778743783"></script>
 </body>
 </html>

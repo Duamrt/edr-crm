@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743535">
+  <link rel="stylesheet" href="css/style.css?cb=1778743783">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -91,10 +91,6 @@
                 <label>Valor do FGTS (R$)</label>
                 <input type="number" id="fgts_valor" min="0" step="0.01" placeholder="0,00">
               </div>
-              <div class="form-group">
-                <label>Subsídio estimado (R$)</label>
-                <input type="number" id="subsidio" min="0" step="0.01" placeholder="0,00">
-              </div>
             </div>
           </div>
 
@@ -159,10 +155,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743535"></script>
-  <script src="js/auth.js?cb=1778743535"></script>
-  <script src="js/utils.js?cb=1778743535"></script>
-  <script src="js/data/clientes.js?cb=1778743535"></script>
+  <script src="js/supabase.js?cb=1778743783"></script>
+  <script src="js/auth.js?cb=1778743783"></script>
+  <script src="js/utils.js?cb=1778743783"></script>
+  <script src="js/data/clientes.js?cb=1778743783"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -299,7 +295,6 @@
           document.getElementById('grupo-fgts-valor').style.display = 'block'
           document.getElementById('fgts_valor').value = c.fgts_valor || ''
         }
-        document.getElementById('subsidio').value = c.subsidio_estimado || ''
         document.getElementById('status_kanban').value = c.status_kanban || 'triagem'
         document.getElementById('data_contato').value = c.data_primeiro_contato || ''
         document.getElementById('observacoes').value = c.observacoes || ''
@@ -339,7 +334,6 @@
         faixa_mcmv: parseInt(document.getElementById('faixa_mcmv').value) || null,
         fgts: document.getElementById('fgts').value === 'true',
         fgts_valor: parseFloat(document.getElementById('fgts_valor').value) || null,
-        subsidio_estimado: parseFloat(document.getElementById('subsidio').value) || null,
         status_kanban: document.getElementById('status_kanban').value,
         lote_id: loteId,
         data_primeiro_contato: document.getElementById('data_contato').value || null,
@@ -357,16 +351,11 @@
           cId = await criarFamiliaComChecklist(dados)
         }
 
-        // Salvar composição familiar
-        // Deletar membros antigos e reinserir
+        // Salvar composição familiar via RPC atômico (DELETE+INSERT em transação)
+        // Evita corrupção se rede cair no meio
         if (cId) {
-          await fetch(`${SUPABASE_URL}/rest/v1/crm_composicao_familiar?cliente_id=eq.${cId}`, {
-            method: 'DELETE',
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getToken() }
-          })
           let membros = getMembros()
-          // Fallback: cliente novo SEM membros válidos → cria titular automático com o nome do cadastro
-          // Evita salvar família com composição vazia, que quebraria triagem/auditor
+          // Fallback: cliente novo SEM membros válidos → cria titular automático
           if (!membros.length && dados.nome) {
             membros = [{
               nome: dados.nome,
@@ -374,9 +363,7 @@
               renda: parseFloat(document.getElementById('renda_simulada').value) || 0
             }]
           }
-          if (membros.length) {
-            await sbPost('crm_composicao_familiar', membros.map(m => ({ ...m, cliente_id: cId })))
-          }
+          await sbRpc('crm_substituir_composicao', { p_cliente_id: cId, p_membros: membros })
         }
 
         toast(clienteId ? 'Família atualizada!' : 'Família cadastrada!', 'success')
@@ -409,6 +396,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778743535"></script>
+  <script src="js/sw-register.js?cb=1778743783"></script>
 </body>
 </html>

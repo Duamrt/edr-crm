@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778743535'
+const CRM_VERSION = '1778743783'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -371,9 +371,10 @@ function auditarDocumentos(cliente, docs = [], membros = []) {
 
   // Completude honesta: % dos docs RELEVANTES que estão entregues
   // (N/A sai do denominador — pasta solteira sem FGTS chega a 100% real)
+  // Cliente sem docs ainda = 0% (não 100% — evita "Pasta Pronta" enganoso)
   const completude = relevantesTotal > 0
     ? Math.round((entregues.length / relevantesTotal) * 100)
-    : 100
+    : 0
 
   // Sugestões de N/A — docs ainda 'pendente' que deveriam virar nao_aplicavel
   const sugestoesNA = detectarNaoAplicaveis(cliente, membros)

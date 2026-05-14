@@ -1,4 +1,4 @@
-const VERSION = '1778743535'
+const VERSION = '1778743783'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW
@@ -46,7 +46,8 @@ self.addEventListener('fetch', e => {
         cache.match(e.request).then(cached => {
           const networkFetch = fetch(e.request)
             .then(response => {
-              if (response && response.status === 200) {
+              // Só cacheia respostas válidas — pula redirects (302) e respostas opacas
+              if (response && response.status === 200 && !response.redirected && response.type === 'basic') {
                 cache.put(e.request, response.clone())
               }
               return response
