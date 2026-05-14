@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778793399">
+  <link rel="stylesheet" href="css/style.css?cb=1778793698">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -90,9 +90,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778793399"></script>
-  <script src="js/auth.js?cb=1778793399"></script>
-  <script src="js/utils.js?cb=1778793399"></script>
+  <script src="js/supabase.js?cb=1778793698"></script>
+  <script src="js/auth.js?cb=1778793698"></script>
+  <script src="js/utils.js?cb=1778793698"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -151,12 +151,14 @@
       tbody.innerHTML = lista.map(c => {
         const sla = slaBadge(c.ultima_atualizacao)
         const loteNum = c.crm_lotes?.numero ? `Lote ${c.crm_lotes.numero}` : '—'
+        const tarefaTxt = c.tarefa ? `${c.tarefa.descricao} · ${fmtData(c.tarefa.prazo)}` : ''
         const tarefa = c.tarefa
-          ? `<span class="${new Date(c.tarefa.prazo) < new Date() ? 'text-danger' : ''}">${c.tarefa.descricao.substring(0,30)} · ${fmtData(c.tarefa.prazo)}</span>`
+          ? `<span class="${new Date(c.tarefa.prazo) < new Date() ? 'text-danger' : ''}" title="${tarefaTxt.replace(/"/g,'&quot;')}">${tarefaTxt}</span>`
           : '<span class="text-muted text-sm">—</span>'
         const impBadge = c.temImpedimento
           ? '<span class="badge badge-red">🚨 Trava</span>'
           : ''
+        const nomeEsc = c.nome.replace(/"/g,'&quot;')
 
         return `<tr>
           <td><a href="ficha.html?id=${c.id}" class="font-bold" style="text-decoration:none;color:inherit;">${c.nome}</a></td>
@@ -166,11 +168,11 @@
           <td class="text-sm">${loteNum}</td>
           <td><span class="badge status-${c.status_kanban}">${KANBAN_LABEL[c.status_kanban] || c.status_kanban}</span></td>
           <td>${sla}${impBadge}</td>
-          <td style="max-width:200px;">${tarefa}</td>
-          <td>
+          <td class="col-proxima">${tarefa}</td>
+          <td class="col-acoes">
             <a href="ficha.html?id=${c.id}" class="btn btn-secondary btn-sm">Ver</a>
             <a href="familia.html?id=${c.id}" class="btn btn-secondary btn-sm">Editar</a>
-            <button onclick="excluirFamilia('${c.id}', this.dataset.nome)" data-nome="${c.nome.replace(/"/g,'&quot;')}" class="btn btn-danger btn-sm" title="Arquivar família">🗑️</button>
+            <button onclick="excluirFamilia('${c.id}', this.dataset.nome)" data-nome="${nomeEsc}" class="btn btn-danger btn-sm" title="Arquivar família">🗑️</button>
           </td>
         </tr>`
       }).join('')
@@ -213,6 +215,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778793399"></script>
+  <script src="js/sw-register.js?cb=1778793698"></script>
 </body>
 </html>
