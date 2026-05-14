@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778770032">
+  <link rel="stylesheet" href="css/style.css?cb=1778772285">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -28,6 +28,7 @@
           <span id="status-badge"></span>
         </div>
         <div class="flex gap-8">
+          <a href="#" id="btn-drive" class="btn btn-secondary btn-sm hidden" target="_blank" title="Pasta de documentos no Google Drive">📂 Drive</a>
           <a href="#" id="btn-wpp-cobrar" class="btn btn-whatsapp btn-sm" target="_blank">📱 WhatsApp</a>
           <button onclick="gerarMensagem()" id="btn-gerar-wpp" class="btn btn-ai btn-sm">🤖 Gerar mensagem</button>
           <a href="#" id="btn-editar" class="btn btn-outline btn-sm">Editar</a>
@@ -198,11 +199,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778770032"></script>
-  <script src="js/auth.js?cb=1778770032"></script>
-  <script src="js/utils.js?cb=1778770032"></script>
-  <script src="js/data/clientes.js?cb=1778770032"></script>
-  <script src="js/data/documentos.js?cb=1778770032"></script>
+  <script src="js/supabase.js?cb=1778772285"></script>
+  <script src="js/auth.js?cb=1778772285"></script>
+  <script src="js/utils.js?cb=1778772285"></script>
+  <script src="js/data/clientes.js?cb=1778772285"></script>
+  <script src="js/data/documentos.js?cb=1778772285"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -251,6 +252,22 @@
           `<span class="badge status-${_cliente.status_kanban}">${KANBAN_LABEL[_cliente.status_kanban]}</span>`
 
         document.getElementById('btn-editar').href = `familia.html?id=${clienteId}`
+
+        // Botão Drive — só aparece se a pasta já foi criada
+        const btnDrive = document.getElementById('btn-drive')
+        if (_cliente.drive_folder_id) {
+          btnDrive.href = `https://drive.google.com/drive/folders/${_cliente.drive_folder_id}`
+          btnDrive.classList.remove('hidden')
+        } else {
+          // Tenta criar (idempotente) — útil pra famílias antigas cadastradas antes da feature
+          criarPastaDriveDoCliente(clienteId).then(r => {
+            if (r?.folder_id) {
+              btnDrive.href = r.folder_url
+              btnDrive.classList.remove('hidden')
+              _cliente.drive_folder_id = r.folder_id
+            }
+          }).catch(err => console.warn('Drive folder não disponível:', err.message))
+        }
 
         // WhatsApp com template cobrança
         const tel = _cliente.telefone
@@ -682,6 +699,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778770032"></script>
+  <script src="js/sw-register.js?cb=1778772285"></script>
 </body>
 </html>
