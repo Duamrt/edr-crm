@@ -16,9 +16,9 @@ async function atualizarStatusDoc(docId, clienteId, novoStatus) {
   })
 }
 
-// Atualizar vencimento de um doc
+// Atualizar vencimento de um doc (string vazia vira null pra Postgres aceitar)
 async function atualizarVencimentoDoc(docId, dataVencimento) {
-  await sbPatch('crm_documentos', docId, { data_vencimento: dataVencimento })
+  await sbPatch('crm_documentos', docId, { data_vencimento: dataVencimento || null })
 }
 
 // Marcar lote de docs como N/A com 1 único evento histórico consolidado
