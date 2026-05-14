@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778689016'
+const CRM_VERSION = '1778743229'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -69,10 +69,11 @@ function vencimentoBadge(dataVencimento) {
   return ''
 }
 
-// Link WhatsApp
+// Link WhatsApp (defensivo: telefone null/undefined/vazio retorna '#')
 function linkWhatsapp(telefone, mensagem) {
-  const tel = telefone.replace(/\D/g,'')
-  return `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}`
+  const tel = (telefone || '').toString().replace(/\D/g,'')
+  if (!tel) return '#'
+  return `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem || '')}`
 }
 
 // Template WhatsApp: cobrança de documento
