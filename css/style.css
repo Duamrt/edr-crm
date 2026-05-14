@@ -263,8 +263,31 @@ h3 { font-size: 1rem; font-weight: 600; }
 
 /* ── Tabela ── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; table-layout: auto; }
 thead tr { background: #f9fafb; }
+
+/* Coluna "Próxima ação" — trunca com … quando texto longo, mostra completo no hover */
+#tabela-clientes td.col-proxima {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#tabela-clientes td.col-proxima > span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+/* Coluna de Ações — sempre ocupa só o mínimo necessário, alinhada à direita */
+#tabela-clientes td.col-acoes {
+  white-space: nowrap;
+  width: 1%;
+  text-align: right;
+}
+#tabela-clientes td.col-acoes .btn { margin-left: 4px; }
 th, td {
   padding: 10px 14px;
   text-align: left;
