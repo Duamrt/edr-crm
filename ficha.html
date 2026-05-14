@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743229">
+  <link rel="stylesheet" href="css/style.css?cb=1778743535">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -197,9 +197,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743229"></script>
-  <script src="js/auth.js?cb=1778743229"></script>
-  <script src="js/utils.js?cb=1778743229"></script>
+  <script src="js/supabase.js?cb=1778743535"></script>
+  <script src="js/auth.js?cb=1778743535"></script>
+  <script src="js/utils.js?cb=1778743535"></script>
+  <script src="js/data/clientes.js?cb=1778743535"></script>
+  <script src="js/data/documentos.js?cb=1778743535"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -384,16 +386,8 @@
       btn.disabled = true
       btn.textContent = '⏳ Aplicando...'
       try {
-        const motivos = _auditoria.sugestoesNA.map(d => DOC_LABEL[d.tipo] || d.tipo).join(', ')
-        for (const doc of _auditoria.sugestoesNA) {
-          await sbPatch('crm_documentos', doc.id, { status: 'nao_aplicavel' })
-        }
-        await sbPost('crm_historico', {
-          cliente_id: clienteId,
-          descricao: `🤖 Auditor marcou como N/A: ${motivos}`,
-          tipo: 'sistema'
-        })
-        toast(`${_auditoria.sugestoesNA.length} doc(s) marcado(s) como N/A`, 'success')
+        const qtd = await aplicarNAEmLote(_auditoria.sugestoesNA, clienteId)
+        toast(`${qtd} doc(s) marcado(s) como N/A`, 'success')
         carregar()
       } catch (err) {
         toast('Erro: ' + err.message, 'error')
@@ -467,15 +461,14 @@
 
     async function atualizarDoc(id, status) {
       try {
-        await sbPatch('crm_documentos', id, { status, data_entrega: status === 'entregue' ? new Date().toISOString() : null })
-        await sbPost('crm_historico', { cliente_id: clienteId, descricao: `Documento atualizado para: ${status}`, tipo: 'documento' })
+        await atualizarStatusDoc(id, clienteId, status)
         toast('Documento atualizado', 'success')
       } catch (err) { toast('Erro: ' + err.message, 'error') }
     }
 
     async function atualizarVencimento(id, data) {
       try {
-        await sbPatch('crm_documentos', id, { data_vencimento: data })
+        await atualizarVencimentoDoc(id, data)
         toast('Vencimento salvo', 'success')
         carregar()
       } catch (err) { toast('Erro: ' + err.message, 'error') }
@@ -598,13 +591,17 @@
 
     async function salvarStatus() {
       const status = document.getElementById('status-select').value
+      // Validação unificada: doc recusado ou impedimento ativo bloqueiam avanço
+      const temDocRecusado = _docs.some(d => d.status === 'recusado')
+      const temImpedimentoAtivo = _imps.some(i => i.ativo)
+      const check = podeAvancarEtapa(status, { temDocRecusado, temImpedimentoAtivo })
+      if (!check.ok) {
+        toast(check.motivo, 'error')
+        document.getElementById('status-select').value = _cliente.status_kanban
+        return
+      }
       try {
-        await sbPatch('crm_clientes', clienteId, { status_kanban: status })
-        await sbPost('crm_historico', {
-          cliente_id: clienteId,
-          descricao: `Status alterado para: ${KANBAN_LABEL[status]}`,
-          tipo: 'sistema'
-        })
+        await moverStatusKanban(clienteId, status)
         toast('Status atualizado', 'success')
         document.getElementById('status-badge').innerHTML =
           `<span class="badge status-${status}">${KANBAN_LABEL[status]}</span>`
@@ -683,6 +680,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778743229"></script>
+  <script src="js/sw-register.js?cb=1778743535"></script>
 </body>
 </html>

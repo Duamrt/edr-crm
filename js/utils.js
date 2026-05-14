@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778743229'
+const CRM_VERSION = '1778743535'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -91,6 +91,44 @@ const MCMV_LIMITES = { faixa1_max: 2640, faixa2_max: 4400, faixa3_max: 8000 }
 
 // Limiar de dias sem interação real antes de virar pendência operacional
 const MCMV_DIAS_PARADO = 7
+
+// Dias parado pra cobrar correspondente no kanban
+const MCMV_DIAS_COBRAR_CORRESPONDENTE = 2
+
+// Etapas do fluxo MCMV que exigem doc/impedimento OK pra avançar
+const ETAPAS_BLOQUEADAS_AVANCO = ['correspondente','aprovado','prefeitura','assinatura','concluido']
+
+// Validação unificada: pode avançar pra essa etapa?
+// Usada por kanban (drop) e ficha (salvarStatus) — fonte única de verdade
+function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo }) {
+  if (!ETAPAS_BLOQUEADAS_AVANCO.includes(novoStatus)) return { ok: true }
+  if (temDocRecusado) {
+    return { ok: false, motivo: '🚫 Documento recusado — resolva antes de avançar nessa etapa.' }
+  }
+  if (temImpedimentoAtivo) {
+    return { ok: false, motivo: '🚨 Família com impedimento ativo — resolva antes de avançar nessa etapa.' }
+  }
+  return { ok: true }
+}
+
+// Badges e classe SLA pra cards do kanban e linhas da lista
+// Retorna { badges: [{tipo:'red|yellow', texto:string}], slaClass:'sla-red|sla-yellow|''
+function classificarSlaCard(cliente, opts = {}) {
+  const { temImpedimento = false, temRecusado = false, contexto = 'kanban' } = opts
+  const dias = diasDesde(cliente.ultima_atualizacao) || 0
+  const badges = []
+
+  if (temImpedimento) badges.push({ tipo: 'red', texto: '🚨 Trava' })
+  if (temRecusado) badges.push({ tipo: 'red', texto: '🚫 Doc recusado' })
+  if (contexto === 'kanban' && cliente.status_kanban === 'correspondente' && dias >= MCMV_DIAS_COBRAR_CORRESPONDENTE) {
+    badges.push({ tipo: 'yellow', texto: '⚡ Cobrar correspondente' })
+  }
+  if (dias >= MCMV_DIAS_PARADO) badges.push({ tipo: 'red', texto: `⏱ ${dias}d` })
+  else if (dias >= 3) badges.push({ tipo: 'yellow', texto: `⏱ ${dias}d` })
+
+  const slaClass = dias >= MCMV_DIAS_PARADO ? 'sla-red' : dias >= 3 ? 'sla-yellow' : ''
+  return { badges, slaClass, dias }
+}
 
 // Docs essenciais por etapa do kanban — travam avanço
 const MCMV_DOCS_ESSENCIAIS_CORRESPONDENTE = ['rg_cpf_titular','comp_residencia','comp_renda','cadunico']

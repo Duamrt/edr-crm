@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743229">
+  <link rel="stylesheet" href="css/style.css?cb=1778743535">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -159,9 +159,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743229"></script>
-  <script src="js/auth.js?cb=1778743229"></script>
-  <script src="js/utils.js?cb=1778743229"></script>
+  <script src="js/supabase.js?cb=1778743535"></script>
+  <script src="js/auth.js?cb=1778743535"></script>
+  <script src="js/utils.js?cb=1778743535"></script>
+  <script src="js/data/clientes.js?cb=1778743535"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -349,27 +350,11 @@
         let cId = clienteId
 
         if (cId) {
-          await sbPatch('crm_clientes', cId, dados)
-          // Registrar no histórico
-          await sbPost('crm_historico', {
-            cliente_id: cId,
-            descricao: 'Cadastro atualizado',
-            tipo: 'acao'
-          })
+          // Atualização — patch + histórico via data layer
+          await atualizarCliente(cId, dados)
         } else {
-          const rows = await sbPost('crm_clientes', dados)
-          cId = Array.isArray(rows) ? rows[0]?.id : rows?.id
-          await sbPost('crm_historico', {
-            cliente_id: cId,
-            descricao: 'Família cadastrada no sistema',
-            tipo: 'sistema'
-          })
-          // Criar checklist de documentos padrão MCMV
-          const docsDefault = ['rg_cpf_titular','rg_cpf_conjuge','certidao','comp_residencia',
-            'comp_renda','ctps','fgts','ir','certidao_negativa','cadunico']
-          await Promise.all(docsDefault.map(tipo =>
-            sbPost('crm_documentos', { cliente_id: cId, tipo, status: 'pendente' })
-          ))
+          // Cadastro novo — cria família + 10 docs MCMV padrão + histórico (1 chamada)
+          cId = await criarFamiliaComChecklist(dados)
         }
 
         // Salvar composição familiar
@@ -424,6 +409,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778743229"></script>
+  <script src="js/sw-register.js?cb=1778743535"></script>
 </body>
 </html>

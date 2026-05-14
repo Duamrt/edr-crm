@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743229">
+  <link rel="stylesheet" href="css/style.css?cb=1778743535">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -45,9 +45,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743229"></script>
-  <script src="js/auth.js?cb=1778743229"></script>
-  <script src="js/utils.js?cb=1778743229"></script>
+  <script src="js/supabase.js?cb=1778743535"></script>
+  <script src="js/auth.js?cb=1778743535"></script>
+  <script src="js/utils.js?cb=1778743535"></script>
+  <script src="js/data/clientes.js?cb=1778743535"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -69,9 +70,7 @@
     let _dragging = null
     let _recusadoSet = new Set()
     let _impSet = new Set()
-
-    // Etapas que exigem documentos ok para avançar
-    const ETAPAS_BLOQUEADAS = ['correspondente','aprovado','prefeitura','assinatura','concluido']
+    // ETAPAS_BLOQUEADAS_AVANCO e podeAvancarEtapa() agora vivem em utils.js (fonte única)
 
     async function carregar() {
       showLoading()
@@ -174,25 +173,15 @@
           if (!clienteId) return
           const novoStatus = colEl.dataset.status
 
-          // Bloquear avanço se tem documento recusado
-          if (ETAPAS_BLOQUEADAS.includes(novoStatus) && _recusadoSet.has(clienteId)) {
-            toast('🚫 Documento recusado — resolva antes de avançar nessa etapa.', 'error')
-            return
-          }
-
-          // Bloquear avanço se tem impedimento ativo (CADMUT, score baixo, etc)
-          if (ETAPAS_BLOQUEADAS.includes(novoStatus) && _impSet.has(clienteId)) {
-            toast('🚨 Família com impedimento ativo — resolva antes de avançar nessa etapa.', 'error')
-            return
-          }
+          // Validação unificada: doc recusado OU impedimento ativo bloqueia avanço
+          const check = podeAvancarEtapa(novoStatus, {
+            temDocRecusado: _recusadoSet.has(clienteId),
+            temImpedimentoAtivo: _impSet.has(clienteId)
+          })
+          if (!check.ok) { toast(check.motivo, 'error'); return }
 
           try {
-            await sbPatch('crm_clientes', clienteId, { status_kanban: novoStatus })
-            await sbPost('crm_historico', {
-              cliente_id: clienteId,
-              descricao: `Movido para: ${KANBAN_LABEL[novoStatus]}`,
-              tipo: 'sistema'
-            })
+            await moverStatusKanban(clienteId, novoStatus)
             carregar()
           } catch (err) {
             toast('Erro ao mover: ' + err.message, 'error')
@@ -205,6 +194,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778743229"></script>
+  <script src="js/sw-register.js?cb=1778743535"></script>
 </body>
 </html>
