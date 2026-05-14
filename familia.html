@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778689016">
+  <link rel="stylesheet" href="css/style.css?cb=1778743229">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -159,9 +159,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778689016"></script>
-  <script src="js/auth.js?cb=1778689016"></script>
-  <script src="js/utils.js?cb=1778689016"></script>
+  <script src="js/supabase.js?cb=1778743229"></script>
+  <script src="js/auth.js?cb=1778743229"></script>
+  <script src="js/utils.js?cb=1778743229"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -206,14 +206,22 @@
         <div class="form-group" style="margin:0;">
           <input type="number" placeholder="Renda (R$)" value="${renda}" class="membro-renda" min="0" step="0.01" oninput="calcularRendaTotal()">
         </div>
-        <button type="button" onclick="removeMembro('${id}')" class="btn btn-danger btn-icon" title="Remover">✕</button>
+        ${parentesco === 'Titular'
+          ? '<span class="btn btn-secondary btn-icon" title="Titular não pode ser removido" style="opacity:.4;cursor:not-allowed;">🔒</span>'
+          : `<button type="button" onclick="removeMembro('${id}')" class="btn btn-danger btn-icon" title="Remover">✕</button>`}
       `
+      if (parentesco === 'Titular') div.dataset.titular = '1'
       document.getElementById('membros-lista').appendChild(div)
       calcularRendaTotal()
     }
 
     function removeMembro(id) {
-      document.getElementById(id)?.remove()
+      const div = document.getElementById(id)
+      if (div?.dataset.titular === '1') {
+        toast('Titular não pode ser removido', 'error')
+        return
+      }
+      div?.remove()
       calcularRendaTotal()
     }
 
@@ -371,7 +379,16 @@
             method: 'DELETE',
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getToken() }
           })
-          const membros = getMembros()
+          let membros = getMembros()
+          // Fallback: cliente novo SEM membros válidos → cria titular automático com o nome do cadastro
+          // Evita salvar família com composição vazia, que quebraria triagem/auditor
+          if (!membros.length && dados.nome) {
+            membros = [{
+              nome: dados.nome,
+              parentesco: 'Titular',
+              renda: parseFloat(document.getElementById('renda_simulada').value) || 0
+            }]
+          }
           if (membros.length) {
             await sbPost('crm_composicao_familiar', membros.map(m => ({ ...m, cliente_id: cId })))
           }
@@ -407,6 +424,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778689016"></script>
+  <script src="js/sw-register.js?cb=1778743229"></script>
 </body>
 </html>

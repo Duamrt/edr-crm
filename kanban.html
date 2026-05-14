@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778689016">
+  <link rel="stylesheet" href="css/style.css?cb=1778743229">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -45,9 +45,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778689016"></script>
-  <script src="js/auth.js?cb=1778689016"></script>
-  <script src="js/utils.js?cb=1778689016"></script>
+  <script src="js/supabase.js?cb=1778743229"></script>
+  <script src="js/auth.js?cb=1778743229"></script>
+  <script src="js/utils.js?cb=1778743229"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -68,6 +68,7 @@
 
     let _dragging = null
     let _recusadoSet = new Set()
+    let _impSet = new Set()
 
     // Etapas que exigem documentos ok para avançar
     const ETAPAS_BLOQUEADAS = ['correspondente','aprovado','prefeitura','assinatura','concluido']
@@ -81,12 +82,12 @@
           sbGet('crm_tarefas', '?concluida=eq.false&order=prazo.asc&select=cliente_id,descricao,prazo'),
           sbGet('crm_documentos', '?status=eq.recusado&select=cliente_id')
         ])
-        const impSet = new Set(imps.map(i => i.cliente_id))
+        _impSet = new Set(imps.map(i => i.cliente_id))
         _recusadoSet = new Set(recusados.map(d => d.cliente_id))
         const tarefaMap = {}
         tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
 
-        renderKanban(clientes, impSet, tarefaMap)
+        renderKanban(clientes, _impSet, tarefaMap)
       } catch (err) {
         toast('Erro ao carregar: ' + err.message, 'error')
       }
@@ -179,6 +180,12 @@
             return
           }
 
+          // Bloquear avanço se tem impedimento ativo (CADMUT, score baixo, etc)
+          if (ETAPAS_BLOQUEADAS.includes(novoStatus) && _impSet.has(clienteId)) {
+            toast('🚨 Família com impedimento ativo — resolva antes de avançar nessa etapa.', 'error')
+            return
+          }
+
           try {
             await sbPatch('crm_clientes', clienteId, { status_kanban: novoStatus })
             await sbPost('crm_historico', {
@@ -198,6 +205,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778689016"></script>
+  <script src="js/sw-register.js?cb=1778743229"></script>
 </body>
 </html>
