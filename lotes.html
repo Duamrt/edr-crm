@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778773385">
+  <link rel="stylesheet" href="css/style.css?cb=1778774275">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="preload" href="img/mapa-lotes.jpg" as="image">
@@ -28,6 +28,7 @@
         <span class="topbar-title">Lotes — MCMV</span>
         <div style="display:flex;align-items:center;gap:12px;">
           <div id="contador-lotes" class="text-sm text-muted"></div>
+          <button class="btn btn-primary btn-sm" onclick="abrirNovoAvulso()" style="font-size:.8rem;padding:4px 10px;">+ Lote avulso</button>
           <button id="btn-ajustar" class="btn btn-secondary" onclick="toggleEditMode()" style="font-size:.8rem;padding:4px 10px;">⚙️ Ajustar</button>
         </div>
       </div>
@@ -49,6 +50,45 @@
                xmlns="http://www.w3.org/2000/svg">
             <!-- renderizado pelo JS -->
           </svg>
+        </div>
+
+        <!-- Lotes avulsos (fora do empreendimento Josué) -->
+        <div id="avulsos-wrap" class="card hidden" style="margin-top:18px;padding:14px 18px;">
+          <div class="card-header" style="margin-bottom:8px;">
+            <h3 class="card-title">📍 Lotes avulsos <span class="text-sm text-muted" id="avulsos-count"></span></h3>
+            <span class="text-sm text-muted">Lotes próprios fora da planta projetada do Josué</span>
+          </div>
+          <div id="avulsos-lista"></div>
+        </div>
+
+        <!-- Modal novo lote avulso -->
+        <div id="modal-novo-avulso" class="modal-overlay hidden">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>+ Novo lote avulso</h3>
+              <button class="modal-close" onclick="fecharNovoAvulso()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número da matrícula *</label>
+                  <input type="number" id="avulso-numero" min="1" placeholder="ex: 67">
+                </div>
+                <div class="form-group">
+                  <label>Metragem (m²)</label>
+                  <input type="number" id="avulso-metragem" min="0" step="0.01" placeholder="0,00">
+                </div>
+                <div class="form-group form-full">
+                  <label>Observação</label>
+                  <input type="text" id="avulso-observacao" maxlength="200" placeholder="ex: Terreno próprio, localização, etc">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button onclick="fecharNovoAvulso()" class="btn btn-secondary">Cancelar</button>
+              <button onclick="salvarNovoAvulso()" class="btn btn-primary">Cadastrar</button>
+            </div>
+          </div>
         </div>
 
         <!-- Modal detalhe lote -->
@@ -116,9 +156,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778773385"></script>
-  <script src="js/auth.js?cb=1778773385"></script>
-  <script src="js/utils.js?cb=1778773385"></script>
+  <script src="js/supabase.js?cb=1778774275"></script>
+  <script src="js/auth.js?cb=1778774275"></script>
+  <script src="js/utils.js?cb=1778774275"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -242,10 +282,69 @@
           return { ...l, statusReal, cliente }
         })
         renderLotes()
+        renderAvulsos()
         atualizarContador()
         initDrag()
       } catch (err) { toast('Erro: ' + err.message, 'error') }
       hideLoading()
+    }
+
+    // Lotes fora da planta projetada (quadra ≠ A e ≠ B)
+    function renderAvulsos() {
+      const avulsos = _lotes.filter(l => l.quadra !== 'A' && l.quadra !== 'B')
+      const wrap = document.getElementById('avulsos-wrap')
+      if (!avulsos.length) { wrap.classList.add('hidden'); return }
+      wrap.classList.remove('hidden')
+      document.getElementById('avulsos-count').textContent = `· ${avulsos.length} ${avulsos.length === 1 ? 'lote' : 'lotes'}`
+
+      const CORES = { disponivel: '#22c55e', reservado: '#f59e0b', vendido: '#6b7280', bloqueado: '#ef4444' }
+      const LABEL = { disponivel: 'Disponível', reservado: 'Reservado', vendido: 'Vendido', bloqueado: 'Bloqueado' }
+
+      document.getElementById('avulsos-lista').innerHTML = avulsos.map(l => `
+        <div class="card" style="display:flex;align-items:center;gap:14px;padding:10px 14px;margin-bottom:8px;cursor:pointer;" onclick="abrirLote('${l.id}')">
+          <div style="width:10px;height:10px;border-radius:50%;background:${CORES[l.statusReal] || '#94a3b8'};flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:.95rem;">Lote ${l.numero} <span class="text-sm text-muted">(${l.quadra})</span></div>
+            <div class="text-sm text-muted">${l.metragem ? l.metragem + ' m² · ' : ''}${LABEL[l.statusReal] || l.statusReal}${l.cliente ? ' · ' + l.cliente.nome : ''}</div>
+            ${l.observacao ? `<div class="text-sm" style="color:#6b7280;margin-top:2px;">${l.observacao}</div>` : ''}
+          </div>
+          <div class="text-sm text-muted">↗</div>
+        </div>
+      `).join('')
+    }
+
+    function abrirNovoAvulso() {
+      document.getElementById('avulso-numero').value = ''
+      document.getElementById('avulso-metragem').value = ''
+      document.getElementById('avulso-observacao').value = ''
+      document.getElementById('modal-novo-avulso').classList.remove('hidden')
+    }
+
+    function fecharNovoAvulso() {
+      document.getElementById('modal-novo-avulso').classList.add('hidden')
+    }
+
+    async function salvarNovoAvulso() {
+      const numero = parseInt(document.getElementById('avulso-numero').value)
+      if (!numero || numero < 1) { toast('Número da matrícula é obrigatório', 'error'); return }
+      const metragem = parseFloat(document.getElementById('avulso-metragem').value) || null
+      const observacao = document.getElementById('avulso-observacao').value.trim() || null
+      try {
+        await sbPost('crm_lotes', {
+          numero, metragem, observacao,
+          quadra: 'Avulso',
+          status: 'disponivel'
+        })
+        toast('Lote avulso cadastrado', 'success')
+        fecharNovoAvulso()
+        carregar()
+      } catch (err) {
+        if (err.message?.includes('duplicate') || err.message?.includes('unique')) {
+          toast(`Já existe um lote ${numero} avulso. Use outro número.`, 'error')
+        } else {
+          toast('Erro: ' + err.message, 'error')
+        }
+      }
     }
 
     function renderLotes() {
@@ -387,6 +486,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778773385"></script>
+  <script src="js/sw-register.js?cb=1778774275"></script>
 </body>
 </html>
