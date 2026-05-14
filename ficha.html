@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778743535">
+  <link rel="stylesheet" href="css/style.css?cb=1778743783">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -197,11 +197,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778743535"></script>
-  <script src="js/auth.js?cb=1778743535"></script>
-  <script src="js/utils.js?cb=1778743535"></script>
-  <script src="js/data/clientes.js?cb=1778743535"></script>
-  <script src="js/data/documentos.js?cb=1778743535"></script>
+  <script src="js/supabase.js?cb=1778743783"></script>
+  <script src="js/auth.js?cb=1778743783"></script>
+  <script src="js/utils.js?cb=1778743783"></script>
+  <script src="js/data/clientes.js?cb=1778743783"></script>
+  <script src="js/data/documentos.js?cb=1778743783"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -220,12 +220,12 @@
     async function carregar() {
       showLoading()
       try {
-        const [rows, docs, imps, tarefas, hist, lotes] = await Promise.all([
+        const [rows, docs, imps, tarefas, hist, composicao] = await Promise.all([
           sbGet('crm_clientes', `?id=eq.${clienteId}&select=*,crm_lotes(numero,quadra)`),
           sbGet('crm_documentos', `?cliente_id=eq.${clienteId}&order=created_at.asc`),
           sbGet('crm_impedimentos', `?cliente_id=eq.${clienteId}&order=created_at.desc`),
           sbGet('crm_tarefas', `?cliente_id=eq.${clienteId}&order=prazo.asc`),
-          sbGet('crm_historico', `?cliente_id=eq.${clienteId}&order=created_at.desc&limit=30`),
+          sbGet('crm_historico', `?cliente_id=eq.${clienteId}&order=created_at.desc&limit=200`),
           sbGet('crm_composicao_familiar', `?cliente_id=eq.${clienteId}&order=created_at.asc`)
         ])
 
@@ -234,10 +234,10 @@
 
         _docs = docs
         _imps = imps
-        _membros = lotes
+        _membros = composicao
         renderTriagem(_cliente, docs, imps, hist)
-        renderAuditoria(_cliente, docs, lotes)
-        renderResumo(_cliente, lotes)
+        renderAuditoria(_cliente, docs, composicao)
+        renderResumo(_cliente, composicao)
         renderDocs(docs)
         renderImpedimentos(imps)
         renderTarefas(tarefas)
@@ -423,7 +423,6 @@
         <div><span class="text-sm text-muted">Renda simulada</span><br><strong>${fmtMoeda(c.renda_total_simulada)}</strong></div>
         <div><span class="text-sm text-muted">Renda confirmada</span><br><strong>${fmtMoeda(c.renda_total_confirmada)}</strong></div>
         <div><span class="text-sm text-muted">Faixa MCMV</span><br><strong>${c.faixa_mcmv ? 'Faixa ' + c.faixa_mcmv : '—'}</strong></div>
-        <div><span class="text-sm text-muted">Subsídio estimado</span><br><strong>${fmtMoeda(c.subsidio_estimado)}</strong></div>
         <div><span class="text-sm text-muted">Tipo de renda</span><br><strong>${TIPO_RENDA_LABEL[c.tipo_renda] || '—'}</strong></div>
         <div><span class="text-sm text-muted">FGTS</span><br><strong>${c.fgts ? fmtMoeda(c.fgts_valor) + ' disponível' : 'Não'}</strong></div>
         <div><span class="text-sm text-muted">Lote vinculado</span><br><strong>${loteInfo}</strong></div>
@@ -620,14 +619,16 @@
         return v >= hoje && v <= em15
       })
 
-      for (const doc of vencendo) {
-        const desc = `Renovar: ${DOC_LABEL[doc.tipo] || doc.tipo}`
-        if (descExistentes.has(desc)) continue
+      // Dispara as N tarefas em paralelo (era serial — travava abertura da ficha)
+      const novas = vencendo
+        .map(doc => ({ doc, desc: `Renovar: ${DOC_LABEL[doc.tipo] || doc.tipo}` }))
+        .filter(({ desc }) => !descExistentes.has(desc))
+      await Promise.all(novas.map(async ({ doc, desc }) => {
         try {
           await sbPost('crm_tarefas', { cliente_id: clienteId, descricao: desc, prazo: doc.data_vencimento, concluida: false })
           await sbPost('crm_historico', { cliente_id: clienteId, descricao: `⚠️ Tarefa automática: ${desc}`, tipo: 'sistema' })
         } catch {}
-      }
+      }))
     }
 
     async function gerarMensagem() {
@@ -680,6 +681,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778743535"></script>
+  <script src="js/sw-register.js?cb=1778743783"></script>
 </body>
 </html>
