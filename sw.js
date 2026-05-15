@@ -1,4 +1,4 @@
-const VERSION = '1778793698'
+const VERSION = '1778860155'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW

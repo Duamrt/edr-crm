@@ -62,13 +62,14 @@ async function sbDelete(table, id) {
 
 // RPC
 async function sbRpc(fn, body = {}) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+  const r = await _retry401(() => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
     headers: _headers(),
     body: JSON.stringify(body)
-  })
-  if (!r.ok) throw new Error(`RPC ${fn}: ${r.status}`)
-  return r.json()
+  }))
+  if (!r.ok) { const e = await r.text(); throw new Error(`RPC ${fn}: ${r.status} ${e}`) }
+  const text = await r.text()
+  return text ? JSON.parse(text) : null
 }
 
 // Exportar token (usado pelo auth.js)
