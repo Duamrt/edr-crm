@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Dashboard</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778929751">
+  <link rel="stylesheet" href="css/style.css?cb=1778948212">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="ficha.html">
@@ -46,12 +46,14 @@
     .badge-fire{background:var(--vermelho-pale);color:#991B1B;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
     .badge-attn{background:var(--amarelo-pale);color:#92400E;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
 
-    .fam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s;color:inherit;text-decoration:none}
-    .fam-row:last-child{border-bottom:none}
-    .fam-row:hover{background:var(--verde-surface)}
-    .fam-avatar{width:36px;height:36px;border-radius:50%;background:var(--verde-pale);color:var(--verde);display:grid;place-items:center;font-family:'Plus Jakarta Sans';font-weight:700;font-size:13px}
-    .fam-name{font-weight:600;font-size:14px;color:var(--text-primary)}
-    .fam-meta{font-size:12px;color:var(--text-secondary);margin-top:2px}
+    .fam-card{padding:16px 20px;border-bottom:1px solid var(--border);transition:.12s}
+    .fam-card:last-child{border-bottom:none}
+    .fam-card:hover{background:var(--verde-surface)}
+    .fam-head{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center}
+    .fam-avatar{width:38px;height:38px;border-radius:50%;background:var(--verde-pale);color:var(--verde);display:grid;place-items:center;font-family:'Plus Jakarta Sans';font-weight:700;font-size:13px}
+    .fam-name-link{font-weight:600;font-size:14.5px;color:var(--text-primary);text-decoration:none;cursor:pointer}
+    .fam-name-link:hover{color:var(--verde);text-decoration:underline}
+    .fam-meta{font-size:12px;color:var(--text-secondary);margin-top:3px}
     .fam-tag{font-family:'Plus Jakarta Sans';font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#F3F4F6;color:var(--text-secondary);white-space:nowrap}
     .fam-tag.triagem{background:#E0F2FE;color:#075985}
     .fam-tag.documentacao{background:var(--amarelo-pale);color:#92400E}
@@ -61,6 +63,28 @@
     .fam-tag.assinatura{background:#FECDD3;color:#9F1239}
     .fam-days{font-family:'JetBrains Mono';font-size:13px;font-weight:700;color:var(--vermelho);min-width:78px;text-align:right;white-space:nowrap}
     .fam-days.warn{color:var(--amarelo)}
+
+    .fam-pendencias{margin-top:10px;padding:10px 12px;background:rgba(0,0,0,.025);border-radius:8px;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+    .fam-pendencias .pend-row{display:flex;gap:6px;align-items:flex-start}
+    .fam-pendencias .pend-label{font-family:'Plus Jakarta Sans';font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:5px;flex-shrink:0;line-height:1.5}
+    .fam-pendencias .pend-label.r{background:var(--vermelho-pale);color:#991B1B}
+    .fam-pendencias .pend-label.y{background:var(--amarelo-pale);color:#92400E}
+    .fam-pendencias .pend-label.b{background:#FEE2E2;color:#7F1D1D}
+    .fam-pendencias .pend-items{color:var(--text-primary);line-height:1.55}
+    .fam-pendencias .pend-items b{font-weight:600}
+    .fam-tudo-ok{margin-top:10px;padding:10px 12px;background:var(--verde-surface);border:1px solid var(--verde-pale);border-radius:8px;font-size:12.5px;color:var(--verde-hover);display:flex;align-items:center;gap:8px}
+
+    .fam-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+    .fam-act{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-family:'Plus Jakarta Sans';transition:.15s}
+    .fam-act:hover{border-color:var(--verde);background:var(--verde-surface);color:var(--verde-hover)}
+    .fam-act.primary{background:var(--verde);color:#fff;border-color:var(--verde)}
+    .fam-act.primary:hover{background:var(--verde-hover);color:#fff}
+    .fam-act.success{background:#fff;color:var(--success);border-color:var(--success)}
+    .fam-act.success:hover{background:#ECFDF5;color:var(--success)}
+    .fam-act:disabled{opacity:.6;cursor:wait}
+
+    .toast-flash{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--verde);color:#fff;padding:11px 22px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(45,106,79,.35);z-index:1000;animation:flashIn .25s ease;font-family:'Plus Jakarta Sans'}
+    @keyframes flashIn{from{transform:translate(-50%,20px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 
     .dash-card-foot{padding:11px 20px;font-size:12px;color:var(--text-secondary);background:var(--bg);display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
     .link-toggle{color:var(--verde);font-family:'Plus Jakarta Sans';font-weight:600;text-decoration:none;cursor:pointer;font-size:13px;border:none;background:none;padding:0}
@@ -154,9 +178,9 @@
               </div>
             </header>
             <div class="dash-card-body" id="cobrar-lista">
-              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
-              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
-              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
+              <div class="fam-card"><div class="fam-head"><div class="fam-avatar skel">··</div><div><div class="fam-name-link skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div></div>
+              <div class="fam-card"><div class="fam-head"><div class="fam-avatar skel">··</div><div><div class="fam-name-link skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div></div>
+              <div class="fam-card"><div class="fam-head"><div class="fam-avatar skel">··</div><div><div class="fam-name-link skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div></div>
             </div>
             <div class="dash-card-foot" id="cobrar-foot" style="display:none">
               <span id="cobrar-foot-info"></span>
@@ -199,10 +223,10 @@
     </div>
   </div>
 
-  <script src="js/supabase.js?cb=1778929751"></script>
-  <script src="js/auth.js?cb=1778929751"></script>
-  <script src="js/utils.js?cb=1778929751"></script>
-  <script src="js/data/dashboard.js?cb=1778929751"></script>
-  <script src="js/sw-register.js?cb=1778929751"></script>
+  <script src="js/supabase.js?cb=1778948212"></script>
+  <script src="js/auth.js?cb=1778948212"></script>
+  <script src="js/utils.js?cb=1778948212"></script>
+  <script src="js/data/dashboard.js?cb=1778948212"></script>
+  <script src="js/sw-register.js?cb=1778948212"></script>
 </body>
 </html>

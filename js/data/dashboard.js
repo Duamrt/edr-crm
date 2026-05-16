@@ -1,6 +1,6 @@
-// EDR CRM — Dashboard data layer
-// Consome RPC get_crm_dashboard_summary() e renderiza tudo.
-// Auto-refresh 3min, expand inline da lista, nome dinâmico do usuário logado.
+// EDR CRM — Dashboard data layer (v2 — com pendências detalhadas + ações)
+// Consome RPC get_crm_dashboard_summary() e renderiza com bloco de pendências por família.
+// Auto-refresh 3min, expand inline, nome dinâmico, mensagem padrão pra clipboard, "Cobrei agora".
 
 (function() {
   if (!authGuard()) throw new Error('not auth')
@@ -13,17 +13,15 @@
   let _dados = null
   let _expandido = false
   let _ultimaSync = null
-  const REFRESH_MS = 3 * 60 * 1000  // 3 minutos
+  const REFRESH_MS = 3 * 60 * 1000
 
-  const LABEL_ETAPA = {
+  const LABEL_ETAPA_CURTO = {
     triagem: 'Triagem',
     documentacao: 'Documentação',
     correspondente: 'Correspondente',
     aprovado: 'Aprovado',
     prefeitura: 'Prefeitura',
-    assinatura: 'Assinatura',
-    concluido: 'Concluído',
-    perdido: 'Perdido'
+    assinatura: 'Assinatura'
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
@@ -34,16 +32,14 @@
     return (partes[0][0] + partes[partes.length-1][0]).toUpperCase()
   }
 
-  function saudacao(hora) {
-    if (hora < 12) return 'Bom dia'
-    if (hora < 18) return 'Boa tarde'
+  function saudacao(h) {
+    if (h < 12) return 'Bom dia'
+    if (h < 18) return 'Boa tarde'
     return 'Boa noite'
   }
 
   function dataExtenso(d) {
-    return d.toLocaleDateString('pt-BR', {
-      weekday: 'long', day: 'numeric', month: 'long'
-    })
+    return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   }
 
   function tempoDecorrido(ms) {
@@ -62,29 +58,82 @@
     }[c]))
   }
 
+  function labelDoc(d) {
+    if (!d) return ''
+    if (d.descricao) return d.descricao
+    return DOC_LABEL[d.tipo] || d.tipo
+  }
+
+  function labelImp(i) {
+    if (!i) return ''
+    return IMPEDIMENTO_LABEL[i.tipo] || i.descricao || i.tipo
+  }
+
+  function primeiroNome(nomeCompleto) {
+    if (!nomeCompleto) return ''
+    return nomeCompleto.trim().split(/\s+/)[0]
+  }
+
+  function capitalizar(s) {
+    if (!s) return s
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+  }
+
+  // Gera mensagem padrão de cobrança baseada no estado da família
+  function gerarMensagemPadrao(f) {
+    const nome = capitalizar(primeiroNome(f.nome))
+    const tudoOk = (f.docs_faltando?.length || 0) === 0 &&
+                   (f.docs_recusados?.length || 0) === 0 &&
+                   (f.docs_vencidos?.length || 0) === 0 &&
+                   (f.impedimentos?.length || 0) === 0
+
+    let corpo = ''
+
+    if (tudoOk) {
+      // Família sem pendências de doc — provavelmente travada na etapa (corresp, prefeitura, etc)
+      const etapa = LABEL_ETAPA_CURTO[f.status_kanban] || f.status_kanban
+      corpo = `Oi ${nome}, tudo bem? Aqui é da EDR. Tô passando pra acompanhar o andamento do seu processo MCMV (atualmente em *${etapa}*). Tem alguma novidade aí da sua parte? Já faz ${f.dias_parado} dia${f.dias_parado === 1 ? '' : 's'} sem movimento.`
+    } else {
+      corpo = `Oi ${nome}, tudo bem? Aqui é da EDR. Tô passando pra avançar com sua casa pelo MCMV. Pra darmos o próximo passo, precisamos do seguinte:\n`
+
+      if (f.docs_faltando?.length) {
+        const itens = f.docs_faltando.map(d => `• ${labelDoc(d)}`).join('\n')
+        corpo += `\n📄 *Faltando entregar:*\n${itens}\n`
+      }
+      if (f.docs_recusados?.length) {
+        const itens = f.docs_recusados.map(d => `• ${labelDoc(d)} (precisa refazer)`).join('\n')
+        corpo += `\n🚫 *Recusado anteriormente:*\n${itens}\n`
+      }
+      if (f.docs_vencidos?.length) {
+        const itens = f.docs_vencidos.map(d => `• ${labelDoc(d)}`).join('\n')
+        corpo += `\n⏰ *Vencido (renovar):*\n${itens}\n`
+      }
+      if (f.impedimentos?.length) {
+        const itens = f.impedimentos.map(i => `• ${labelImp(i)}`).join('\n')
+        corpo += `\n⚠️ *Pendência:*\n${itens}\n`
+      }
+
+      corpo += `\nConsegue me mandar/resolver até amanhã? Qualquer dúvida me chama!`
+    }
+
+    return corpo
+  }
+
   // ─── Renderers ──────────────────────────────────────────────────
   function renderHero(briefing) {
     const agora = new Date()
     const sau = saudacao(agora.getHours())
     const nome = briefing.usuario_nome || u?.nome || u?.email || 'usuário'
-    document.getElementById('hero-greeting').innerHTML =
-      `${sau}, ${escapeHtml(nome)} 🌿`
+    document.getElementById('hero-greeting').innerHTML = `${sau}, ${escapeHtml(nome)} 🌿`
 
     const dia = dataExtenso(agora)
     const cobrar = briefing.cobrar_hoje_total
     const tarefasHoje = briefing.tarefas_hoje
-
     let partes = [`Hoje é ${dia}.`]
-    if (cobrar > 0) {
-      partes.push(`Você tem <b>${cobrar} ${cobrar === 1 ? 'família' : 'famílias'}</b> precisando de ação`)
-    } else {
-      partes.push(`Nenhuma família urgente`)
-    }
-    if (tarefasHoje > 0) {
-      partes.push(`e <b>${tarefasHoje} ${tarefasHoje === 1 ? 'tarefa' : 'tarefas'}</b> vencendo hoje.`)
-    } else {
-      partes[partes.length-1] += '.'
-    }
+    if (cobrar > 0) partes.push(`Você tem <b>${cobrar} ${cobrar === 1 ? 'família' : 'famílias'}</b> precisando de ação`)
+    else partes.push(`Nenhuma família urgente`)
+    if (tarefasHoje > 0) partes.push(`e <b>${tarefasHoje} ${tarefasHoje === 1 ? 'tarefa' : 'tarefas'}</b> vencendo hoje.`)
+    else partes[partes.length-1] += '.'
     document.getElementById('hero-sub').innerHTML = partes.join(' ')
   }
 
@@ -136,14 +185,13 @@
 
     const reds = lista.filter(f => f.gravidade === 'red').length
     const yellows = lista.filter(f => f.gravidade === 'yellow').length
-    const badgeHtml = reds > 0
+    elBadge.innerHTML = reds > 0
       ? `<span class="badge-fire">${reds} ${reds === 1 ? 'crítica' : 'críticas'}</span>`
       : `<span class="badge-attn">${yellows} atenção</span>`
-    elBadge.innerHTML = badgeHtml
-    elSub.textContent = `${total} ${total === 1 ? 'família' : 'famílias'} ordenadas por gravidade`
+    elSub.textContent = `${total} ${total === 1 ? 'família' : 'famílias'} — ordenadas por etapa + gravidade`
 
     const exibir = _expandido ? lista : lista.slice(0, 3)
-    elLista.innerHTML = exibir.map(f => renderFamRow(f)).join('')
+    elLista.innerHTML = exibir.map(f => renderFamCard(f)).join('')
 
     if (total > 3) {
       elFoot.style.display = 'flex'
@@ -159,8 +207,8 @@
     }
   }
 
-  function renderFamRow(f) {
-    const stage = LABEL_ETAPA[f.status_kanban] || f.status_kanban
+  function renderFamCard(f) {
+    const stage = LABEL_ETAPA_CURTO[f.status_kanban] || f.status_kanban
     const lote = f.lote_numero
       ? `Lote ${f.lote_numero}${f.lote_quadra && f.lote_quadra !== 'Avulso' ? ' Q.' + f.lote_quadra : ' (avulso)'}`
       : 'Sem lote'
@@ -172,16 +220,58 @@
     ].join(' · ')
     const diasClass = f.gravidade === 'red' ? '' : 'warn'
     const diasLabel = f.dias_parado === 0 ? 'hoje' : `${f.dias_parado}d parado`
+
+    // Pendências
+    const faltando = f.docs_faltando || []
+    const recusados = f.docs_recusados || []
+    const vencidos = f.docs_vencidos || []
+    const imps = f.impedimentos || []
+    const tudoOk = !faltando.length && !recusados.length && !vencidos.length && !imps.length
+
+    const linhasPend = []
+    if (faltando.length) {
+      const txt = faltando.slice(0, 5).map(d => `<b>${escapeHtml(labelDoc(d))}</b>`).join(' · ')
+      const resto = faltando.length > 5 ? ` <span style="opacity:.7">+${faltando.length - 5} outros</span>` : ''
+      linhasPend.push(`<div class="pend-row"><span class="pend-label y">FALTA</span><span class="pend-items">${txt}${resto}</span></div>`)
+    }
+    if (recusados.length) {
+      const txt = recusados.slice(0, 5).map(d => `<b>${escapeHtml(labelDoc(d))}</b>`).join(' · ')
+      linhasPend.push(`<div class="pend-row"><span class="pend-label r">RECUSADO</span><span class="pend-items">${txt}</span></div>`)
+    }
+    if (vencidos.length) {
+      const txt = vencidos.slice(0, 5).map(d => `<b>${escapeHtml(labelDoc(d))}</b>`).join(' · ')
+      linhasPend.push(`<div class="pend-row"><span class="pend-label y">VENCIDO</span><span class="pend-items">${txt}</span></div>`)
+    }
+    if (imps.length) {
+      const txt = imps.slice(0, 3).map(i => `<b>${escapeHtml(labelImp(i))}</b>`).join(' · ')
+      linhasPend.push(`<div class="pend-row"><span class="pend-label b">BLOQUEIO</span><span class="pend-items">${txt}</span></div>`)
+    }
+
+    const pendBloco = tudoOk
+      ? `<div class="fam-tudo-ok">✓ Sem pendências de doc — provavelmente travado na etapa <b>${stage}</b>. Cobrar andamento.</div>`
+      : `<div class="fam-pendencias">${linhasPend.join('')}</div>`
+
+    const id = escapeHtml(f.id)
     return `
-      <a class="fam-row" href="ficha.html?id=${escapeHtml(f.id)}">
-        <div class="fam-avatar">${iniciais(f.nome)}</div>
-        <div>
-          <div class="fam-name">${escapeHtml(f.nome)}</div>
-          <div class="fam-meta">${escapeHtml(meta)}</div>
+      <div class="fam-card" data-fam-id="${id}">
+        <div class="fam-head">
+          <div class="fam-avatar">${iniciais(f.nome)}</div>
+          <div>
+            <a class="fam-name-link" href="ficha.html?id=${id}">${escapeHtml(f.nome)}</a>
+            <div class="fam-meta">${escapeHtml(meta)}</div>
+          </div>
+          <span class="fam-tag ${f.status_kanban}">${stage}</span>
+          <span class="fam-days ${diasClass}">${diasLabel}</span>
         </div>
-        <span class="fam-tag ${f.status_kanban}">${stage}</span>
-        <span class="fam-days ${diasClass}">${diasLabel}</span>
-      </a>
+
+        ${pendBloco}
+
+        <div class="fam-actions">
+          <button class="fam-act primary" data-act="copiar" data-fam-id="${id}">📋 Copiar mensagem</button>
+          <button class="fam-act success" data-act="cobrei" data-fam-id="${id}">✓ Cobrei agora</button>
+          <a class="fam-act" href="ficha.html?id=${id}">📄 Ver ficha</a>
+        </div>
+      </div>
     `
   }
 
@@ -229,6 +319,60 @@
     el.textContent = `Atualizado ${tempoDecorrido(_ultimaSync)}`
   }
 
+  // ─── Toast flash ────────────────────────────────────────────────
+  function flashToast(texto) {
+    const t = document.createElement('div')
+    t.className = 'toast-flash'
+    t.textContent = texto
+    document.body.appendChild(t)
+    setTimeout(() => t.remove(), 2400)
+  }
+
+  // ─── Ações ──────────────────────────────────────────────────────
+  async function copiarMensagem(famId, btnEl) {
+    const f = (_dados?.cobrar_hoje?.lista || []).find(x => x.id === famId)
+    if (!f) return
+    const msg = gerarMensagemPadrao(f)
+    try {
+      await navigator.clipboard.writeText(msg)
+      flashToast(`📋 Mensagem da ${primeiroNome(f.nome)} copiada — cola no Whats`)
+    } catch (err) {
+      // Fallback pra contextos sem clipboard API (http antigo)
+      const ta = document.createElement('textarea')
+      ta.value = msg
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch {}
+      ta.remove()
+      flashToast('📋 Mensagem copiada')
+    }
+  }
+
+  async function registrarCobranca(famId, btnEl) {
+    if (!famId) return
+    btnEl.disabled = true
+    const txtOrig = btnEl.textContent
+    btnEl.textContent = '⏳ Registrando...'
+    try {
+      const res = await sbRpc('crm_registrar_cobranca', { p_cliente_id: famId, p_canal: 'whatsapp' })
+      if (!res?.ok) throw new Error('Falha ao registrar')
+      // Remove o card otimisticamente (volta no próximo refresh)
+      const card = document.querySelector(`.fam-card[data-fam-id="${famId}"]`)
+      if (card) {
+        card.style.opacity = '.4'
+        card.style.pointerEvents = 'none'
+      }
+      flashToast('✓ Cobrança registrada — família sai da lista por enquanto')
+      // Atualiza dados depois de 1s pra dar feedback visual
+      setTimeout(() => dashboardCarregar(), 1000)
+    } catch (err) {
+      btnEl.disabled = false
+      btnEl.textContent = txtOrig
+      console.error(err)
+      flashToast('❌ Erro ao registrar: ' + (err.message || 'tente novamente'))
+    }
+  }
+
   // ─── Loader ─────────────────────────────────────────────────────
   async function dashboardCarregar() {
     try {
@@ -259,20 +403,23 @@
   window.dashboardCarregar = dashboardCarregar
   window.toggleExpandir = toggleExpandir
 
-  // Toggle do expandir
+  // Delegação de clicks na lista de famílias
   document.addEventListener('click', e => {
+    const tgt = e.target.closest('[data-act]')
+    if (tgt) {
+      e.preventDefault()
+      const act = tgt.dataset.act
+      const famId = tgt.dataset.famId
+      if (act === 'copiar') return copiarMensagem(famId, tgt)
+      if (act === 'cobrei') return registrarCobranca(famId, tgt)
+    }
     if (e.target && e.target.id === 'cobrar-toggle') {
       e.preventDefault()
       toggleExpandir()
     }
   })
 
-  // Carrega inicial
   dashboardCarregar()
-
-  // Auto-refresh 3min
   setInterval(dashboardCarregar, REFRESH_MS)
-
-  // Atualiza "há X min" a cada 30s
   setInterval(renderRefreshInfo, 30 * 1000)
 })()
