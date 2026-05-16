@@ -73,12 +73,21 @@ async function login(email, senha) {
 }
 
 async function logout() {
+  // 1. Limpa estado local IMEDIATAMENTE (antes de qualquer await)
+  // Evita race: se algo for re-renderizado no meio, já tá sem sessão.
+  sessionClear()
+  try { localStorage.clear() } catch {}
+  try { sessionStorage.clear() } catch {}
+
+  // 2. Revoga token server-side (best-effort — não bloqueia logout se rede cair)
   try {
     await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getToken() }
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + (getToken() || SUPABASE_KEY) },
+      keepalive: true
     })
   } catch {}
-  sessionClear()
+
+  // 3. Redireciona com replace (history limpa — back não volta pro app)
   window.location.replace('index.html')
 }

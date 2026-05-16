@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778948212">
+  <link rel="stylesheet" href="css/style.css?cb=1778952854">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -226,11 +227,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778948212"></script>
-  <script src="js/auth.js?cb=1778948212"></script>
-  <script src="js/utils.js?cb=1778948212"></script>
-  <script src="js/data/clientes.js?cb=1778948212"></script>
-  <script src="js/data/documentos.js?cb=1778948212"></script>
+  <script src="js/supabase.js?cb=1778952854"></script>
+  <script src="js/auth.js?cb=1778952854"></script>
+  <script src="js/utils.js?cb=1778952854"></script>
+  <script src="js/data/clientes.js?cb=1778952854"></script>
+  <script src="js/data/documentos.js?cb=1778952854"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -463,7 +464,7 @@
       const sla = slaBadge(c.ultima_atualizacao)
 
       document.getElementById('resumo-grid').innerHTML = `
-        <div><span class="text-sm text-muted">CPF</span><br><strong>${fmtCpf(c.cpf)}</strong></div>
+        <div><span class="text-sm text-muted">CPF</span><br><strong class="cpf-masked" data-cpf-masked data-cliente-id="${c.id}" data-cpf-contexto="ficha" title="Clique para revelar (registrado no log de acesso)">${fmtCpfMasked(c.cpf)}</strong></div>
         <div><span class="text-sm text-muted">Telefone</span><br><strong>${fmtTel(c.telefone)}</strong></div>
         <div><span class="text-sm text-muted">Renda simulada</span><br><strong>${fmtMoeda(c.renda_total_simulada)}</strong></div>
         <div><span class="text-sm text-muted">Renda confirmada</span><br><strong>${fmtMoeda(c.renda_total_confirmada)}</strong></div>
@@ -766,6 +767,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778948212"></script>
+  <script src="js/sw-register.js?cb=1778952854"></script>
 </body>
 </html>

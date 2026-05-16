@@ -267,8 +267,9 @@
         ${pendBloco}
 
         <div class="fam-actions">
-          <button class="fam-act primary" data-act="copiar" data-fam-id="${id}">📋 Copiar mensagem</button>
-          <button class="fam-act success" data-act="cobrei" data-fam-id="${id}">✓ Cobrei agora</button>
+          <button class="fam-act whats" data-act="whats" data-fam-id="${id}" title="Abre o WhatsApp com a mensagem já pronta">💬 Abrir Whats</button>
+          <button class="fam-act primary" data-act="copiar" data-fam-id="${id}" title="Copia a mensagem pro clipboard">📋 Copiar</button>
+          <button class="fam-act success" data-act="cobrei" data-fam-id="${id}" title="Registra cobrança no histórico e tira da lista por 3 dias">✓ Cobrei agora</button>
           <a class="fam-act" href="ficha.html?id=${id}">📄 Ver ficha</a>
         </div>
       </div>
@@ -329,10 +330,25 @@
   }
 
   // ─── Ações ──────────────────────────────────────────────────────
+  // Normaliza CRLF → LF (Whats Desktop trata CRLF como parágrafo único)
+  function normalizarQuebrasLinha(s) {
+    return (s || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  }
+
+  // Sanitiza telefone pra wa.me: só dígitos, com DDI 55 BR
+  function telefoneParaWhats(tel) {
+    if (!tel) return null
+    let d = String(tel).replace(/\D/g, '')
+    if (d.length < 10) return null
+    // Se já tem 12-13 dígitos (DDI incluso), usa direto. Senão, adiciona 55.
+    if (d.length === 10 || d.length === 11) d = '55' + d
+    return d
+  }
+
   async function copiarMensagem(famId, btnEl) {
     const f = (_dados?.cobrar_hoje?.lista || []).find(x => x.id === famId)
     if (!f) return
-    const msg = gerarMensagemPadrao(f)
+    const msg = normalizarQuebrasLinha(gerarMensagemPadrao(f))
     try {
       await navigator.clipboard.writeText(msg)
       flashToast(`📋 Mensagem da ${primeiroNome(f.nome)} copiada — cola no Whats`)
@@ -346,6 +362,20 @@
       ta.remove()
       flashToast('📋 Mensagem copiada')
     }
+  }
+
+  // Abre WhatsApp Web/App com mensagem já preenchida (zero copy-paste)
+  function abrirWhatsApp(famId, btnEl) {
+    const f = (_dados?.cobrar_hoje?.lista || []).find(x => x.id === famId)
+    if (!f) return
+    const tel = telefoneParaWhats(f.telefone)
+    if (!tel) {
+      flashToast('❌ Telefone inválido — verifique a ficha da família')
+      return
+    }
+    const msg = normalizarQuebrasLinha(gerarMensagemPadrao(f))
+    const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   async function registrarCobranca(famId, btnEl) {
@@ -411,6 +441,7 @@
       const act = tgt.dataset.act
       const famId = tgt.dataset.famId
       if (act === 'copiar') return copiarMensagem(famId, tgt)
+      if (act === 'whats') return abrirWhatsApp(famId, tgt)
       if (act === 'cobrei') return registrarCobranca(famId, tgt)
     }
     if (e.target && e.target.id === 'cobrar-toggle') {

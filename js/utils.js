@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778948212'
+const CRM_VERSION = '1778952854'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -13,6 +13,65 @@ document.addEventListener('DOMContentLoaded', () => {
 function fmtCpf(v) {
   if (!v) return ''
   return v.replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')
+}
+
+// CPF mascarado para listagens/telas compartilhadas (LGPD Art. 46)
+// Mostra dígitos do meio (que ajudam identificação visual) e oculta primeiros 3 e últimos 2
+function fmtCpfMasked(v) {
+  if (!v) return ''
+  const d = v.replace(/\D/g,'')
+  if (d.length !== 11) return fmtCpf(v)
+  return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`
+}
+
+// Revela CPF completo via RPC (registra audit log) e atualiza um elemento DOM
+// Uso: <span data-cpf-masked data-cliente-id="UUID">***.123.456-**</span>
+// Click no elemento (via delegação) chama esta função; troca por completo + volta em 30s
+async function revelarCpf(clienteId, contexto, elTarget) {
+  if (!clienteId || !elTarget) return
+  try {
+    elTarget.style.opacity = '.5'
+    const r = await sbRpc('crm_revelar_cpf', { p_cliente_id: clienteId, p_contexto: contexto || 'listagem' })
+    if (!r?.cpf) throw new Error('Resposta sem CPF')
+    const completo = fmtCpf(r.cpf)
+    elTarget.dataset.cpfOriginal = elTarget.textContent
+    elTarget.textContent = completo
+    elTarget.style.opacity = '1'
+    elTarget.title = 'Revelado — volta a mascarar em 30s'
+    setTimeout(() => {
+      if (elTarget.dataset.cpfOriginal) {
+        elTarget.textContent = elTarget.dataset.cpfOriginal
+        delete elTarget.dataset.cpfOriginal
+        elTarget.title = 'Clique para revelar (registrado no log de acesso)'
+      }
+    }, 30000)
+  } catch (err) {
+    elTarget.style.opacity = '1'
+    console.error('revelarCpf erro:', err)
+    if (typeof toast === 'function') toast('Erro ao revelar CPF: ' + err.message, 'error')
+  }
+}
+
+// Pill de Faixa MCMV (componente reutilizável — listagem, ficha, kanban, dashboard)
+// Cores diferenciadas por faixa pra identificação visual rápida
+function pillFaixa(faixa, opts = {}) {
+  if (!faixa) return ''
+  const size = opts.size === 'sm' ? 'pill-faixa-sm' : ''
+  const compact = opts.compact === true
+  const label = compact ? `F${faixa}` : `Faixa ${faixa}`
+  return `<span class="pill-faixa pill-faixa-${faixa} ${size}">${label}</span>`
+}
+
+// Listener global de revelação de CPF (delegação)
+// Qualquer elemento com data-cpf-masked + data-cliente-id revela ao clicar
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-cpf-masked][data-cliente-id]')
+    if (!el || el.dataset.cpfOriginal) return
+    e.preventDefault()
+    const contexto = el.dataset.cpfContexto || 'listagem'
+    revelarCpf(el.dataset.clienteId, contexto, el)
+  })
 }
 
 // Formatar telefone

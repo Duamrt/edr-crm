@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778948212">
+  <link rel="stylesheet" href="css/style.css?cb=1778952854">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -28,6 +29,9 @@
       <div class="topbar">
         <span class="topbar-title">Esteira MCMV</span>
         <div class="flex gap-8">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-secondary);cursor:pointer;user-select:none;">
+            <input type="checkbox" id="toggle-finalizados" style="cursor:pointer;"> Mostrar finalizados
+          </label>
           <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
@@ -47,10 +51,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778948212"></script>
-  <script src="js/auth.js?cb=1778948212"></script>
-  <script src="js/utils.js?cb=1778948212"></script>
-  <script src="js/data/clientes.js?cb=1778948212"></script>
+  <script src="js/supabase.js?cb=1778952854"></script>
+  <script src="js/auth.js?cb=1778952854"></script>
+  <script src="js/utils.js?cb=1778952854"></script>
+  <script src="js/data/clientes.js?cb=1778952854"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -112,7 +116,12 @@
       const wrap = document.getElementById('kanban-wrap')
       wrap.innerHTML = ''
 
-      COLUNAS.forEach(col => {
+      const mostrarFinalizados = localStorage.getItem('kanban_mostrar_finalizados') === '1'
+      const colunasVisiveis = mostrarFinalizados
+        ? COLUNAS
+        : COLUNAS.filter(c => c.id !== 'concluido' && c.id !== 'perdido')
+
+      colunasVisiveis.forEach(col => {
         const cards = clientes.filter(c => c.status_kanban === col.id)
 
         const colEl = document.createElement('div')
@@ -147,11 +156,12 @@
           card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${hasRecusado ? 'has-recusado' : ''} ${slaClass}`
           card.draggable = true
           card.dataset.id = c.id
+          const tarefaTxt = tarefa ? '📋 ' + escapeHtml(tarefa.descricao.substring(0,35)) + ' · ' + fmtData(tarefa.prazo) : '<span class="text-muted">Sem próxima ação</span>'
           card.innerHTML = `
-            <div class="kanban-card-nome">${c.nome}${c.faixa_mcmv ? ` <span class="badge badge-blue" style="font-size:.7rem;">F${c.faixa_mcmv}</span>` : ''}</div>
-            <div class="kanban-card-lote">${lote}</div>
+            <div class="kanban-card-nome">${escapeHtml(c.nome)}${c.faixa_mcmv ? ' ' + pillFaixa(c.faixa_mcmv, { compact: true, size: 'sm' }) : ''}</div>
+            <div class="kanban-card-lote">${escapeHtml(lote)}</div>
             ${badges.length ? `<div class="kanban-card-badges">${badges.join('')}</div>` : ''}
-            <div class="kanban-card-acao">${tarefa ? '📋 ' + tarefa.descricao.substring(0,35) + ' · ' + fmtData(tarefa.prazo) : '<span class="text-muted">Sem próxima ação</span>'}</div>
+            <div class="kanban-card-acao">${tarefaTxt}</div>
           `
 
           card.addEventListener('click', () => {
@@ -204,8 +214,16 @@
       })
     }
 
+    // Toggle "Mostrar finalizados" — persiste em localStorage
+    const _toggleFin = document.getElementById('toggle-finalizados')
+    _toggleFin.checked = localStorage.getItem('kanban_mostrar_finalizados') === '1'
+    _toggleFin.addEventListener('change', () => {
+      localStorage.setItem('kanban_mostrar_finalizados', _toggleFin.checked ? '1' : '0')
+      carregar()
+    })
+
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778948212"></script>
+  <script src="js/sw-register.js?cb=1778952854"></script>
 </body>
 </html>
