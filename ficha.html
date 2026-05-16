@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953554">
+  <link rel="stylesheet" href="css/style.css?cb=1778953868">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -34,10 +34,14 @@
           <a href="#" id="btn-wpp-cobrar" class="btn btn-whatsapp btn-sm" target="_blank">📱 WhatsApp</a>
           <button onclick="gerarMensagem()" id="btn-gerar-wpp" class="btn btn-ai btn-sm">🤖 Gerar mensagem</button>
           <a href="#" id="btn-editar" class="btn btn-outline btn-sm">Editar</a>
+          <button type="button" id="btn-lgpd-delete" class="btn btn-danger btn-sm hidden" onclick="apagarFamiliaLGPD()" title="LGPD — Direito ao esquecimento (admin only)">🗑️ Apagar permanente</button>
         </div>
       </div>
 
       <div class="page-content">
+        <!-- Banner de status terminal (FUNC03 — perdido/concluido) -->
+        <div id="banner-terminal" class="banner-terminal hidden"></div>
+
         <!-- Triagem MCMV (Agente 1) -->
         <div id="triagem-card" class="triagem-card hidden">
           <div class="triagem-header">
@@ -228,11 +232,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778953554"></script>
-  <script src="js/auth.js?cb=1778953554"></script>
-  <script src="js/utils.js?cb=1778953554"></script>
-  <script src="js/data/clientes.js?cb=1778953554"></script>
-  <script src="js/data/documentos.js?cb=1778953554"></script>
+  <script src="js/supabase.js?cb=1778953868"></script>
+  <script src="js/auth.js?cb=1778953868"></script>
+  <script src="js/utils.js?cb=1778953868"></script>
+  <script src="js/data/clientes.js?cb=1778953868"></script>
+  <script src="js/data/documentos.js?cb=1778953868"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -279,6 +283,15 @@
         document.getElementById('status-select').value = _cliente.status_kanban
         document.getElementById('status-badge').innerHTML =
           `<span class="badge status-${_cliente.status_kanban}">${KANBAN_LABEL[_cliente.status_kanban]}</span>`
+
+        // Banner de status terminal (FUNC03)
+        renderBannerTerminal(_cliente)
+
+        // Botão LGPD apagar permanente — só pra admin (FUNC05)
+        const usrAtual = getUsuario()
+        if (usrAtual?.role === 'admin') {
+          document.getElementById('btn-lgpd-delete').classList.remove('hidden')
+        }
 
         document.getElementById('btn-editar').href = `familia.html?id=${clienteId}`
 
@@ -490,6 +503,88 @@
       const linhas = lista.map(l => `• ${l}`).join('\n')
       const msg = `Olá ${_cliente.nome}! 👋 Sou Elyda da EDR Engenharia. Para dar continuidade ao seu processo MCMV, ainda preciso dos seguintes documentos:\n\n${linhas}\n\nPode me enviar pelo WhatsApp ou trazer na nossa sede. Qualquer dúvida, estou à disposição! 🙏`
       window.open(linkWhatsapp(_cliente.telefone, msg), '_blank')
+    }
+
+    // Banner de aviso quando família está em estado terminal (FUNC03)
+    function renderBannerTerminal(c) {
+      const el = document.getElementById('banner-terminal')
+      if (!el) return
+      if (c.status_kanban === 'perdido') {
+        el.className = 'banner-terminal banner-terminal-perdido'
+        el.innerHTML = `
+          <div class="banner-terminal-icon">⛔</div>
+          <div class="banner-terminal-body">
+            <div class="banner-terminal-titulo">Esta família está marcada como <b>PERDIDA</b></div>
+            <div class="banner-terminal-sub">Edições nesta ficha não voltam ela para o pipeline. Se foi um engano, mude o status logo abaixo para reativar.</div>
+          </div>
+          <button type="button" class="banner-terminal-btn" onclick="reativarFamilia('triagem')">↺ Reativar (para Triagem)</button>
+        `
+      } else if (c.status_kanban === 'concluido') {
+        el.className = 'banner-terminal banner-terminal-concluido'
+        el.innerHTML = `
+          <div class="banner-terminal-icon">🏁</div>
+          <div class="banner-terminal-body">
+            <div class="banner-terminal-titulo">Família <b>CONCLUÍDA</b></div>
+            <div class="banner-terminal-sub">Esta família já fechou o processo MCMV. Ficha em modo histórico — evite alterações sem motivo.</div>
+          </div>
+        `
+      } else {
+        el.className = 'banner-terminal hidden'
+        el.innerHTML = ''
+      }
+    }
+
+    // LGPD — apaga família e todos os dados relacionados (admin only, FUNC05)
+    async function apagarFamiliaLGPD() {
+      if (!_cliente) return
+      const nome = _cliente.nome
+      // Confirmação dupla: digitar o nome
+      const digitado = prompt(
+        `⚠️ APAGAR PERMANENTEMENTE\n\n` +
+        `Esta ação apaga TODOS os dados desta família (documentos, histórico, tarefas, impedimentos, composição).\n` +
+        `É IRREVERSÍVEL. Usado para atender pedido LGPD de direito ao esquecimento.\n\n` +
+        `Para confirmar, digite o nome exato da família:\n\n${nome}`
+      )
+      if (digitado == null) return  // cancelou
+      if (digitado.trim() !== nome.trim()) {
+        toast('Nome não confere — operação cancelada', 'error')
+        return
+      }
+      const motivo = prompt('Motivo da exclusão (registrado no log LGPD):', 'Solicitação do titular dos dados')
+      if (motivo == null) return
+
+      const btn = document.getElementById('btn-lgpd-delete')
+      btn.disabled = true
+      btn.textContent = '⏳ Apagando...'
+      try {
+        const res = await sbRpc('crm_apagar_familia_lgpd', { p_cliente_id: clienteId, p_motivo: motivo })
+        if (!res?.ok) throw new Error('Falha ao apagar')
+        const ap = res.apagados
+        const resumo = `Família apagada (${ap.documentos} docs, ${ap.historico} históricos, ${ap.tarefas} tarefas).\nLog registrado como: ${res.nome_anon} (${res.cpf_anon})`
+        alert('✅ ' + resumo)
+        window.location.replace('clientes.html')
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = '🗑️ Apagar permanente'
+        toast('Erro: ' + err.message, 'error')
+      }
+    }
+
+    // Reativa família vinda de "perdido" → muda status pra triagem
+    async function reativarFamilia(novoStatus) {
+      if (!confirm('Reativar esta família para Triagem? O histórico de "perdido" fica preservado.')) return
+      try {
+        await sbPatch('crm_clientes', clienteId, { status_kanban: novoStatus, ultima_atualizacao: new Date().toISOString() })
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: `↺ Família reativada (perdido → ${novoStatus})`,
+          tipo: 'sistema'
+        })
+        toast('Família reativada', 'success')
+        carregar()
+      } catch (err) {
+        toast('Erro ao reativar: ' + err.message, 'error')
+      }
     }
 
     function renderResumo(c, membros) {
@@ -801,6 +896,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778953554"></script>
+  <script src="js/sw-register.js?cb=1778953868"></script>
 </body>
 </html>

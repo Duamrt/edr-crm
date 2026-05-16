@@ -1270,3 +1270,56 @@ tbody tr:hover { background: #f9fafb; }
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* Banner terminal (FUNC03 — família perdida/concluída) */
+.banner-terminal {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border-left: 4px solid;
+}
+.banner-terminal-perdido {
+  background: #FEF2F2;
+  border-color: var(--vermelho);
+  color: #7F1D1D;
+}
+.banner-terminal-concluido {
+  background: #ECFDF5;
+  border-color: var(--verde);
+  color: #065F46;
+}
+.banner-terminal-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.banner-terminal-body { flex: 1; }
+.banner-terminal-titulo {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.banner-terminal-sub {
+  font-size: 12.5px;
+  opacity: .85;
+  line-height: 1.4;
+}
+.banner-terminal-btn {
+  background: white;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.banner-terminal-btn:hover {
+  background: currentColor;
+  color: white;
+}

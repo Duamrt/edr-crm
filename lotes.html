@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953554">
+  <link rel="stylesheet" href="css/style.css?cb=1778953868">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="preload" href="img/mapa-lotes.jpg" as="image">
@@ -158,9 +158,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778953554"></script>
-  <script src="js/auth.js?cb=1778953554"></script>
-  <script src="js/utils.js?cb=1778953554"></script>
+  <script src="js/supabase.js?cb=1778953868"></script>
+  <script src="js/auth.js?cb=1778953868"></script>
+  <script src="js/utils.js?cb=1778953868"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -359,8 +359,23 @@
         const cor = CORES[lote.statusReal] || '#94a3b8'
         const label = `${q}${lote.numero}`
         const nomeAbrev = lote.cliente ? lote.cliente.nome.split(' ')[0].substring(0, 6) : ''
+
+        // Tooltip nativo SVG (hover do browser) — FUNC06
+        const STATUS_PT = { disponivel: 'Disponível', reservado: 'Reservado', vendido: 'Vendido', bloqueado: 'Bloqueado' }
+        const tooltipLinhas = [
+          `Lote ${q}${lote.numero}${lote.metragem ? ' · ' + lote.metragem + 'm²' : ''}`,
+          `Status: ${STATUS_PT[lote.statusReal] || lote.statusReal}`
+        ]
+        if (lote.cliente) {
+          tooltipLinhas.push(`Família: ${lote.cliente.nome}`)
+          if (lote.cliente.faixa_mcmv) tooltipLinhas.push(`Faixa ${lote.cliente.faixa_mcmv}`)
+        }
+        if (lote.observacao) tooltipLinhas.push(`Obs: ${lote.observacao}`)
+        const tooltip = `<title>${escapeHtml(tooltipLinhas.join('\n'))}</title>`
+
         if (_editMode) {
           return `<g data-q="${q}" data-i="${i}" style="cursor:grab">
+            ${tooltip}
             <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.75" stroke="white" stroke-width="1.5"/>
             <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
                   fill="white" font-size="8" font-weight="700" font-family="sans-serif"
@@ -370,13 +385,14 @@
         return `<g onclick="abrirLote('${lote.id}')" style="cursor:pointer"
           onmouseover="this.querySelector('circle').setAttribute('r','15');this.querySelector('circle').setAttribute('opacity','1')"
           onmouseout="this.querySelector('circle').setAttribute('r','12');this.querySelector('circle').setAttribute('opacity','0.90')">
+          ${tooltip}
           <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.90"/>
           <text x="${cx}" y="${nomeAbrev ? cy - 3 : cy}" text-anchor="middle" dominant-baseline="middle"
                 fill="white" font-size="8" font-weight="700" font-family="sans-serif"
                 pointer-events="none">${label}</text>
           ${nomeAbrev ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" dominant-baseline="middle"
                 fill="rgba(255,255,255,.85)" font-size="6.5" font-family="sans-serif"
-                pointer-events="none">${nomeAbrev}</text>` : ''}
+                pointer-events="none">${escapeHtml(nomeAbrev)}</text>` : ''}
         </g>`
       }
 
@@ -488,6 +504,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778953554"></script>
+  <script src="js/sw-register.js?cb=1778953868"></script>
 </body>
 </html>
