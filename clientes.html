@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953868">
+  <link rel="stylesheet" href="css/style.css?cb=1778954174">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -92,9 +92,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778953868"></script>
-  <script src="js/auth.js?cb=1778953868"></script>
-  <script src="js/utils.js?cb=1778953868"></script>
+  <script src="js/supabase.js?cb=1778954174"></script>
+  <script src="js/auth.js?cb=1778954174"></script>
+  <script src="js/utils.js?cb=1778954174"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -133,7 +133,7 @@
 
         renderTabela(_todos)
       } catch (err) {
-        toast('Erro ao carregar: ' + err.message, 'error')
+        toast('Erro ao carregar: ' + traduzirErro(err), 'error')
       }
       hideLoading()
     }
@@ -192,7 +192,7 @@
         toast('Família arquivada', 'success')
         carregar()
       } catch (err) {
-        toast('Erro ao arquivar: ' + err.message, 'error')
+        toast('Erro ao arquivar: ' + traduzirErro(err), 'error')
       }
     }
 
@@ -217,6 +217,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778953868"></script>
+  <script src="js/sw-register.js?cb=1778954174"></script>
 </body>
 </html>
