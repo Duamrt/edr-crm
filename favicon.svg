@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2d6a4f"/>
-  <text x="32" y="46" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700" fill="#ffffff" text-anchor="middle">E</text>
+  <rect width="64" height="64" rx="12" fill="#2d6a4f"/>
+  <!-- Telhado geométrico (identidade EDR Engenharia/MCMV) -->
+  <path d="M 14 26 L 32 13 L 50 26" stroke="#34d399" stroke-width="2.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Letra E -->
+  <text x="32" y="50" font-family="'Plus Jakarta Sans', system-ui, Arial, sans-serif" font-size="26" font-weight="800" fill="#ffffff" text-anchor="middle">E</text>
 </svg>

@@ -1358,3 +1358,37 @@ tbody tr:hover { background: #f9fafb; }
   background: var(--text-tertiary);
   opacity: .7;
 }
+
+/* Sort por coluna na tabela (P2-05) */
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .12s;
+  position: relative;
+}
+.th-sort:hover {
+  background: var(--verde-surface);
+  color: var(--verde-hover);
+}
+.th-sort-active {
+  color: var(--verde);
+  font-weight: 700;
+}
+.sort-ind {
+  display: inline-block;
+  margin-left: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .85rem;
+  color: var(--verde);
+  min-width: 12px;
+}
+
+/* Footer versionado promovido (P1-DES04) */
+.crm-versao {
+  color: #9ca3af !important;
+  font-size: .8rem !important;
+  font-weight: 500;
+  margin-top: 6px;
+  letter-spacing: .02em;
+  opacity: 1 !important;
+}
