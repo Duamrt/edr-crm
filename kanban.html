@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778928857">
+  <link rel="stylesheet" href="css/style.css?cb=1778929751">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
@@ -16,6 +16,7 @@
     <nav class="sidebar">
       <div class="sidebar-logo"><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div>
       <div class="sidebar-nav">
+        <a href="dashboard.html">📊 Dashboard</a>
         <a href="clientes.html">👥 Famílias</a>
         <a href="kanban.html" class="active">📋 Kanban</a>
         <a href="lotes.html">🏘️ Lotes</a>
@@ -46,10 +47,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778928857"></script>
-  <script src="js/auth.js?cb=1778928857"></script>
-  <script src="js/utils.js?cb=1778928857"></script>
-  <script src="js/data/clientes.js?cb=1778928857"></script>
+  <script src="js/supabase.js?cb=1778929751"></script>
+  <script src="js/auth.js?cb=1778929751"></script>
+  <script src="js/utils.js?cb=1778929751"></script>
+  <script src="js/data/clientes.js?cb=1778929751"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -205,6 +206,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778928857"></script>
+  <script src="js/sw-register.js?cb=1778929751"></script>
 </body>
 </html>
