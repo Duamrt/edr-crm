@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Dashboard</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778948212">
+  <link rel="stylesheet" href="css/style.css?cb=1778952854">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="ficha.html">
@@ -81,6 +82,8 @@
     .fam-act.primary:hover{background:var(--verde-hover);color:#fff}
     .fam-act.success{background:#fff;color:var(--success);border-color:var(--success)}
     .fam-act.success:hover{background:#ECFDF5;color:var(--success)}
+    .fam-act.whats{background:#25D366;color:#fff;border-color:#25D366}
+    .fam-act.whats:hover{background:#1EBE5D;color:#fff;border-color:#1EBE5D}
     .fam-act:disabled{opacity:.6;cursor:wait}
 
     .toast-flash{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--verde);color:#fff;padding:11px 22px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(45,106,79,.35);z-index:1000;animation:flashIn .25s ease;font-family:'Plus Jakarta Sans'}
@@ -223,10 +226,10 @@
     </div>
   </div>
 
-  <script src="js/supabase.js?cb=1778948212"></script>
-  <script src="js/auth.js?cb=1778948212"></script>
-  <script src="js/utils.js?cb=1778948212"></script>
-  <script src="js/data/dashboard.js?cb=1778948212"></script>
-  <script src="js/sw-register.js?cb=1778948212"></script>
+  <script src="js/supabase.js?cb=1778952854"></script>
+  <script src="js/auth.js?cb=1778952854"></script>
+  <script src="js/utils.js?cb=1778952854"></script>
+  <script src="js/data/dashboard.js?cb=1778952854"></script>
+  <script src="js/sw-register.js?cb=1778952854"></script>
 </body>
 </html>

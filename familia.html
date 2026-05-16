@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778948212">
+  <link rel="stylesheet" href="css/style.css?cb=1778952854">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -157,10 +158,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778948212"></script>
-  <script src="js/auth.js?cb=1778948212"></script>
-  <script src="js/utils.js?cb=1778948212"></script>
-  <script src="js/data/clientes.js?cb=1778948212"></script>
+  <script src="js/supabase.js?cb=1778952854"></script>
+  <script src="js/auth.js?cb=1778952854"></script>
+  <script src="js/utils.js?cb=1778952854"></script>
+  <script src="js/data/clientes.js?cb=1778952854"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -230,11 +231,25 @@
       document.getElementById('renda-calculada').textContent = fmtMoeda(total)
       // Auto-preenche renda simulada (campo readonly)
       document.getElementById('renda_simulada').value = total > 0 ? total.toFixed(2) : ''
-      // Recalcula faixa MCMV se não tiver override manual
+      recalcularFaixaPelaRenda()
+    }
+
+    // Recalcula faixa MCMV usando a maior entre renda confirmada e simulada
+    // (renda confirmada é fonte autoritativa quando preenchida)
+    function recalcularFaixaPelaRenda() {
+      const conf = parseFloat(document.getElementById('renda_confirmada').value) || 0
+      const sim = parseFloat(document.getElementById('renda_simulada').value) || 0
+      const rendaUsada = conf > 0 ? conf : sim
       const faixaSelect = document.getElementById('faixa_mcmv')
-      const faixaCalc = calcFaixaMcmv(total)
-      // Sempre atualiza pra refletir a renda atual da composição
-      faixaSelect.value = faixaCalc ? String(faixaCalc) : ''
+      const faixaCalc = calcFaixaMcmv(rendaUsada)
+      const novaFaixa = faixaCalc ? String(faixaCalc) : ''
+      if (faixaSelect.value !== novaFaixa) {
+        faixaSelect.value = novaFaixa
+        // Feedback visual: highlight verde por 1s pra sinalizar que mudou
+        faixaSelect.style.transition = 'background-color .15s'
+        faixaSelect.style.backgroundColor = 'var(--verde-pale)'
+        setTimeout(() => { faixaSelect.style.backgroundColor = '' }, 900)
+      }
     }
 
     function getMembros() {
@@ -393,6 +408,9 @@
     maskTel(document.getElementById('telefone'))
     document.getElementById('data_contato').value = new Date().toISOString().split('T')[0]
 
+    // Recalcula faixa quando renda confirmada mudar (a simulada já dispara via membros)
+    document.getElementById('renda_confirmada').addEventListener('input', recalcularFaixaPelaRenda)
+
     if (clienteId) {
       carregarCliente(clienteId)
     } else {
@@ -408,6 +426,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1778948212"></script>
+  <script src="js/sw-register.js?cb=1778952854"></script>
 </body>
 </html>

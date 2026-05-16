@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778948212">
+  <link rel="stylesheet" href="css/style.css?cb=1778952854">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -91,9 +92,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778948212"></script>
-  <script src="js/auth.js?cb=1778948212"></script>
-  <script src="js/utils.js?cb=1778948212"></script>
+  <script src="js/supabase.js?cb=1778952854"></script>
+  <script src="js/auth.js?cb=1778952854"></script>
+  <script src="js/utils.js?cb=1778952854"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -163,9 +164,9 @@
 
         return `<tr>
           <td><a href="ficha.html?id=${c.id}" class="font-bold" style="text-decoration:none;color:inherit;">${c.nome}</a></td>
-          <td class="text-sm">${fmtCpf(c.cpf)}</td>
+          <td class="text-sm"><span class="cpf-masked" data-cpf-masked data-cliente-id="${c.id}" data-cpf-contexto="listagem" title="Clique para revelar (registrado no log de acesso)">${fmtCpfMasked(c.cpf)}</span></td>
           <td class="text-sm">${fmtTel(c.telefone)}</td>
-          <td>${c.faixa_mcmv ? '<span class="badge badge-blue">Faixa ' + c.faixa_mcmv + '</span>' : '—'}</td>
+          <td>${pillFaixa(c.faixa_mcmv) || '—'}</td>
           <td class="text-sm">${loteNum}</td>
           <td><span class="badge status-${c.status_kanban}">${KANBAN_LABEL[c.status_kanban] || c.status_kanban}</span></td>
           <td>${sla}${impBadge}</td>
@@ -216,6 +217,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778948212"></script>
+  <script src="js/sw-register.js?cb=1778952854"></script>
 </body>
 </html>
