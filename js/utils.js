@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778952854'
+const CRM_VERSION = '1778953074'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (el) el.textContent = v
   console.log(`%c EDR CRM ${v} `, 'background:#2d6a4f;color:#fff;font-weight:bold;padding:4px 8px;border-radius:4px;')
 })
+
+// Escape HTML — proteção XSS quando renderiza input do usuário via innerHTML
+// Global porque é usado em todas as telas (kanban, dashboard, clientes, ficha)
+function escapeHtml(s) {
+  if (s == null) return ''
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]))
+}
 
 // Formatar CPF: 000.000.000-00
 function fmtCpf(v) {
