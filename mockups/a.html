@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup A · Operacional Denso · EDR CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --bg-soft:#F9FAFB; --bg-card:#FFFFFF; --bg-hover:#F3F4F6;
+  --border:#E5E7EB; --border-strong:#D1D5DB;
+  --text:#111827; --text-muted:#6B7280;
+  --accent:#2563EB; --accent-soft:#DBEAFE;
+  --success:#10B981; --success-soft:#D1FAE5;
+  --warn:#D97706; --warn-soft:#FEF3C7;
+  --danger:#DC2626; --danger-soft:#FEE2E2;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Geist',-apple-system,sans-serif;background:var(--bg-soft);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+.sidebar{background:#FFFFFF;border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.brand-logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#60A5FA);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+.brand-name{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.brand-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+.sidebar-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .12s}
+.nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent)}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--bg-hover);color:var(--text-muted);padding:2px 7px;border-radius:999px}
+.nav-item.active .nav-badge{background:var(--accent);color:#fff}
+
+.topbar{height:56px;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;background:#FFFFFF;position:sticky;top:0;z-index:20}
+.breadcrumb{font-size:13px;color:var(--text-muted)}
+.breadcrumb b{color:var(--text);font-weight:600}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.icon-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:white;display:grid;place-items:center;font-weight:600;font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;font-family:inherit}
+.btn-primary{background:var(--accent);color:white}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+
+main{padding:22px 28px 60px}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:20px;flex-wrap:wrap}
+.hero h1{margin:0 0 4px;font-size:24px;font-weight:600;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--text-muted);font-size:13.5px}
+.hero p b{color:var(--text);font-weight:600}
+
+/* KPIs topo */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kpi-value{font-family:'Geist Mono',monospace;font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.kpi-delta{font-size:12px;font-weight:500;margin-top:6px;display:inline-flex;align-items:center;gap:3px}
+.kpi-delta.up{color:var(--success)}
+.kpi-delta.down{color:var(--danger)}
+.kpi-delta.flat{color:var(--text-muted)}
+
+/* Bloco principal Cobrar Hoje */
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.card-head{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card-sub{margin:2px 0 0;font-size:12px;color:var(--text-muted)}
+.card-body{padding:8px 0}
+
+.fam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.fam-row:last-child{border-bottom:none}
+.fam-row:hover{background:var(--bg-hover)}
+.fam-dot{width:8px;height:8px;border-radius:50%}
+.fam-dot.r{background:var(--danger)}
+.fam-dot.y{background:var(--warn)}
+.fam-name{font-weight:500;font-size:13.5px}
+.fam-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+.fam-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--bg-hover);color:var(--text-muted)}
+.fam-tag.doc{background:var(--warn-soft);color:#92400E}
+.fam-tag.corresp{background:var(--accent-soft);color:#1E40AF}
+.fam-days{font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;color:var(--danger);min-width:46px;text-align:right}
+.fam-days.warn{color:var(--warn)}
+
+.list-foot{padding:10px 20px;font-size:12px;color:var(--text-muted);background:var(--bg-soft);display:flex;align-items:center;justify-content:space-between}
+.link{color:var(--accent);font-weight:500;text-decoration:none;cursor:pointer}
+
+/* Lateral - O que tá quebrado */
+.broken-list{padding:6px 0}
+.broken-row{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--border)}
+.broken-row:last-child{border-bottom:none}
+.broken-label{display:flex;align-items:center;gap:10px;color:var(--text)}
+.broken-icon{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;font-size:13px}
+.bi-r{background:var(--danger-soft);color:var(--danger)}
+.bi-y{background:var(--warn-soft);color:var(--warn)}
+.bi-b{background:var(--accent-soft);color:var(--accent)}
+.broken-count{font-family:'Geist Mono',monospace;font-weight:600;font-size:14px}
+
+/* Funil */
+.funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.fn{text-align:center;padding:10px 6px;border-radius:10px;background:var(--bg-soft);cursor:pointer;transition:.12s}
+.fn:hover{background:var(--accent-soft)}
+.fn-label{font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.fn-value{font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.02em}
+
+/* Footer mockup */
+.mockup-footer{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:999px;font-size:12px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:50}
+.mockup-footer a{color:#93C5FD;text-decoration:none;font-weight:500}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">E</div>
+    <div>
+      <div class="brand-name">EDR CRM</div>
+      <div class="brand-sub">Gestão MCMV</div>
+    </div>
+  </div>
+  <div class="sidebar-label">Início</div>
+  <a class="nav-item active">📊 Dashboard <span class="nav-badge">8</span></a>
+  <div class="sidebar-label">Operação</div>
+  <a class="nav-item">👥 Famílias <span class="nav-badge">101</span></a>
+  <a class="nav-item">📋 Kanban</a>
+  <a class="nav-item">🏘️ Lotes <span class="nav-badge">67</span></a>
+  <div class="sidebar-label">Outros</div>
+  <a class="nav-item">📁 Drive</a>
+  <a class="nav-item">⚙️ Configurações</a>
+</aside>
+
+<div>
+  <header class="topbar">
+    <div class="breadcrumb">Início › <b>Dashboard</b></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost">🔄 Atualizar</button>
+      <div class="icon-btn">🔔</div>
+      <div class="avatar">EL</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1>Bom dia, Elyda 👋</h1>
+        <p>Hoje é sábado, 16 de maio. Você tem <b>8 famílias</b> precisando de ação e <b>2 tarefas</b> vencendo hoje.</p>
+      </div>
+      <button class="btn btn-primary">+ Nova família</button>
+    </div>
+
+    <!-- KPIs topo -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Cobrar hoje</div>
+        <div class="kpi-value">8</div>
+        <div class="kpi-delta up">↑ 3 vs ontem</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Em movimento</div>
+        <div class="kpi-value">97</div>
+        <div class="kpi-delta flat">= sem mudança</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Lotes reservados</div>
+        <div class="kpi-value">18/23</div>
+        <div class="kpi-delta up">↑ 1 esta semana</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Concluídos no mês</div>
+        <div class="kpi-value">4</div>
+        <div class="kpi-delta up">↑ 2 vs abr</div>
+      </div>
+    </div>
+
+    <!-- Cobrar Hoje + O que tá quebrado -->
+    <div class="dash-grid">
+      <section class="card">
+        <header class="card-head">
+          <div>
+            <h2 class="card-title">🔥 Cobrar hoje</h2>
+            <p class="card-sub">3 famílias mais críticas — ordenadas por gravidade</p>
+          </div>
+          <a class="link">Ver todas (8) →</a>
+        </header>
+        <div class="card-body">
+          <div class="fam-row">
+            <span class="fam-dot r"></span>
+            <div>
+              <div class="fam-name">Marcos Rodrigues da Silva</div>
+              <div class="fam-meta">(87) 9 9123-4567 · Faixa 2 · Lote 42</div>
+            </div>
+            <span class="fam-tag doc">Documentação</span>
+            <span class="fam-days">9d parado</span>
+          </div>
+          <div class="fam-row">
+            <span class="fam-dot r"></span>
+            <div>
+              <div class="fam-name">João Carlos Mendes</div>
+              <div class="fam-meta">(87) 9 8888-1212 · Faixa 1 · Sem lote</div>
+            </div>
+            <span class="fam-tag doc">Documentação</span>
+            <span class="fam-days">7d parado</span>
+          </div>
+          <div class="fam-row">
+            <span class="fam-dot y"></span>
+            <div>
+              <div class="fam-name">Maria das Graças Santos</div>
+              <div class="fam-meta">(87) 9 9444-5050 · Faixa 1 · Lote 15</div>
+            </div>
+            <span class="fam-tag corresp">Correspondente</span>
+            <span class="fam-days warn">5d parado</span>
+          </div>
+        </div>
+        <div class="list-foot">
+          <span>Mostrando 3 de 8 famílias</span>
+          <a class="link">Expandir lista completa →</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <header class="card-head">
+          <div>
+            <h2 class="card-title">⚠️ O que tá quebrado</h2>
+            <p class="card-sub">Pontos de atenção</p>
+          </div>
+        </header>
+        <div class="broken-list">
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-r">!</span> Docs recusados</span>
+            <span class="broken-count">4</span>
+          </div>
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-y">⏰</span> Docs vencidos</span>
+            <span class="broken-count">2</span>
+          </div>
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-r">🛑</span> Impedimentos</span>
+            <span class="broken-count">3</span>
+          </div>
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-r">📅</span> Tarefas vencidas</span>
+            <span class="broken-count">1</span>
+          </div>
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-y">📅</span> Tarefas hoje</span>
+            <span class="broken-count">2</span>
+          </div>
+          <div class="broken-row">
+            <span class="broken-label"><span class="broken-icon bi-b">📅</span> Tarefas amanhã</span>
+            <span class="broken-count">4</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Funil -->
+    <section style="margin-bottom:8px"><h3 style="margin:0 0 10px;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">📈 Funil</h3></section>
+    <div class="funnel">
+      <div class="fn"><div class="fn-label">Triagem</div><div class="fn-value">42</div></div>
+      <div class="fn"><div class="fn-label">Doc</div><div class="fn-value">28</div></div>
+      <div class="fn"><div class="fn-label">Corresp</div><div class="fn-value">11</div></div>
+      <div class="fn"><div class="fn-label">Aprov</div><div class="fn-value">8</div></div>
+      <div class="fn"><div class="fn-label">Pref</div><div class="fn-value">5</div></div>
+      <div class="fn"><div class="fn-label">Assin</div><div class="fn-value">3</div></div>
+      <div class="fn"><div class="fn-label">Concl mês</div><div class="fn-value">4</div></div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-footer">
+  <span>🎨 <b>Mockup A · Operacional Denso</b></span>
+  <a href="index.html">← Voltar à escolha</a>
+</div>
+</body>
+</html>
