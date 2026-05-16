@@ -1,8 +1,9 @@
-const VERSION = '1778954564'
+const VERSION = '1778971108'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW
 const ASSETS = [
+  'css/tokens.css?cb=' + VERSION,
   'css/style.css?cb=' + VERSION,
   'js/supabase.js?cb=' + VERSION,
   'js/auth.js?cb=' + VERSION,
