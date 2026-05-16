@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>EDR CRM — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css?cb=1778929751">
+  <link rel="prefetch" href="clientes.html">
+  <link rel="prefetch" href="kanban.html">
+  <link rel="prefetch" href="ficha.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    document.documentElement.style.visibility = 'hidden'
+  </script>
+  <style>
+    /* Dashboard-only styles (cores e fontes vêm de style.css) */
+    .dash-heading{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;letter-spacing:-.02em}
+    .dash-mono{font-family:'JetBrains Mono',monospace;font-feature-settings:"tnum"}
+
+    .dash-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px;flex-wrap:wrap}
+    .dash-hero h1{font-family:'Plus Jakarta Sans';margin:0 0 4px;font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--text-primary)}
+    .dash-hero p{margin:0;color:var(--text-secondary);font-size:14px}
+    .dash-hero p b{color:var(--text-primary);font-weight:600}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--sombra);position:relative;overflow:hidden}
+    .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--verde)}
+    .kpi.urgent::before{background:var(--vermelho)}
+    .kpi.attn::before{background:var(--amarelo)}
+    .kpi-label{font-family:'Plus Jakarta Sans';font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+    .kpi-value{font-family:'Plus Jakarta Sans';font-size:30px;font-weight:700;letter-spacing:-.025em;line-height:1;color:var(--text-primary)}
+    .kpi-value .frac{font-size:1rem;color:var(--text-secondary);font-weight:600}
+    .kpi-sub{font-family:'JetBrains Mono';font-size:11.5px;font-weight:500;margin-top:8px;color:var(--text-tertiary)}
+
+    .dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:22px}
+    @media (max-width:980px){.dash-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+
+    .dash-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sombra);overflow:hidden}
+    .dash-card-head{padding:16px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .dash-card-title{font-family:'Plus Jakarta Sans';margin:0;font-size:15px;font-weight:700;letter-spacing:-.015em;display:flex;align-items:center;gap:8px;color:var(--text-primary)}
+    .dash-card-sub{margin:3px 0 0;font-size:12px;color:var(--text-secondary)}
+    .dash-card-body{padding:6px 0}
+    .badge-fire{background:var(--vermelho-pale);color:#991B1B;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
+    .badge-attn{background:var(--amarelo-pale);color:#92400E;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
+
+    .fam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s;color:inherit;text-decoration:none}
+    .fam-row:last-child{border-bottom:none}
+    .fam-row:hover{background:var(--verde-surface)}
+    .fam-avatar{width:36px;height:36px;border-radius:50%;background:var(--verde-pale);color:var(--verde);display:grid;place-items:center;font-family:'Plus Jakarta Sans';font-weight:700;font-size:13px}
+    .fam-name{font-weight:600;font-size:14px;color:var(--text-primary)}
+    .fam-meta{font-size:12px;color:var(--text-secondary);margin-top:2px}
+    .fam-tag{font-family:'Plus Jakarta Sans';font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#F3F4F6;color:var(--text-secondary);white-space:nowrap}
+    .fam-tag.triagem{background:#E0F2FE;color:#075985}
+    .fam-tag.documentacao{background:var(--amarelo-pale);color:#92400E}
+    .fam-tag.correspondente{background:#DBEAFE;color:#1E40AF}
+    .fam-tag.aprovado{background:var(--verde-pale);color:var(--verde-hover)}
+    .fam-tag.prefeitura{background:#EDE9FE;color:#5B21B6}
+    .fam-tag.assinatura{background:#FECDD3;color:#9F1239}
+    .fam-days{font-family:'JetBrains Mono';font-size:13px;font-weight:700;color:var(--vermelho);min-width:78px;text-align:right;white-space:nowrap}
+    .fam-days.warn{color:var(--amarelo)}
+
+    .dash-card-foot{padding:11px 20px;font-size:12px;color:var(--text-secondary);background:var(--bg);display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
+    .link-toggle{color:var(--verde);font-family:'Plus Jakarta Sans';font-weight:600;text-decoration:none;cursor:pointer;font-size:13px;border:none;background:none;padding:0}
+    .link-toggle:hover{color:var(--verde-hover);text-decoration:underline}
+
+    .broken-list{padding:6px 0}
+    .broken-row{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;font-size:13px;border-bottom:1px solid var(--border)}
+    .broken-row:last-child{border-bottom:none}
+    .broken-label{display:flex;align-items:center;gap:10px;color:var(--text-primary);font-weight:500}
+    .broken-icon{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;font-size:13px;flex-shrink:0}
+    .bi-r{background:var(--vermelho-pale);color:var(--vermelho)}
+    .bi-y{background:var(--amarelo-pale);color:var(--amarelo)}
+    .bi-g{background:var(--verde-pale);color:var(--verde)}
+    .broken-count{font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--text-primary)}
+    .broken-count.zero{color:var(--text-tertiary);font-weight:500}
+
+    .funnel-wrap h3{font-family:'Plus Jakarta Sans';margin:0 0 12px;font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.08em}
+    .funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;box-shadow:var(--sombra)}
+    @media (max-width:780px){.funnel{grid-template-columns:repeat(4,1fr)}}
+    @media (max-width:480px){.funnel{grid-template-columns:repeat(2,1fr)}}
+    .fn{text-align:center;padding:14px 6px;border-radius:10px;background:var(--bg);cursor:pointer;transition:.15s;border:1px solid transparent;text-decoration:none;color:inherit;display:block}
+    .fn:hover{background:var(--verde-surface);border-color:var(--verde-pale)}
+    .fn-label{font-family:'Plus Jakarta Sans';font-size:10.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .fn-value{font-family:'Plus Jakarta Sans';font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--text-primary)}
+
+    .skel{background:linear-gradient(90deg,#f0f0f0 0%,#f8f8f8 50%,#f0f0f0 100%);background-size:200% 100%;animation:skel 1.2s infinite;border-radius:6px;color:transparent;user-select:none}
+    @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    .empty-state{padding:40px 20px;text-align:center;color:var(--text-secondary);font-size:14px}
+    .empty-state .icon{font-size:32px;margin-bottom:8px;display:block;opacity:.4}
+
+    .refresh-info{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-tertiary);font-family:'JetBrains Mono'}
+    .refresh-info .dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-title">EDR CRM</div>
+        <div class="logo-sub">Gestão MCMV</div>
+      </div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html" class="active">📊 Dashboard</a>
+        <a href="clientes.html">👥 Famílias</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+      </div>
+      <div class="sidebar-footer">
+        <div id="sidebar-usuario"></div>
+        <div id="crm-versao-footer" class="crm-versao"></div>
+      </div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">📊 Dashboard</span>
+        <div class="flex gap-8" style="align-items:center">
+          <span class="refresh-info"><span class="dot"></span><span id="last-refresh">Carregando...</span></span>
+          <button onclick="dashboardCarregar()" class="btn btn-secondary btn-sm">🔄 Atualizar</button>
+          <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
+          <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <!-- HERO greeting -->
+        <div class="dash-hero">
+          <div>
+            <h1 id="hero-greeting"><span class="skel">Carregando saudação...</span></h1>
+            <p id="hero-sub"><span class="skel">Carregando contexto do dia...</span></p>
+          </div>
+        </div>
+
+        <!-- KPIs topo -->
+        <div class="kpi-grid" id="kpis">
+          <div class="kpi"><div class="kpi-label">Cobrar hoje</div><div class="kpi-value skel">···</div></div>
+          <div class="kpi"><div class="kpi-label">Em movimento</div><div class="kpi-value skel">···</div></div>
+          <div class="kpi"><div class="kpi-label">Lotes Josué</div><div class="kpi-value skel">···</div></div>
+          <div class="kpi"><div class="kpi-label">Concluídos no mês</div><div class="kpi-value skel">···</div></div>
+        </div>
+
+        <!-- Cobrar Hoje + O que tá quebrado -->
+        <div class="dash-grid">
+          <section class="dash-card">
+            <header class="dash-card-head">
+              <div>
+                <h2 class="dash-card-title">🔥 Cobrar hoje <span id="cobrar-badge"></span></h2>
+                <p class="dash-card-sub" id="cobrar-sub">Carregando famílias críticas...</p>
+              </div>
+            </header>
+            <div class="dash-card-body" id="cobrar-lista">
+              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
+              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
+              <div class="fam-row"><div class="fam-avatar skel">··</div><div><div class="fam-name skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div>
+            </div>
+            <div class="dash-card-foot" id="cobrar-foot" style="display:none">
+              <span id="cobrar-foot-info"></span>
+              <button class="link-toggle" id="cobrar-toggle">Expandir lista completa ↓</button>
+            </div>
+          </section>
+
+          <section class="dash-card">
+            <header class="dash-card-head">
+              <div>
+                <h2 class="dash-card-title">⚠️ O que tá quebrado</h2>
+                <p class="dash-card-sub">Pontos de atenção</p>
+              </div>
+            </header>
+            <div class="broken-list" id="quebrado-lista">
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-r">!</span> Docs recusados</span><span class="broken-count skel">·</span></div>
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-y">⏰</span> Docs vencidos</span><span class="broken-count skel">·</span></div>
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-r">🛑</span> Impedimentos</span><span class="broken-count skel">·</span></div>
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-r">📅</span> Tarefas vencidas</span><span class="broken-count skel">·</span></div>
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-y">📅</span> Tarefas hoje</span><span class="broken-count skel">·</span></div>
+              <div class="broken-row"><span class="broken-label"><span class="broken-icon bi-g">📅</span> Tarefas amanhã</span><span class="broken-count skel">·</span></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Funil -->
+        <div class="funnel-wrap">
+          <h3>📈 Funil de famílias</h3>
+          <div class="funnel" id="funil">
+            <a class="fn"><div class="fn-label">Triagem</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Doc</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Corresp</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Aprov</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Pref</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Assin</div><div class="fn-value skel">·</div></a>
+            <a class="fn"><div class="fn-label">Concl mês</div><div class="fn-value skel">·</div></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/supabase.js?cb=1778929751"></script>
+  <script src="js/auth.js?cb=1778929751"></script>
+  <script src="js/utils.js?cb=1778929751"></script>
+  <script src="js/data/dashboard.js?cb=1778929751"></script>
+  <script src="js/sw-register.js?cb=1778929751"></script>
+</body>
+</html>

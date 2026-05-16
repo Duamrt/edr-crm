@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778928857'
+const CRM_VERSION = '1778929751'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -94,6 +94,25 @@ const MCMV_DIAS_PARADO = 7
 
 // Dias parado pra cobrar correspondente no kanban
 const MCMV_DIAS_COBRAR_CORRESPONDENTE = 2
+
+// SLA por etapa (calibrado com Elyda 2026-05-15) — usado pelo dashboard
+// Limite VERMELHO em dias. Amarelo = metade do limite.
+const SLA_POR_ETAPA = {
+  triagem: 3,
+  documentacao: 3,
+  correspondente: 5,
+  aprovado: 5,
+  prefeitura: 5,
+  assinatura: 2,
+  concluido: 999,
+  perdido: 999
+}
+function slaGravidade(etapa, dias) {
+  const limite = SLA_POR_ETAPA[etapa] || 7
+  if (dias >= limite) return 'red'
+  if (dias >= limite / 2) return 'yellow'
+  return 'green'
+}
 
 // Etapas do fluxo MCMV que exigem doc/impedimento OK pra avançar
 const ETAPAS_BLOQUEADAS_AVANCO = ['correspondente','aprovado','prefeitura','assinatura','concluido']
