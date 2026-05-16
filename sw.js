@@ -1,4 +1,4 @@
-const VERSION = '1778928296'
+const VERSION = '1778928501'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW
@@ -37,6 +37,7 @@ self.addEventListener('fetch', e => {
   if (e.request.url.includes('supabase.co')) return  // API nunca em cache
 
   const url = new URL(e.request.url)
+  if (url.pathname.startsWith('/mockups/')) return  // mockups visuais — sempre direto da network
   const isHtml = url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname === ''
 
   if (isHtml) {
