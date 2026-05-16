@@ -191,12 +191,12 @@
     if (total > 3) {
       elFoot.style.display = 'flex'
       const restantes = total - 3
-      elFootInfo.textContent = _expandido
-        ? `Mostrando todas as ${total}`
-        : `Mostrando 3 de ${total}`
+      elFootInfo.innerHTML = _expandido
+        ? `Mostrando todas as ${total} · <a href="clientes.html?prioridade=cobrar_hoje" class="link-toggle">Abrir listagem filtrada →</a>`
+        : `Mostrando 3 de ${total} · <a href="clientes.html?prioridade=cobrar_hoje" class="link-toggle">Abrir listagem filtrada →</a>`
       elToggle.textContent = _expandido
         ? 'Mostrar só top 3 ↑'
-        : `Expandir lista completa ↓ (+${restantes})`
+        : `Expandir aqui ↓ (+${restantes})`
     } else {
       elFoot.style.display = 'none'
     }

@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778954271">
+  <link rel="stylesheet" href="css/style.css?cb=1778954402">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -58,6 +58,11 @@
             <option value="sim">Com impedimento ativo</option>
             <option value="nao">Sem impedimento</option>
           </select>
+          <select id="filtro-prioridade" onchange="filtrar()">
+            <option value="">Todas as prioridades</option>
+            <option value="cobrar_hoje">🔥 Cobrar hoje (críticas)</option>
+            <option value="em_dia">✓ Em dia</option>
+          </select>
           <span id="contador" class="text-sm text-muted"></span>
         </div>
 
@@ -92,9 +97,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778954271"></script>
-  <script src="js/auth.js?cb=1778954271"></script>
-  <script src="js/utils.js?cb=1778954271"></script>
+  <script src="js/supabase.js?cb=1778954402"></script>
+  <script src="js/auth.js?cb=1778954402"></script>
+  <script src="js/utils.js?cb=1778954402"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -131,7 +136,8 @@
           return new Date(b.ultima_atualizacao) - new Date(a.ultima_atualizacao)
         })
 
-        renderTabela(_todos)
+        // Aplica filtro se algum select estiver setado (ex: vindo de URL param)
+        filtrar()
       } catch (err) {
         toast('Erro ao carregar: ' + traduzirErro(err), 'error')
       }
@@ -200,6 +206,7 @@
       const busca = document.getElementById('busca').value.toLowerCase().trim()
       const status = document.getElementById('filtro-status').value
       const imp = document.getElementById('filtro-impedimento').value
+      const prio = document.getElementById('filtro-prioridade').value
 
       let lista = _todos.filter(c => {
         const matchBusca = !busca
@@ -209,14 +216,35 @@
         const matchImp = !imp
           || (imp === 'sim' && c.temImpedimento)
           || (imp === 'nao' && !c.temImpedimento)
-        return matchBusca && matchStatus && matchImp
+
+        // Filtro de prioridade — usa SLA por etapa de utils.js
+        let matchPrio = true
+        if (prio) {
+          const dias = diasDesde(c.ultima_atualizacao) || 0
+          const grav = slaGravidade(c.status_kanban, dias)
+          const naoTerminal = c.status_kanban !== 'concluido' && c.status_kanban !== 'perdido'
+          if (prio === 'cobrar_hoje') {
+            matchPrio = naoTerminal && (grav === 'red' || grav === 'yellow')
+          } else if (prio === 'em_dia') {
+            matchPrio = naoTerminal && grav === 'green'
+          }
+        }
+
+        return matchBusca && matchStatus && matchImp && matchPrio
       })
 
       renderTabela(lista)
     }
 
+    // Suporta URL param: ?prioridade=cobrar_hoje (vindo do dashboard)
+    const urlParams = new URLSearchParams(window.location.search)
+    const prioParam = urlParams.get('prioridade')
+    if (prioParam) {
+      document.getElementById('filtro-prioridade').value = prioParam
+    }
+
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778954271"></script>
+  <script src="js/sw-register.js?cb=1778954402"></script>
 </body>
 </html>
