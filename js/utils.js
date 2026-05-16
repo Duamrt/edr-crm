@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778953074'
+const CRM_VERSION = '1778953554'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -59,6 +59,70 @@ async function revelarCpf(clienteId, contexto, elTarget) {
     console.error('revelarCpf erro:', err)
     if (typeof toast === 'function') toast('Erro ao revelar CPF: ' + err.message, 'error')
   }
+}
+
+// Sistema de Undo Toast reutilizável (UX05)
+// Mostra toast persistente com botão "Desfazer" + countdown visual.
+// Uso: toastUndo('3 docs marcados como N/A', async () => { await desfazerFn() }, { duration: 30000 })
+function toastUndo(mensagem, undoFn, opts = {}) {
+  const duration = opts.duration || 30000  // 30s default
+  // Remove qualquer toast undo anterior (1 ativo por vez)
+  document.querySelectorAll('.undo-toast').forEach(el => el.remove())
+
+  const wrap = document.createElement('div')
+  wrap.className = 'undo-toast'
+  wrap.innerHTML = `
+    <div class="undo-toast-content">
+      <span class="undo-toast-icon">✓</span>
+      <span class="undo-toast-msg">${escapeHtml(mensagem)}</span>
+      <button class="undo-toast-btn" type="button">Desfazer</button>
+      <button class="undo-toast-close" type="button" aria-label="Fechar">×</button>
+    </div>
+    <div class="undo-toast-bar"><div class="undo-toast-bar-fill"></div></div>
+  `
+  document.body.appendChild(wrap)
+
+  // Anima barra de countdown
+  const barFill = wrap.querySelector('.undo-toast-bar-fill')
+  requestAnimationFrame(() => {
+    barFill.style.transition = `transform ${duration}ms linear`
+    barFill.style.transform = 'scaleX(0)'
+  })
+
+  let desfeito = false
+  const fechar = () => {
+    if (wrap.parentNode) {
+      wrap.classList.add('undo-toast-out')
+      setTimeout(() => wrap.remove(), 200)
+    }
+  }
+  const timer = setTimeout(fechar, duration)
+
+  wrap.querySelector('.undo-toast-close').onclick = () => {
+    clearTimeout(timer)
+    fechar()
+  }
+  wrap.querySelector('.undo-toast-btn').onclick = async () => {
+    if (desfeito) return
+    desfeito = true
+    clearTimeout(timer)
+    const btn = wrap.querySelector('.undo-toast-btn')
+    btn.disabled = true
+    btn.textContent = '⏳ Desfazendo...'
+    try {
+      await undoFn()
+      wrap.querySelector('.undo-toast-msg').textContent = '↶ Desfeito'
+      wrap.querySelector('.undo-toast-icon').textContent = '↶'
+      setTimeout(fechar, 1500)
+    } catch (err) {
+      btn.disabled = false
+      btn.textContent = 'Desfazer'
+      desfeito = false
+      if (typeof toast === 'function') toast('Erro ao desfazer: ' + err.message, 'error')
+    }
+  }
+
+  return { fechar }
 }
 
 // Pill de Faixa MCMV (componente reutilizável — listagem, ficha, kanban, dashboard)

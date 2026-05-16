@@ -1131,3 +1131,142 @@ tbody tr:hover { background: #f9fafb; }
 .pill-faixa-1 { background: #D1FAE5; color: #065F46; border-color: #A7F3D0; }
 .pill-faixa-2 { background: #DBEAFE; color: #1E40AF; border-color: #BFDBFE; }
 .pill-faixa-3 { background: #EDE9FE; color: #5B21B6; border-color: #DDD6FE; }
+
+/* Undo Toast — sistema reutilizável (UX05) */
+.undo-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1A1D23;
+  color: #F3F4F6;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.35), 0 4px 8px rgba(0,0,0,.2);
+  z-index: 9999;
+  min-width: 320px;
+  max-width: 540px;
+  font-family: 'Inter', system-ui, sans-serif;
+  animation: undoToastIn .25s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+.undo-toast.undo-toast-out {
+  animation: undoToastOut .2s ease forwards;
+}
+@keyframes undoToastIn {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes undoToastOut {
+  to { transform: translate(-50%, 20px); opacity: 0; }
+}
+.undo-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+}
+.undo-toast-icon {
+  font-size: 16px;
+  color: #34D399;
+  font-weight: 700;
+}
+.undo-toast-msg {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.undo-toast-btn {
+  background: transparent;
+  color: #34D399;
+  border: 1px solid #34D399;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.undo-toast-btn:hover {
+  background: #34D399;
+  color: #1A1D23;
+}
+.undo-toast-btn:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+.undo-toast-close {
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  font-size: 20px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  line-height: 1;
+}
+.undo-toast-close:hover {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+.undo-toast-bar {
+  height: 3px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.undo-toast-bar-fill {
+  height: 100%;
+  background: #34D399;
+  transform-origin: left;
+}
+
+/* Confirm inline na ficha (Aplicar N/A) */
+.confirm-inline {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--verde-surface);
+  border: 1px solid var(--verde-pale);
+  border-left: 4px solid var(--verde);
+  border-radius: 8px;
+  font-size: 13px;
+  animation: confirmSlide .2s ease;
+}
+@keyframes confirmSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.confirm-inline-title {
+  font-weight: 600;
+  color: var(--verde-hover);
+  margin-bottom: 8px;
+}
+.confirm-inline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.confirm-inline-list li {
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.confirm-inline-list li::before {
+  content: '○';
+  color: var(--verde);
+  font-weight: 700;
+}
+.confirm-inline-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953074">
+  <link rel="stylesheet" href="css/style.css?cb=1778953554">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -78,6 +78,7 @@
                 <button onclick="aplicarNaAutomaticos()" id="btn-aplicar-na" class="btn btn-secondary btn-sm">Aplicar N/A automaticamente</button>
               </div>
               <div id="auditoria-na-lista" class="auditoria-na-lista"></div>
+              <div id="auditoria-na-confirm" class="hidden"></div>
             </div>
             <div class="auditoria-acoes hidden" id="auditoria-acoes-wrap">
               <button onclick="cobrarPendentesWpp()" class="btn btn-whatsapp btn-sm">📱 Cobrar pendentes</button>
@@ -227,11 +228,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778953074"></script>
-  <script src="js/auth.js?cb=1778953074"></script>
-  <script src="js/utils.js?cb=1778953074"></script>
-  <script src="js/data/clientes.js?cb=1778953074"></script>
-  <script src="js/data/documentos.js?cb=1778953074"></script>
+  <script src="js/supabase.js?cb=1778953554"></script>
+  <script src="js/auth.js?cb=1778953554"></script>
+  <script src="js/utils.js?cb=1778953554"></script>
+  <script src="js/data/clientes.js?cb=1778953554"></script>
+  <script src="js/data/documentos.js?cb=1778953554"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -426,19 +427,52 @@
       }
     }
 
-    async function aplicarNaAutomaticos() {
+    // Aplicar N/A: confirmação inline + undo toast (UX01 + UX05)
+    function aplicarNaAutomaticos() {
       if (!_auditoria || !_auditoria.sugestoesNA.length) return
+      const sugestoes = [..._auditoria.sugestoesNA]  // snapshot
+      const confirmEl = document.getElementById('auditoria-na-confirm')
       const btn = document.getElementById('btn-aplicar-na')
       btn.disabled = true
-      btn.textContent = '⏳ Aplicando...'
-      try {
-        const qtd = await aplicarNAEmLote(_auditoria.sugestoesNA, clienteId)
-        toast(`${qtd} doc(s) marcado(s) como N/A`, 'success')
-        carregar()
-      } catch (err) {
-        toast('Erro: ' + err.message, 'error')
+
+      const itens = sugestoes.map(d => `<li>${escapeHtml(DOC_LABEL[d.tipo] || d.tipo)}</li>`).join('')
+      confirmEl.className = 'confirm-inline'
+      confirmEl.innerHTML = `
+        <div class="confirm-inline-title">Vou marcar ${sugestoes.length} doc(s) como N/A:</div>
+        <ul class="confirm-inline-list">${itens}</ul>
+        <div class="confirm-inline-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="na-cancelar">Cancelar</button>
+          <button type="button" class="btn btn-primary btn-sm" id="na-confirmar">Confirmar — marcar como N/A</button>
+        </div>
+      `
+      document.getElementById('na-cancelar').onclick = () => {
+        confirmEl.className = 'hidden'
+        confirmEl.innerHTML = ''
         btn.disabled = false
-        btn.textContent = 'Aplicar N/A automaticamente'
+      }
+      document.getElementById('na-confirmar').onclick = async () => {
+        const confirmBtn = document.getElementById('na-confirmar')
+        confirmBtn.disabled = true
+        confirmBtn.textContent = '⏳ Aplicando...'
+        try {
+          const res = await aplicarNAEmLote(sugestoes, clienteId)
+          confirmEl.className = 'hidden'
+          confirmEl.innerHTML = ''
+          btn.disabled = false
+          toastUndo(
+            `${res.qtd} doc(s) marcado(s) como N/A`,
+            async () => {
+              await desfazerNAEmLote(res.alterados, clienteId)
+              carregar()
+            },
+            { duration: 30000 }
+          )
+          carregar()
+        } catch (err) {
+          confirmBtn.disabled = false
+          confirmBtn.textContent = 'Confirmar — marcar como N/A'
+          toast('Erro: ' + err.message, 'error')
+        }
       }
     }
 
@@ -767,6 +801,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778953074"></script>
+  <script src="js/sw-register.js?cb=1778953554"></script>
 </body>
 </html>
