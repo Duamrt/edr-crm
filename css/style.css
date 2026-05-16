@@ -1323,3 +1323,38 @@ tbody tr:hover { background: #f9fafb; }
   background: currentColor;
   color: white;
 }
+
+/* Form seção numerada (UX02 — Nova Família) */
+.form-secao {
+  position: relative;
+}
+.form-secao .card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.form-secao .card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.form-secao-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--verde);
+  color: white;
+  border-radius: 50%;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+.form-secao-extra .form-secao-num {
+  background: var(--text-tertiary);
+  opacity: .7;
+}
