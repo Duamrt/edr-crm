@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1778953868'
+const CRM_VERSION = '1778954174'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -59,6 +59,92 @@ async function revelarCpf(clienteId, contexto, elTarget) {
     console.error('revelarCpf erro:', err)
     if (typeof toast === 'function') toast('Erro ao revelar CPF: ' + err.message, 'error')
   }
+}
+
+// Tradutor de erros Supabase/REST → mensagens úteis em pt-BR (COPY01)
+// Uso: toast(traduzirErro(err), 'error') em vez de toast('Erro: ' + err.message, 'error')
+function traduzirErro(err) {
+  if (!err) return 'Erro desconhecido. Tenta de novo em alguns segundos.'
+  const msg = (err.message || String(err) || '').toLowerCase()
+  const original = err.message || String(err) || ''
+
+  // HTTP status comuns
+  if (msg.includes('401') || msg.includes('jwt') || msg.includes('unauthorized')) {
+    return 'Sua sessão expirou. Faça login de novo.'
+  }
+  if (msg.includes('403') || msg.includes('forbidden') || msg.includes('permission')) {
+    return 'Você não tem permissão para essa ação. Fale com o admin.'
+  }
+  if (msg.includes('404') || msg.includes('not found') || msg.includes('pgrst116')) {
+    return 'Registro não encontrado. Pode ter sido apagado por outro usuário.'
+  }
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many')) {
+    return 'Muitas requisições. Espera uns segundos e tenta de novo.'
+  }
+  if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+    return 'Servidor com problema. Tenta de novo em 1 minuto — se persistir, avisa o Duam.'
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed')) {
+    return 'Sem conexão. Confere o Wi-Fi/4G e tenta de novo.'
+  }
+
+  // PostgreSQL codes
+  if (msg.includes('23505') || msg.includes('unique') || msg.includes('duplicate')) {
+    return 'Esse registro já existe (CPF duplicado, número de lote repetido, etc).'
+  }
+  if (msg.includes('23503') || msg.includes('foreign key')) {
+    return 'Referência inválida — o item relacionado não existe.'
+  }
+  if (msg.includes('23502') || msg.includes('not null') || msg.includes('null value')) {
+    return 'Falta preencher um campo obrigatório.'
+  }
+  if (msg.includes('22001') || msg.includes('value too long')) {
+    return 'Texto muito longo pra esse campo. Encurta um pouco.'
+  }
+  if (msg.includes('42501')) {
+    return 'Permissão negada pelo banco (RLS). Fale com o admin.'
+  }
+
+  // Auth (Supabase GoTrue)
+  if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+    return 'E-mail ou senha incorretos.'
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'E-mail ainda não confirmado. Confere a caixa de entrada.'
+  }
+  if (msg.includes('user already registered') || msg.includes('email already exists')) {
+    return 'Esse e-mail já está cadastrado.'
+  }
+  if (msg.includes('weak password') || msg.includes('password should be')) {
+    return 'Senha muito fraca. Use 8+ caracteres com letras e números.'
+  }
+
+  // RPC genérico
+  if (msg.includes('rpc ') && msg.includes(': 4')) {
+    return 'Operação rejeitada pelo servidor. Mensagem técnica: ' + original
+  }
+  if (msg.includes('rpc ') && msg.includes(': 5')) {
+    return 'Servidor com problema ao processar essa operação. Tenta de novo.'
+  }
+
+  // Mensagens já em PT (vindas de RAISE EXCEPTION nas RPCs)
+  if (msg.includes('sem permissao') || msg.includes('sem permissão')) {
+    return 'Sua sessão não tem permissão pra essa ação.'
+  }
+  if (msg.includes('usuario sem profile') || msg.includes('usuário sem profile')) {
+    return 'Seu usuário não tem perfil cadastrado no CRM. Fale com o admin.'
+  }
+  if (msg.includes('cliente nao encontrado') || msg.includes('cliente não encontrado')) {
+    return 'Família não encontrada (pode ter sido apagada).'
+  }
+  if (msg.includes('apenas administradores')) {
+    return original  // já tá útil
+  }
+
+  // Fallback: mostra original mas em formato amigável
+  return original.length > 100
+    ? 'Algo deu errado: ' + original.slice(0, 100) + '...'
+    : 'Algo deu errado: ' + original
 }
 
 // Sistema de Undo Toast reutilizável (UX05)

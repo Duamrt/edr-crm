@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953868">
+  <link rel="stylesheet" href="css/style.css?cb=1778954174">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -232,11 +232,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778953868"></script>
-  <script src="js/auth.js?cb=1778953868"></script>
-  <script src="js/utils.js?cb=1778953868"></script>
-  <script src="js/data/clientes.js?cb=1778953868"></script>
-  <script src="js/data/documentos.js?cb=1778953868"></script>
+  <script src="js/supabase.js?cb=1778954174"></script>
+  <script src="js/auth.js?cb=1778954174"></script>
+  <script src="js/utils.js?cb=1778954174"></script>
+  <script src="js/data/clientes.js?cb=1778954174"></script>
+  <script src="js/data/documentos.js?cb=1778954174"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -320,7 +320,7 @@
         document.getElementById('btn-wpp-cobrar').href = linkWhatsapp(tel, msg)
 
       } catch (err) {
-        toast('Erro: ' + err.message, 'error')
+        toast(traduzirErro(err), 'error')
       }
       hideLoading()
     }
@@ -484,7 +484,7 @@
         } catch (err) {
           confirmBtn.disabled = false
           confirmBtn.textContent = 'Confirmar — marcar como N/A'
-          toast('Erro: ' + err.message, 'error')
+          toast(traduzirErro(err), 'error')
         }
       }
     }
@@ -566,7 +566,7 @@
       } catch (err) {
         btn.disabled = false
         btn.textContent = '🗑️ Apagar permanente'
-        toast('Erro: ' + err.message, 'error')
+        toast(traduzirErro(err), 'error')
       }
     }
 
@@ -583,7 +583,7 @@
         toast('Família reativada', 'success')
         carregar()
       } catch (err) {
-        toast('Erro ao reativar: ' + err.message, 'error')
+        toast('Erro ao reativar: ' + traduzirErro(err), 'error')
       }
     }
 
@@ -638,7 +638,7 @@
       try {
         await atualizarStatusDoc(id, clienteId, status)
         toast('Documento atualizado', 'success')
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     function toggleFormDocAvulso() {
@@ -674,7 +674,7 @@
         toast('Documento adicionado', 'success')
         toggleFormDocAvulso()
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     async function atualizarVencimento(id, data) {
@@ -682,7 +682,7 @@
         await atualizarVencimentoDoc(id, data)
         toast('Vencimento salvo', 'success')
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     function renderImpedimentos(imps) {
@@ -713,7 +713,7 @@
         await sbPost('crm_historico', { cliente_id: clienteId, descricao: 'Impedimento resolvido', tipo: 'impedimento' })
         toast('Impedimento resolvido', 'success')
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     function toggleFormImpedimento() {
@@ -729,7 +729,7 @@
         toast('Impedimento registrado', 'success')
         document.getElementById('form-impedimento').classList.add('hidden')
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     function renderTarefas(tarefas) {
@@ -775,7 +775,7 @@
         document.getElementById('form-tarefa').classList.add('hidden')
         document.getElementById('tarefa-desc').value = ''
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     async function concluirTarefa(id) {
@@ -784,7 +784,7 @@
         await sbPost('crm_historico', { cliente_id: clienteId, descricao: 'Tarefa concluída', tipo: 'acao' })
         toast('Tarefa concluída!', 'success')
         carregar()
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     function renderHistorico(hist) {
@@ -819,7 +819,7 @@
         toast('Status atualizado', 'success')
         document.getElementById('status-badge').innerHTML =
           `<span class="badge status-${status}">${KANBAN_LABEL[status]}</span>`
-      } catch (err) { toast('Erro: ' + err.message, 'error') }
+      } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
     // Automação: cria tarefa automaticamente se doc vence em ≤ 15 dias
@@ -896,6 +896,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778953868"></script>
+  <script src="js/sw-register.js?cb=1778954174"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Login</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778953868">
+  <link rel="stylesheet" href="css/style.css?cb=1778954174">
 </head>
 <body>
   <div class="login-wrap">
@@ -38,8 +38,9 @@
     <div class="spinner"></div>
   </div>
 
-  <script src="js/supabase.js?cb=1778953868"></script>
-  <script src="js/auth.js?cb=1778953868"></script>
+  <script src="js/supabase.js?cb=1778954174"></script>
+  <script src="js/auth.js?cb=1778954174"></script>
+  <script src="js/utils.js?cb=1778954174"></script>
   <script>
     // Se já está logado, redirecionar
     const s = sessionGet()
@@ -61,7 +62,24 @@
         await login(email, senha)
         window.location.replace('dashboard.html')
       } catch (err) {
-        erro.textContent = err.message || 'E-mail ou senha inválidos'
+        // Produto interno (~3 usuários) — diferencia email vs senha pra reduzir fricção (COPY02)
+        const msg = (err.message || '').toLowerCase()
+        let mensagemFinal
+        if (msg.includes('invalid_credentials') || msg.includes('invalid login')) {
+          // Distinção sem expor enum de usuários: detecta padrão de email malformado
+          if (!email.includes('@') || !email.includes('.')) {
+            mensagemFinal = 'E-mail mal formatado. Tem que ter @ e domínio.'
+          } else if (senha.length < 4) {
+            mensagemFinal = 'Senha muito curta — confere se digitou ela inteira.'
+          } else {
+            mensagemFinal = 'E-mail ou senha não conferem. Verifica e tenta de novo.'
+          }
+        } else if (typeof traduzirErro === 'function') {
+          mensagemFinal = traduzirErro(err)
+        } else {
+          mensagemFinal = err.message || 'Erro ao entrar.'
+        }
+        erro.textContent = mensagemFinal
         erro.classList.remove('hidden')
         btn.disabled = false
         btn.textContent = 'Entrar'
@@ -72,6 +90,6 @@
     function showLoading() { document.getElementById('loading').classList.remove('hidden') }
     function hideLoading() { document.getElementById('loading').classList.add('hidden') }
   </script>
-  <script src="js/sw-register.js?cb=1778953868"></script>
+  <script src="js/sw-register.js?cb=1778954174"></script>
 </body>
 </html>
