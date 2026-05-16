@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/style.css?cb=1778954402">
+  <link rel="stylesheet" href="css/style.css?cb=1778954564">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="familia.html">
@@ -72,13 +72,13 @@
             <table id="tabela-clientes">
               <thead>
                 <tr>
-                  <th>Nome</th>
+                  <th class="th-sort" data-sort="nome">Nome <span class="sort-ind"></span></th>
                   <th>CPF</th>
                   <th>Telefone</th>
-                  <th>Faixa</th>
+                  <th class="th-sort" data-sort="faixa_mcmv">Faixa <span class="sort-ind"></span></th>
                   <th>Lote</th>
-                  <th>Status</th>
-                  <th>Alerta</th>
+                  <th class="th-sort" data-sort="status_kanban">Status <span class="sort-ind"></span></th>
+                  <th class="th-sort" data-sort="ultima_atualizacao">Alerta <span class="sort-ind"></span></th>
                   <th>Próxima ação</th>
                   <th></th>
                 </tr>
@@ -97,9 +97,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778954402"></script>
-  <script src="js/auth.js?cb=1778954402"></script>
-  <script src="js/utils.js?cb=1778954402"></script>
+  <script src="js/supabase.js?cb=1778954564"></script>
+  <script src="js/auth.js?cb=1778954564"></script>
+  <script src="js/utils.js?cb=1778954564"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -109,6 +109,52 @@
     document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
 
     let _todos = []
+    let _sortCol = null    // coluna ativa de ordenação
+    let _sortDir = 1       // 1 asc, -1 desc
+
+    function aplicarSort(lista) {
+      if (!_sortCol) return lista
+      const col = _sortCol
+      return [...lista].sort((a, b) => {
+        const va = a[col] ?? ''
+        const vb = b[col] ?? ''
+        if (col === 'ultima_atualizacao') {
+          return _sortDir * (new Date(va) - new Date(vb))
+        }
+        if (typeof va === 'number' || typeof vb === 'number') {
+          return _sortDir * ((Number(va) || 0) - (Number(vb) || 0))
+        }
+        return _sortDir * String(va).localeCompare(String(vb), 'pt-BR')
+      })
+    }
+
+    function atualizarIndSort() {
+      document.querySelectorAll('.th-sort').forEach(th => {
+        const ind = th.querySelector('.sort-ind')
+        if (!ind) return
+        if (th.dataset.sort === _sortCol) {
+          ind.textContent = _sortDir === 1 ? ' ↑' : ' ↓'
+          th.classList.add('th-sort-active')
+        } else {
+          ind.textContent = ''
+          th.classList.remove('th-sort-active')
+        }
+      })
+    }
+
+    document.addEventListener('click', e => {
+      const th = e.target.closest('.th-sort')
+      if (!th) return
+      const col = th.dataset.sort
+      if (_sortCol === col) {
+        _sortDir = -_sortDir
+      } else {
+        _sortCol = col
+        _sortDir = 1
+      }
+      atualizarIndSort()
+      filtrar()
+    })
 
     async function carregar() {
       showLoading()
@@ -233,6 +279,7 @@
         return matchBusca && matchStatus && matchImp && matchPrio
       })
 
+      lista = aplicarSort(lista)
       renderTabela(lista)
     }
 
@@ -245,6 +292,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778954402"></script>
+  <script src="js/sw-register.js?cb=1778954564"></script>
 </body>
 </html>
