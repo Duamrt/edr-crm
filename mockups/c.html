@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup C · Brutalist Foco · EDR CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0A0A0A;
+  --paper:#FAFAF7;
+  --line:#0A0A0A;
+  --muted:#737373;
+  --alert:#FF3B30;
+  --soft:#F0EFEB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+.mono{font-family:'JetBrains Mono',monospace;font-feature-settings:"tnum"}
+
+/* Container */
+.wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+
+/* Top bar - mínimo absoluto */
+.topbar{border-bottom:2px solid var(--ink);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);position:sticky;top:0;z-index:50}
+.topbar .l{display:flex;align-items:center;gap:16px}
+.brand{font-weight:700;font-size:1.05rem;letter-spacing:-.02em}
+.brand sup{font-size:.6rem;font-weight:500;color:var(--muted);margin-left:4px;letter-spacing:.04em;text-transform:uppercase}
+.tabs{display:flex;gap:0;margin-left:36px}
+.tabs a{padding:6px 14px;font-size:.85rem;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-20px;padding-bottom:18px}
+.tabs a.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.topbar .r{display:flex;align-items:center;gap:12px}
+.tb-btn{background:var(--ink);color:var(--paper);border:none;padding:9px 16px;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;letter-spacing:.01em}
+.tb-meta{font-size:.78rem;color:var(--muted);font-weight:500}
+
+/* Big briefing */
+.briefing{padding:64px 0 48px;border-bottom:1px solid var(--ink)}
+.briefing .greet{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px;font-weight:600}
+.briefing h1{font-size:clamp(2.4rem,5.5vw,4.6rem);font-weight:700;letter-spacing:-.04em;line-height:.95;margin-bottom:24px}
+.briefing h1 .alert{color:var(--alert)}
+.briefing h1 .num{font-family:'JetBrains Mono';font-weight:700;font-feature-settings:"tnum";letter-spacing:-.02em}
+.briefing .sub{font-size:1.05rem;color:var(--muted);max-width:640px}
+.briefing .sub b{color:var(--ink)}
+
+/* Big numbers ribbon */
+.ribbon{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--ink);padding:0}
+.rb{padding:36px 28px;border-right:1px solid var(--ink);display:flex;flex-direction:column;justify-content:space-between;min-height:160px}
+.rb:last-child{border-right:none}
+.rb .rb-lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600;margin-bottom:24px}
+.rb .rb-val{font-family:'JetBrains Mono';font-size:3.6rem;font-weight:700;letter-spacing:-.04em;line-height:.9}
+.rb.alert .rb-val{color:var(--alert)}
+.rb .rb-trend{font-size:.78rem;color:var(--muted);font-weight:500;margin-top:10px;font-family:'JetBrains Mono'}
+
+/* Cobrar Hoje - lista vertical brutalista */
+.section{padding:56px 0 0}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:32px}
+.section-head h2{font-size:2.1rem;font-weight:700;letter-spacing:-.025em}
+.section-head .meta{font-size:.82rem;color:var(--muted);font-family:'JetBrains Mono';font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.section-head .link{color:var(--ink);font-size:.85rem;font-weight:600;text-decoration:underline;text-underline-offset:5px;cursor:pointer}
+
+.fam{display:grid;grid-template-columns:80px 1fr auto;align-items:center;padding:28px 0;border-top:1px solid var(--ink);gap:24px;cursor:pointer;transition:background .15s}
+.fam:hover{background:var(--soft)}
+.fam:last-child{border-bottom:1px solid var(--ink)}
+.fam-num{font-family:'JetBrains Mono';font-size:1.4rem;color:var(--muted);font-weight:500}
+.fam-body .fname{font-size:1.35rem;font-weight:600;letter-spacing:-.015em;margin-bottom:6px}
+.fam-body .fmeta{font-size:.85rem;color:var(--muted);font-family:'JetBrains Mono'}
+.fam-right{text-align:right}
+.fam-days{font-family:'JetBrains Mono';font-size:2rem;font-weight:700;color:var(--alert);letter-spacing:-.03em;line-height:1}
+.fam-days.warn{color:var(--ink)}
+.fam-stage{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:6px;font-weight:600}
+
+/* Linha 2: stats consolidadas */
+.stats-line{padding:56px 0;display:grid;grid-template-columns:1fr 1fr;gap:48px;border-top:1px solid var(--ink);margin-top:56px}
+.stats-line h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600;margin-bottom:24px}
+.stat-block{display:flex;flex-direction:column;gap:12px}
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px dotted var(--muted)}
+.stat-row .l{font-size:1rem;font-weight:500}
+.stat-row .v{font-family:'JetBrains Mono';font-size:1.4rem;font-weight:700}
+.stat-row.r .v{color:var(--alert)}
+
+/* Funil bruto */
+.funil-brutal{display:flex;gap:0;padding:36px 0 64px;border-top:1px solid var(--ink);margin-top:56px}
+.fb{flex:1;padding:24px 16px 24px 0;border-right:1px solid var(--ink);text-align:left}
+.fb:last-child{border-right:none}
+.fb-lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600;margin-bottom:12px}
+.fb-val{font-family:'JetBrains Mono';font-size:2.4rem;font-weight:700;letter-spacing:-.04em;line-height:1}
+
+/* Footer mockup */
+.mockup-footer{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:0;font-size:12px;display:flex;align-items:center;gap:12px;z-index:60;font-family:'Space Grotesk';border:1px solid var(--ink)}
+.mockup-footer a{color:var(--paper);text-decoration:underline;font-weight:600;text-underline-offset:3px}
+
+@media (max-width:780px){
+  .ribbon{grid-template-columns:repeat(2,1fr)}
+  .rb{border-right:1px solid var(--ink)}
+  .rb:nth-child(2){border-right:none}
+  .stats-line{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="l">
+    <div class="brand">EDR/CRM<sup>v1</sup></div>
+    <nav class="tabs">
+      <a class="on">Hoje</a>
+      <a>Famílias</a>
+      <a>Kanban</a>
+      <a>Lotes</a>
+    </nav>
+  </div>
+  <div class="r">
+    <span class="tb-meta mono">SAB · 16.05.26</span>
+    <button class="tb-btn">+ Família</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="briefing">
+    <div class="greet">→ Bom dia, Elyda</div>
+    <h1>Você tem <span class="num alert">8</span> famílias parando<br>e <span class="num">2</span> tarefas vencendo hoje.</h1>
+    <p class="sub">Sábado, 16 de maio de 2026. Última sync agora há pouco. <b>3 famílias estão críticas</b> — começa por elas.</p>
+  </section>
+</div>
+
+<section class="ribbon">
+  <div class="rb alert">
+    <div class="rb-lbl">Cobrar hoje</div>
+    <div>
+      <div class="rb-val">8</div>
+      <div class="rb-trend">+3 desde ontem</div>
+    </div>
+  </div>
+  <div class="rb">
+    <div class="rb-lbl">Em movimento</div>
+    <div>
+      <div class="rb-val">97</div>
+      <div class="rb-trend">de 101 ativas</div>
+    </div>
+  </div>
+  <div class="rb">
+    <div class="rb-lbl">Lotes livres</div>
+    <div>
+      <div class="rb-val">5</div>
+      <div class="rb-trend">18/23 reservados</div>
+    </div>
+  </div>
+  <div class="rb">
+    <div class="rb-lbl">Concluídas (mai)</div>
+    <div>
+      <div class="rb-val">4</div>
+      <div class="rb-trend">+2 vs abril</div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <section class="section">
+    <header class="section-head">
+      <div>
+        <h2>Cobrar hoje.</h2>
+        <div class="meta" style="margin-top:8px">3 críticas · começa pela mais antiga</div>
+      </div>
+      <a class="link">ver as 8 →</a>
+    </header>
+
+    <div class="fam">
+      <div class="fam-num">01</div>
+      <div class="fam-body">
+        <div class="fname">Marcos Rodrigues da Silva</div>
+        <div class="fmeta">(87) 9 9123-4567 · Faixa 2 · Lote 42</div>
+      </div>
+      <div class="fam-right">
+        <div class="fam-days">9d</div>
+        <div class="fam-stage">Documentação</div>
+      </div>
+    </div>
+
+    <div class="fam">
+      <div class="fam-num">02</div>
+      <div class="fam-body">
+        <div class="fname">João Carlos Mendes</div>
+        <div class="fmeta">(87) 9 8888-1212 · Faixa 1 · Sem lote</div>
+      </div>
+      <div class="fam-right">
+        <div class="fam-days">7d</div>
+        <div class="fam-stage">Documentação</div>
+      </div>
+    </div>
+
+    <div class="fam">
+      <div class="fam-num">03</div>
+      <div class="fam-body">
+        <div class="fname">Maria das Graças Santos</div>
+        <div class="fmeta">(87) 9 9444-5050 · Faixa 1 · Lote 15</div>
+      </div>
+      <div class="fam-right">
+        <div class="fam-days warn">5d</div>
+        <div class="fam-stage">Correspondente</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-line">
+    <div>
+      <h3>⚠ O que tá quebrado</h3>
+      <div class="stat-block">
+        <div class="stat-row r"><span class="l">Docs recusados</span><span class="v">4</span></div>
+        <div class="stat-row"><span class="l">Docs vencidos</span><span class="v">2</span></div>
+        <div class="stat-row r"><span class="l">Impedimentos ativos</span><span class="v">3</span></div>
+      </div>
+    </div>
+    <div>
+      <h3>📅 Tarefas</h3>
+      <div class="stat-block">
+        <div class="stat-row r"><span class="l">Vencidas</span><span class="v">1</span></div>
+        <div class="stat-row"><span class="l">Hoje</span><span class="v">2</span></div>
+        <div class="stat-row"><span class="l">Amanhã</span><span class="v">4</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="funil-brutal">
+    <div class="fb"><div class="fb-lbl">Triagem</div><div class="fb-val">42</div></div>
+    <div class="fb"><div class="fb-lbl">Doc</div><div class="fb-val">28</div></div>
+    <div class="fb"><div class="fb-lbl">Corresp</div><div class="fb-val">11</div></div>
+    <div class="fb"><div class="fb-lbl">Aprov</div><div class="fb-val">8</div></div>
+    <div class="fb"><div class="fb-lbl">Pref</div><div class="fb-val">5</div></div>
+    <div class="fb"><div class="fb-lbl">Assin</div><div class="fb-val">3</div></div>
+    <div class="fb"><div class="fb-lbl">✓ mai</div><div class="fb-val">4</div></div>
+  </section>
+</div>
+
+<div class="mockup-footer">
+  <span>⬛ <b>Mockup C · Brutalist Foco Total</b></span>
+  <a href="index.html">← Voltar à escolha</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escolha o estilo · EDR CRM Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F7F4;
+  --ink:#0A0A0A;
+  --muted:#6B7280;
+  --border:#E5E7EB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;padding:32px 20px 80px}
+
+.wrap{max-width:1100px;margin:0 auto}
+.hero{text-align:center;margin-bottom:48px;padding:32px 20px}
+.hero .badge{display:inline-block;padding:5px 14px;background:var(--ink);color:#fff;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:999px;margin-bottom:18px}
+.hero h1{font-size:clamp(1.8rem,4.5vw,3rem);font-weight:700;letter-spacing:-.025em;line-height:1.05;margin-bottom:18px}
+.hero p{font-size:1.05rem;color:var(--muted);max-width:620px;margin:0 auto;line-height:1.6}
+.hero p b{color:var(--ink)}
+
+.instr{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px 24px;max-width:720px;margin:0 auto 40px;display:flex;align-items:flex-start;gap:14px}
+.instr .ico{font-size:1.5rem;flex-shrink:0}
+.instr .txt{font-size:.92rem;color:var(--muted);line-height:1.55}
+.instr .txt b{color:var(--ink)}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:#fff;border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:.2s;cursor:pointer;display:flex;flex-direction:column;text-decoration:none;color:inherit}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.08);border-color:var(--ink)}
+
+.card-preview{height:200px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.pv-a{background:#F9FAFB;background-image:linear-gradient(to bottom,#F9FAFB 0,#FFFFFF 100%)}
+.pv-b{background:linear-gradient(135deg,#ECFDF5 0%,#D1FAE5 100%)}
+.pv-c{background:#FAFAF7;background-image:repeating-linear-gradient(90deg,transparent 0,transparent 23px,#0A0A0A20 23px,#0A0A0A20 24px)}
+
+.pv-icon{font-size:4rem;font-weight:800;letter-spacing:-.04em;font-family:'Inter'}
+.pv-a .pv-icon{color:#2563EB;font-family:'Inter'}
+.pv-b .pv-icon{color:#2D6A4F;font-family:'Inter'}
+.pv-c .pv-icon{color:#0A0A0A;font-family:'Inter';font-size:5rem}
+
+.card-body{padding:22px 22px 24px;flex:1;display:flex;flex-direction:column}
+.card-tag{display:inline-block;padding:3px 9px;background:#F3F4F6;color:var(--muted);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;margin-bottom:10px;align-self:flex-start}
+.card-title{font-size:1.25rem;font-weight:700;letter-spacing:-.015em;margin-bottom:8px}
+.card-desc{font-size:.88rem;color:var(--muted);line-height:1.55;margin-bottom:18px;flex:1}
+.card-feats{font-size:.78rem;color:var(--ink);font-weight:500;list-style:none;padding:0;margin-bottom:18px}
+.card-feats li{padding:5px 0;border-bottom:1px dashed var(--border);display:flex;align-items:center;gap:8px}
+.card-feats li:last-child{border-bottom:none}
+.card-feats li .b{font-weight:700;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;min-width:50px}
+
+.card-cta{padding:11px 18px;background:var(--ink);color:#fff;border:none;font-family:inherit;font-size:.88rem;font-weight:600;border-radius:10px;cursor:pointer;text-align:center;letter-spacing:.005em}
+.card:hover .card-cta{background:#2563EB}
+.card.b:hover .card-cta{background:#2D6A4F}
+.card.c:hover .card-cta{background:#0A0A0A}
+
+.note{margin-top:48px;padding:24px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:14px;font-size:.9rem;color:#78350F;line-height:1.6;text-align:center;max-width:720px;margin-left:auto;margin-right:auto}
+
+.foot{text-align:center;margin-top:36px;font-size:.78rem;color:var(--muted)}
+
+@media (max-width:780px){
+  .cards{grid-template-columns:1fr}
+  .hero h1{font-size:1.7rem}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="badge">⚡ Escolha do design</span>
+    <h1>Qual estilo você quer<br>pro dashboard do CRM?</h1>
+    <p>Eu (Duam) preparei <b>3 propostas visuais bem diferentes</b> pro mesmo conteúdo. Sua intuição sabe melhor que a minha — escolhe o que te dá <b>menos ansiedade</b> e <b>mais clareza</b> ao abrir.</p>
+  </header>
+
+  <div class="instr">
+    <div class="ico">👀</div>
+    <div class="txt">
+      <b>Como escolher:</b> clica em cada um, navega 1-2 minutos, fecha a aba e abre a próxima. No final, me responde no Whats: <b>"O A me deu mais segurança"</b> ou <b>"Curti o B mas detestei X"</b>. Pode ser mistura também (<i>"quero a estrutura do A com as cores do B"</i>).
+    </div>
+  </div>
+
+  <div class="cards">
+
+    <a class="card a" href="a.html">
+      <div class="card-preview pv-a">
+        <div class="pv-icon">A</div>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Inspirado no DM Pay</span>
+        <h2 class="card-title">Operacional Denso</h2>
+        <p class="card-desc">Estilo fintech moderno. Sidebar fixa à esquerda com navegação. KPIs grandes no topo, listas ricas em detalhes, muito conteúdo na mesma tela.</p>
+        <ul class="card-feats">
+          <li><span class="b">Vibe</span> Profissional · Vercel/Linear</li>
+          <li><span class="b">Cor</span> Azul</li>
+          <li><span class="b">Densidade</span> Alta</li>
+          <li><span class="b">Pra você</span> Se quer ver TUDO de uma vez</li>
+        </ul>
+        <div class="card-cta">Ver Mockup A →</div>
+      </div>
+    </a>
+
+    <a class="card b" href="b.html">
+      <div class="card-preview pv-b">
+        <div class="pv-icon">B</div>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Inspirado no EDR System</span>
+        <h2 class="card-title">Verde EDR (Brand)</h2>
+        <p class="card-desc">A "cara" da EDR. Header preto com identidade, tabs no topo. Equilíbrio entre informação e respiração. Visual coerente com sistema da obra.</p>
+        <ul class="card-feats">
+          <li><span class="b">Vibe</span> EDR · Familiar</li>
+          <li><span class="b">Cor</span> Verde EDR</li>
+          <li><span class="b">Densidade</span> Média</li>
+          <li><span class="b">Pra você</span> Se quer continuidade visual</li>
+        </ul>
+        <div class="card-cta">Ver Mockup B →</div>
+      </div>
+    </a>
+
+    <a class="card c" href="c.html">
+      <div class="card-preview pv-c">
+        <div class="pv-icon">C</div>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">Direção alternativa</span>
+        <h2 class="card-title">Brutalist Foco</h2>
+        <p class="card-desc">Menos é mais. Preto e branco, tipografia gigante, espaço respirando. Vermelho só quando é urgente. Foco extremo no que importa AGORA.</p>
+        <ul class="card-feats">
+          <li><span class="b">Vibe</span> Editorial · Sério</li>
+          <li><span class="b">Cor</span> Preto · Vermelho de alerta</li>
+          <li><span class="b">Densidade</span> Baixa</li>
+          <li><span class="b">Pra você</span> Se quer foco total</li>
+        </ul>
+        <div class="card-cta">Ver Mockup C →</div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="note">
+    💡 <b>Dica:</b> dados são FAKE só pra mostrar. Os 3 mostram <b>o mesmo conteúdo</b> (briefing + 3 famílias críticas + o que tá quebrado + funil). A escolha é puramente <b>visual e emocional</b> — qual te faz querer abrir todo dia?
+  </div>
+
+  <div class="foot">EDR CRM · Dashboard v1 · Mockups visuais · Maio 2026</div>
+</div>
+
+</body>
+</html>
