@@ -34,12 +34,13 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .card-preview{height:200px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .pv-a{background:#F9FAFB;background-image:linear-gradient(to bottom,#F9FAFB 0,#FFFFFF 100%)}
 .pv-b{background:linear-gradient(135deg,#ECFDF5 0%,#D1FAE5 100%)}
-.pv-c{background:#FAFAF7;background-image:repeating-linear-gradient(90deg,transparent 0,transparent 23px,#0A0A0A20 23px,#0A0A0A20 24px)}
+.pv-c{background:linear-gradient(135deg,#F0F9F4 0%,#D1FAE5 100%);position:relative}
+.pv-c::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(45,106,79,.08));pointer-events:none}
 
 .pv-icon{font-size:4rem;font-weight:800;letter-spacing:-.04em;font-family:'Inter'}
 .pv-a .pv-icon{color:#2563EB;font-family:'Inter'}
 .pv-b .pv-icon{color:#2D6A4F;font-family:'Inter'}
-.pv-c .pv-icon{color:#0A0A0A;font-family:'Inter';font-size:5rem}
+.pv-c .pv-icon{color:#2D6A4F;font-family:'Inter';background:linear-gradient(135deg,#2D6A4F,#34D399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .card-body{padding:22px 22px 24px;flex:1;display:flex;flex-direction:column}
 .card-tag{display:inline-block;padding:3px 9px;background:#F3F4F6;color:var(--muted);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;margin-bottom:10px;align-self:flex-start}
@@ -124,14 +125,14 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
         <div class="pv-icon">C</div>
       </div>
       <div class="card-body">
-        <span class="card-tag">Direção alternativa</span>
-        <h2 class="card-title">Brutalist Foco</h2>
-        <p class="card-desc">Menos é mais. Preto e branco, tipografia gigante, espaço respirando. Vermelho só quando é urgente. Foco extremo no que importa AGORA.</p>
+        <span class="card-tag">⭐ Híbrido — versão final</span>
+        <h2 class="card-title">A com cara da EDR</h2>
+        <p class="card-desc">Mesma estrutura densa e funcional do A (sidebar, KPIs, listas detalhadas), mas com a <b>identidade visual da EDR</b>: verde primário, tipografia Plus Jakarta Sans, brand logo gradiente. O melhor dos dois.</p>
         <ul class="card-feats">
-          <li><span class="b">Vibe</span> Editorial · Sério</li>
-          <li><span class="b">Cor</span> Preto · Vermelho de alerta</li>
-          <li><span class="b">Densidade</span> Baixa</li>
-          <li><span class="b">Pra você</span> Se quer foco total</li>
+          <li><span class="b">Vibe</span> EDR · Operacional</li>
+          <li><span class="b">Cor</span> Verde EDR + acentos</li>
+          <li><span class="b">Densidade</span> Alta (igual A)</li>
+          <li><span class="b">Pra você</span> Se quer A com brand EDR</li>
         </ul>
         <div class="card-cta">Ver Mockup C →</div>
       </div>
