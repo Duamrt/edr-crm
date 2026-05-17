@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup EH · Engenharia Honesta · EDR CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+Pro:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Paleta Engenharia Honesta */
+  --concreto:#8B8680;
+  --aco:#3A4452;
+  --aco-dark:#252D38;
+  --aco-light:#4E5867;
+  --papel:#FAFAF7;
+  --papel-dark:#F0EFEB;
+  --laranja:#FF6B35;
+  --laranja-dark:#E55A2A;
+  --laranja-soft:#FFE5DC;
+  --branco:#FFFFFF;
+
+  --neutral-50:#FAFAF7;
+  --neutral-100:#F0EFEB;
+  --neutral-200:#E0DED7;
+  --neutral-300:#C8C5BC;
+  --neutral-400:#9C9890;
+  --neutral-500:#6B6862;
+  --neutral-700:#3A3833;
+  --neutral-900:#1A1815;
+
+  --linha:#E0DED7;
+  --linha-forte:#C8C5BC;
+
+  --font-sans:'IBM Plex Sans',-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-serif:'Source Serif Pro',Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:var(--font-sans);background:var(--papel);color:var(--neutral-900);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+a{color:inherit;text-decoration:none;cursor:pointer}
+
+/* ── SIDEBAR — aço escuro com header de obra ────────────── */
+aside.sidebar{
+  background:var(--aco);
+  color:#C8C5BC;
+  border-right:1px solid var(--aco-dark);
+  display:flex;
+  flex-direction:column;
+  position:sticky;
+  top:0;
+  height:100vh;
+}
+
+.sb-header{
+  padding:24px 20px 20px;
+  border-bottom:1px solid var(--aco-dark);
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.sb-mark{
+  width:44px;
+  height:44px;
+  background:var(--laranja);
+  display:grid;
+  place-items:center;
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:18px;
+  color:#fff;
+  flex-shrink:0;
+  /* sem border-radius — quadrado */
+}
+
+.sb-brand{font-family:var(--font-serif);font-weight:900;font-size:18px;color:#fff;letter-spacing:-.02em;line-height:1}
+.sb-tag{font-family:var(--font-mono);font-size:9.5px;font-weight:500;color:#9C9890;text-transform:uppercase;letter-spacing:.18em;margin-top:5px}
+
+.sb-section{padding:18px 12px 6px;font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:#7C7975;text-transform:uppercase;letter-spacing:.18em}
+
+.sb-nav{flex:1;padding:6px 8px}
+.sb-nav a{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 12px;
+  font-size:13px;
+  color:#C8C5BC;
+  border-left:3px solid transparent;
+  font-weight:500;
+  transition:none;
+}
+.sb-nav a:hover{background:var(--aco-dark);color:#fff}
+.sb-nav a.active{background:var(--aco-dark);color:#fff;border-left-color:var(--laranja);font-weight:600}
+.sb-nav .ico{font-size:14px;width:18px;display:inline-block}
+.sb-nav .ct{margin-left:auto;font-family:var(--font-mono);font-size:11px;font-weight:600;color:#9C9890}
+.sb-nav a.active .ct{color:var(--laranja)}
+
+.sb-foot{
+  padding:14px 16px;
+  border-top:1px solid var(--aco-dark);
+  font-size:11px;
+  color:#9C9890;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.sb-foot .user-mark{
+  width:30px;
+  height:30px;
+  background:var(--laranja);
+  display:grid;
+  place-items:center;
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:11px;
+  color:#fff;
+  flex-shrink:0;
+}
+.sb-foot .user-meta{line-height:1.3;flex:1;min-width:0}
+.sb-foot .user-name{font-weight:600;color:#fff;font-size:12px}
+.sb-foot .versao{font-family:var(--font-mono);font-size:10px;color:#7C7975;margin-top:1px}
+
+/* ── TOPBAR — clean, com breadcrumb ────────────────────── */
+.topbar{
+  height:64px;
+  border-bottom:1px solid var(--linha-forte);
+  padding:0 32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#fff;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.crumb{font-family:var(--font-mono);font-size:11px;color:var(--neutral-500);text-transform:uppercase;letter-spacing:.12em;display:flex;align-items:center;gap:8px}
+.crumb .sep{color:var(--neutral-300)}
+.crumb b{color:var(--neutral-900);font-weight:600}
+
+.topbar-actions{display:flex;align-items:center;gap:12px}
+
+.btn{
+  font-family:var(--font-sans);
+  font-weight:600;
+  font-size:13px;
+  padding:10px 18px;
+  border:1px solid transparent;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:none;
+  /* sem border-radius */
+}
+.btn-cta{background:var(--laranja);color:#fff}
+.btn-cta:hover{background:var(--laranja-dark)}
+.btn-ghost{background:#fff;border-color:var(--linha-forte);color:var(--neutral-700)}
+.btn-ghost:hover{border-color:var(--neutral-900);color:var(--neutral-900)}
+.btn-sm{padding:7px 14px;font-size:12px}
+
+/* ── CONTEÚDO ──────────────────────────────────────────── */
+main{padding:32px 32px 80px;max-width:1500px}
+
+.hero{margin-bottom:32px;border-bottom:2px solid var(--neutral-900);padding-bottom:24px}
+.hero-tag{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--laranja);text-transform:uppercase;letter-spacing:.18em;margin-bottom:8px}
+.hero h1{font-family:var(--font-serif);font-size:38px;font-weight:900;color:var(--neutral-900);letter-spacing:-.03em;line-height:1.1;margin-bottom:8px}
+.hero p{font-size:15px;color:var(--neutral-500);max-width:680px}
+.hero p b{color:var(--neutral-900);font-weight:600}
+
+/* KPIs — métrica grande tipo placa de obra */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--linha-forte);margin-bottom:32px;border:1px solid var(--linha-forte)}
+.kpi{background:#fff;padding:22px 24px;position:relative}
+.kpi.alarm{background:#fff;border-left:4px solid var(--laranja)}
+.kpi-lbl{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--neutral-500);text-transform:uppercase;letter-spacing:.14em;margin-bottom:14px;display:block}
+.kpi-num{font-family:var(--font-mono);font-size:42px;font-weight:700;color:var(--neutral-900);line-height:1;letter-spacing:-.04em;font-feature-settings:"tnum"}
+.kpi-num .denom{font-size:22px;font-weight:500;color:var(--neutral-500)}
+.kpi-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--neutral-500);margin-top:8px;display:flex;align-items:center;gap:4px}
+.kpi-sub .up{color:var(--laranja)}
+.kpi-sub .dn{color:#7C7975}
+
+/* Bloco principal */
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:32px}
+
+.section{background:#fff;border:1px solid var(--linha-forte)}
+.section-head{
+  padding:18px 22px 16px;
+  border-bottom:1px solid var(--linha);
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+.section-title{font-family:var(--font-serif);font-size:18px;font-weight:700;color:var(--neutral-900);letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.section-tag{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--laranja);background:var(--laranja-soft);padding:3px 8px;text-transform:uppercase;letter-spacing:.12em}
+.section-sub{font-size:12.5px;color:var(--neutral-500);margin-top:3px}
+.section-link{font-family:var(--font-mono);font-size:11.5px;font-weight:600;color:var(--neutral-700);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--neutral-700);padding-bottom:1px}
+.section-link:hover{color:var(--laranja);border-color:var(--laranja)}
+
+/* Linhas de família — denso, tipo planilha técnica */
+.fam-row{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  gap:18px;
+  align-items:center;
+  padding:16px 22px;
+  border-bottom:1px solid var(--linha);
+  cursor:pointer;
+}
+.fam-row:last-child{border-bottom:none}
+.fam-row:hover{background:var(--papel-dark)}
+
+.fam-marker{
+  width:38px;
+  height:38px;
+  background:var(--neutral-100);
+  border:1px solid var(--linha-forte);
+  color:var(--neutral-700);
+  display:grid;
+  place-items:center;
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:12px;
+  flex-shrink:0;
+}
+.fam-row.crit .fam-marker{background:var(--laranja);border-color:var(--laranja-dark);color:#fff}
+.fam-name{font-weight:600;font-size:14.5px;color:var(--neutral-900);letter-spacing:-.005em}
+.fam-meta{font-family:var(--font-mono);font-size:11.5px;color:var(--neutral-500);margin-top:4px;display:flex;gap:14px}
+.fam-meta span{display:inline-flex;align-items:center;gap:5px}
+
+.fam-stage{font-family:var(--font-mono);font-size:10.5px;font-weight:600;color:var(--neutral-700);background:var(--neutral-100);padding:5px 11px;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;border:1px solid var(--linha-forte)}
+.fam-stage.doc{background:#FFF3DC;color:#7A4A0E;border-color:#E8C77F}
+.fam-stage.corresp{background:#E8EFF7;color:#1A3A6B;border-color:#A8B8D0}
+
+.fam-dias{font-family:var(--font-mono);font-size:15px;font-weight:700;text-align:right;min-width:64px}
+.fam-dias.red{color:var(--laranja)}
+.fam-dias.yellow{color:#B07000}
+.fam-dias.gray{color:var(--neutral-500);font-weight:500}
+
+/* Pendências dentro do card de família */
+.fam-pend{
+  margin:14px 22px 14px 78px;
+  padding:14px 16px;
+  background:var(--papel-dark);
+  border-left:3px solid var(--laranja);
+  font-size:12.5px;
+  line-height:1.6;
+}
+.fam-pend strong{font-family:var(--font-mono);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--laranja);margin-right:8px}
+
+.fam-actions{display:flex;gap:8px;margin:0 22px 18px 78px}
+.fam-act{
+  font-family:var(--font-sans);
+  font-size:12px;
+  font-weight:600;
+  padding:8px 14px;
+  border:1px solid var(--linha-forte);
+  background:#fff;
+  color:var(--neutral-900);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.fam-act:hover{border-color:var(--neutral-900)}
+.fam-act.primary{background:var(--neutral-900);color:#fff;border-color:var(--neutral-900)}
+.fam-act.primary:hover{background:var(--aco)}
+
+/* "O que tá quebrado" — barra técnica */
+.broken-row{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--linha);font-size:13.5px}
+.broken-row:last-child{border-bottom:none}
+.broken-label{display:flex;align-items:center;gap:12px;color:var(--neutral-900);font-weight:500}
+.broken-mark{width:28px;height:28px;display:grid;place-items:center;font-size:13px;border:1px solid var(--linha-forte);background:#fff;color:var(--neutral-700)}
+.broken-mark.r{background:var(--laranja);color:#fff;border-color:var(--laranja)}
+.broken-mark.y{background:#FFF3DC;color:#7A4A0E;border-color:#E8C77F}
+.broken-mark.g{background:var(--neutral-100);color:var(--neutral-500);border-color:var(--linha-forte)}
+.broken-count{font-family:var(--font-mono);font-size:17px;font-weight:700;color:var(--neutral-900)}
+.broken-count.zero{color:var(--neutral-300);font-weight:500}
+
+/* Funil — sete colunas alinhadas como cronograma */
+.funil-head{font-family:var(--font-mono);font-size:10.5px;font-weight:600;color:var(--neutral-500);text-transform:uppercase;letter-spacing:.16em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.funil{display:grid;grid-template-columns:repeat(7,1fr);background:#fff;border:1px solid var(--linha-forte)}
+.fn-col{padding:18px 12px;border-right:1px solid var(--linha);text-align:center;cursor:pointer}
+.fn-col:last-child{border-right:none}
+.fn-col:hover{background:var(--papel-dark)}
+.fn-col .lbl{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--neutral-500);text-transform:uppercase;letter-spacing:.14em;margin-bottom:12px}
+.fn-col .val{font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--neutral-900);letter-spacing:-.02em;line-height:1}
+
+/* Footer-faixa "mockup" */
+.mockup-tag{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--neutral-900);color:var(--laranja);font-family:var(--font-mono);font-size:11px;font-weight:600;padding:12px 22px;letter-spacing:.1em;text-transform:uppercase;border:2px solid var(--laranja);display:flex;align-items:center;gap:14px}
+.mockup-tag a{color:#fff;border-bottom:1px solid #fff;padding-bottom:1px}
+.mockup-tag a:hover{color:var(--laranja);border-color:var(--laranja)}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sb-header">
+    <div class="sb-mark">E</div>
+    <div>
+      <div class="sb-brand">EDR CRM</div>
+      <div class="sb-tag">Eng. Honesta · MCMV</div>
+    </div>
+  </div>
+
+  <div class="sb-section">Início</div>
+  <nav class="sb-nav">
+    <a class="active"><span class="ico">▦</span> Dashboard <span class="ct">8</span></a>
+  </nav>
+
+  <div class="sb-section">Operação</div>
+  <nav class="sb-nav">
+    <a><span class="ico">▪</span> Famílias <span class="ct">101</span></a>
+    <a><span class="ico">≡</span> Kanban</a>
+    <a><span class="ico">▣</span> Lotes <span class="ct">23</span></a>
+  </nav>
+
+  <div class="sb-foot">
+    <div class="user-mark">EL</div>
+    <div class="user-meta">
+      <div class="user-name">Elyda Liberato</div>
+      <div class="versao">v 16.05.26 · 16:30</div>
+    </div>
+  </div>
+</aside>
+
+<div>
+  <header class="topbar">
+    <div class="crumb">Início <span class="sep">/</span> <b>Dashboard</b></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm">Atualizar</button>
+      <button class="btn btn-cta btn-sm">+ Nova família</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-tag">Hoje · 16 Mai 2026 · Sábado</div>
+      <h1>Bom dia, Elyda.</h1>
+      <p><b>8 famílias</b> precisam de cobrança imediata e <b>2 tarefas</b> vencem hoje. <b>5 documentos recusados</b> aguardando re-envio do correspondente.</p>
+    </section>
+
+    <!-- KPIs estilo placa de obra -->
+    <div class="kpi-row">
+      <div class="kpi alarm">
+        <span class="kpi-lbl">Cobrar hoje</span>
+        <div class="kpi-num">08</div>
+        <div class="kpi-sub"><span class="up">↑ 03</span> vs ontem</div>
+      </div>
+      <div class="kpi">
+        <span class="kpi-lbl">Em movimento</span>
+        <div class="kpi-num">097</div>
+        <div class="kpi-sub"><span class="dn">─ 00</span> sem alteração</div>
+      </div>
+      <div class="kpi">
+        <span class="kpi-lbl">Lotes reservados</span>
+        <div class="kpi-num">18<span class="denom">/23</span></div>
+        <div class="kpi-sub"><span class="up">↑ 01</span> esta semana</div>
+      </div>
+      <div class="kpi">
+        <span class="kpi-lbl">Concluídos no mês</span>
+        <div class="kpi-num">04</div>
+        <div class="kpi-sub"><span class="up">↑ 02</span> vs abril</div>
+      </div>
+    </div>
+
+    <!-- Cobrar Hoje + Quebrado -->
+    <div class="grid">
+      <section class="section">
+        <header class="section-head">
+          <div>
+            <h2 class="section-title">Cobrar hoje <span class="section-tag">03 críticas</span></h2>
+            <p class="section-sub">Ordenadas por gravidade. Mais antigas primeiro.</p>
+          </div>
+          <a class="section-link">Ver todas (08) →</a>
+        </header>
+
+        <article>
+          <div class="fam-row crit">
+            <div class="fam-marker">MR</div>
+            <div>
+              <div class="fam-name">Marcos Rodrigues da Silva</div>
+              <div class="fam-meta">
+                <span>CPF ***.412.***-**</span>
+                <span>(87) 9 8412-3344</span>
+                <span>Faixa 2</span>
+              </div>
+            </div>
+            <div class="fam-stage doc">Documentação</div>
+            <div class="fam-dias red">12d</div>
+          </div>
+          <div class="fam-pend">
+            <strong>Falta</strong> CPF cônjuge, comprovante residência, declaração FGTS.<br>
+            <strong>Recusado</strong> Carteira de trabalho — foto cortada, re-enviar.
+          </div>
+          <div class="fam-actions">
+            <button class="fam-act primary">Copiar mensagem</button>
+            <button class="fam-act">✓ Cobrei agora</button>
+            <button class="fam-act">Abrir ficha</button>
+          </div>
+
+          <div class="fam-row crit">
+            <div class="fam-marker">JC</div>
+            <div>
+              <div class="fam-name">João Carlos Pereira</div>
+              <div class="fam-meta">
+                <span>CPF ***.781.***-**</span>
+                <span>(87) 9 9871-5522</span>
+                <span>Faixa 1</span>
+              </div>
+            </div>
+            <div class="fam-stage corresp">Correspondente</div>
+            <div class="fam-dias red">09d</div>
+          </div>
+
+          <div class="fam-row">
+            <div class="fam-marker">AS</div>
+            <div>
+              <div class="fam-name">Ana Souza de Lima</div>
+              <div class="fam-meta">
+                <span>CPF ***.005.***-**</span>
+                <span>(87) 9 8800-9912</span>
+                <span>Faixa 1</span>
+              </div>
+            </div>
+            <div class="fam-stage doc">Documentação</div>
+            <div class="fam-dias yellow">05d</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section">
+        <header class="section-head">
+          <div>
+            <h2 class="section-title">O que travou</h2>
+            <p class="section-sub">Bloqueios e contadores ativos</p>
+          </div>
+        </header>
+        <div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark r">!</div> Docs recusados</div>
+            <div class="broken-count">05</div>
+          </div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark y">⏱</div> Docs vencidos</div>
+            <div class="broken-count">02</div>
+          </div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark r">⚠</div> Impedimentos ativos</div>
+            <div class="broken-count">03</div>
+          </div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark g">▢</div> Tarefas vencidas</div>
+            <div class="broken-count zero">00</div>
+          </div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark r">!</div> Tarefas vencendo hoje</div>
+            <div class="broken-count">02</div>
+          </div>
+          <div class="broken-row">
+            <div class="broken-label"><div class="broken-mark g">●</div> Tarefas vencendo amanhã</div>
+            <div class="broken-count">04</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Funil -->
+    <div class="funil-head">
+      <span>Funil · 16 Mai 2026</span>
+      <a class="section-link">Ver Kanban →</a>
+    </div>
+    <div class="funil">
+      <div class="fn-col"><div class="lbl">Triagem</div><div class="val">42</div></div>
+      <div class="fn-col"><div class="lbl">Doc</div><div class="val">28</div></div>
+      <div class="fn-col"><div class="lbl">Corresp</div><div class="val">11</div></div>
+      <div class="fn-col"><div class="lbl">Aprov</div><div class="val">08</div></div>
+      <div class="fn-col"><div class="lbl">Pref</div><div class="val">05</div></div>
+      <div class="fn-col"><div class="lbl">Assin</div><div class="val">03</div></div>
+      <div class="fn-col"><div class="lbl">Concl/mês</div><div class="val">04</div></div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-tag">
+  Mockup EH · Engenharia Honesta
+  <a href="../dashboard.html">comparar com atual →</a>
+</div>
+
+</body>
+</html>
