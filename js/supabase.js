@@ -72,6 +72,17 @@ async function sbRpc(fn, body = {}) {
   return text ? JSON.parse(text) : null
 }
 
+// Edge Function — chamada autenticada
+async function sbInvoke(slug, body = {}) {
+  const r = await _retry401(() => fetch(`${SUPABASE_URL}/functions/v1/${slug}`, {
+    method: 'POST',
+    headers: _headers(),
+    body: JSON.stringify(body)
+  }))
+  if (!r.ok) { const e = await r.text(); throw new Error(`Edge ${slug}: ${r.status} ${e}`) }
+  return r.json()
+}
+
 // Exportar token (usado pelo auth.js)
 function setToken(t) { _token = t }
 function getToken() { return _token }
