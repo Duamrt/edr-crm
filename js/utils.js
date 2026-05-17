@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1779016492'
+const CRM_VERSION = '1779017539'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -351,6 +351,17 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
     return { ok: false, motivo: '🚨 Família com impedimento ativo — resolva antes de avançar nessa etapa.' }
   }
   return { ok: true }
+}
+
+// Derivação compacta usada pelo Kanban/listagem pra decidir se família está bloqueada
+// pelos critérios "rápidos" do Triador (sem rodar triagemMCMV completo, que precisa de docs+histórico).
+// Inclui: renda zero, renda > teto MCMV, CADMUT, renda_insuficiente — subset intencional do triagemMCMV.
+// Wrapper isolado pra qualquer mudança aqui ser refletida em todos os consumidores.
+function isTriagemBloqueadaSimples(cliente, impedimentosDoCliente = []) {
+  const renda = Number(cliente.renda_total_confirmada) || Number(cliente.renda_total_simulada) || 0
+  if (renda === 0) return true
+  if (renda > MCMV_LIMITES.faixa3_max) return true
+  return impedimentosDoCliente.some(i => i.tipo === 'cadmut' || i.tipo === 'renda_insuficiente')
 }
 
 // Badges e classe SLA pra cards do kanban e linhas da lista
