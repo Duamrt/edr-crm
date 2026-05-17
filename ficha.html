@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1778971811">
-  <link rel="stylesheet" href="css/style.css?cb=1778971811">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779012196">
+  <link rel="stylesheet" href="css/style.css?cb=1779012196">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -234,13 +234,37 @@
     </div>
   </div>
 
+  <!-- Modal vincular/trocar/desvincular lote -->
+  <div id="modal-lote" class="modal-overlay hidden" onclick="if(event.target===this)fecharModalLote()">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 id="modal-lote-titulo" style="margin:0;font-size:1.05rem;font-weight:700;">Vincular lote</h3>
+        <button class="modal-close" onclick="fecharModalLote()" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:8px;">
+          <label for="modal-lote-select">Lote do Projeto Josué</label>
+          <select id="modal-lote-select" style="width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.92rem;">
+            <option value="">Carregando lotes...</option>
+          </select>
+        </div>
+        <p class="text-sm text-muted" style="margin:6px 0 0;">Lotes reservados por outras famílias ou bloqueados aparecem desabilitados.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-lote-desvincular" type="button" class="btn btn-danger btn-sm hidden" onclick="desvincularLote()" style="margin-right:auto;">Desvincular lote atual</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalLote()">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="confirmarLote()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1778971811"></script>
-  <script src="js/auth.js?cb=1778971811"></script>
-  <script src="js/utils.js?cb=1778971811"></script>
-  <script src="js/data/clientes.js?cb=1778971811"></script>
-  <script src="js/data/documentos.js?cb=1778971811"></script>
+  <script src="js/supabase.js?cb=1779012196"></script>
+  <script src="js/auth.js?cb=1779012196"></script>
+  <script src="js/utils.js?cb=1779012196"></script>
+  <script src="js/data/clientes.js?cb=1779012196"></script>
+  <script src="js/data/documentos.js?cb=1779012196"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -592,7 +616,9 @@
     }
 
     function renderResumo(c, membros) {
-      const loteInfo = c.crm_lotes ? `Lote ${c.crm_lotes.numero} (Quadra ${c.crm_lotes.quadra || '?'})` : 'Sem lote'
+      const loteHtml = c.crm_lotes
+        ? `<strong>Lote ${c.crm_lotes.numero} (Quadra ${c.crm_lotes.quadra || '?'})</strong> <button type="button" onclick="abrirModalLote()" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:.72rem;margin-left:6px;">↺ Trocar</button>`
+        : `<button type="button" onclick="abrirModalLote()" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:.78rem;">+ Vincular lote</button>`
       const dias = diasDesde(c.ultima_atualizacao)
       const sla = slaBadge(c.ultima_atualizacao)
 
@@ -604,7 +630,7 @@
         <div><span class="text-sm text-muted">Faixa MCMV</span><br><strong>${c.faixa_mcmv ? 'Faixa ' + c.faixa_mcmv : '—'}</strong></div>
         <div><span class="text-sm text-muted">Tipo de renda</span><br><strong>${TIPO_RENDA_LABEL[c.tipo_renda] || '—'}</strong></div>
         <div><span class="text-sm text-muted">FGTS</span><br><strong>${c.fgts ? fmtMoeda(c.fgts_valor) + ' disponível' : 'Não'}</strong></div>
-        <div><span class="text-sm text-muted">Lote vinculado</span><br><strong>${loteInfo}</strong></div>
+        <div><span class="text-sm text-muted">Lote vinculado</span><br>${loteHtml}</div>
         <div><span class="text-sm text-muted">Primeiro contato</span><br><strong>${fmtData(c.data_primeiro_contato)}</strong></div>
         <div><span class="text-sm text-muted">Última atualização</span><br><strong>${fmtData(c.ultima_atualizacao)} ${sla}</strong></div>
         <div class="form-full"><span class="text-sm text-muted">Observações</span><br><span>${c.observacoes || '—'}</span></div>
@@ -826,6 +852,79 @@
       } catch (err) { toast(traduzirErro(err), 'error') }
     }
 
+    // ── Vincular / trocar / desvincular lote (modal inline) ──
+    async function abrirModalLote() {
+      const modal = document.getElementById('modal-lote')
+      const sel = document.getElementById('modal-lote-select')
+      const titulo = document.getElementById('modal-lote-titulo')
+      const btnDesv = document.getElementById('modal-lote-desvincular')
+      const loteAtualId = _cliente?.lote_id || null
+
+      titulo.textContent = loteAtualId ? 'Trocar lote vinculado' : 'Vincular lote'
+      btnDesv.classList.toggle('hidden', !loteAtualId)
+      sel.innerHTML = '<option value="">Carregando lotes...</option>'
+      modal.classList.remove('hidden')
+
+      try {
+        const [lotes, comLote] = await Promise.all([
+          sbGet('crm_lotes', '?order=quadra.asc,numero.asc&select=id,numero,quadra,status'),
+          sbGet('crm_clientes', '?deleted_at=is.null&lote_id=not.is.null&select=id,lote_id')
+        ])
+        const ocupados = new Set(comLote.filter(c => c.id !== clienteId).map(c => c.lote_id))
+        sel.innerHTML = '<option value="">— Selecione um lote —</option>' +
+          lotes.map(l => {
+            const ocupado = ocupados.has(l.id)
+            const bloqueado = l.status === 'bloqueado'
+            const eAtual = l.id === loteAtualId
+            const label = `Lote ${l.numero} (Quadra ${l.quadra || '?'})` +
+              (eAtual ? ' — atual' : '') +
+              (ocupado && !eAtual ? ' — Reservado' : '') +
+              (bloqueado && !eAtual ? ' — Bloqueado' : '')
+            const disabled = (ocupado || bloqueado) && !eAtual
+            return `<option value="${l.id}" ${disabled ? 'disabled' : ''} ${eAtual ? 'selected' : ''}>${label}</option>`
+          }).join('')
+      } catch (err) {
+        sel.innerHTML = '<option value="">Erro ao carregar</option>'
+        toast(traduzirErro(err), 'error')
+      }
+    }
+
+    function fecharModalLote() {
+      document.getElementById('modal-lote').classList.add('hidden')
+    }
+
+    async function confirmarLote() {
+      const novoId = document.getElementById('modal-lote-select').value
+      if (!novoId) { toast('Selecione um lote', 'error'); return }
+      if (novoId === _cliente?.lote_id) { fecharModalLote(); return }
+      try {
+        await sbPatch('crm_clientes', clienteId, { lote_id: novoId, ultima_atualizacao: new Date().toISOString() })
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: _cliente?.lote_id ? '↺ Lote trocado' : '+ Lote vinculado',
+          tipo: 'sistema'
+        })
+        toast(_cliente?.lote_id ? 'Lote trocado' : 'Lote vinculado', 'success')
+        fecharModalLote()
+        carregar()
+      } catch (err) { toast(traduzirErro(err), 'error') }
+    }
+
+    async function desvincularLote() {
+      if (!confirm('Desvincular o lote desta família? O lote ficará disponível para outras.')) return
+      try {
+        await sbPatch('crm_clientes', clienteId, { lote_id: null, ultima_atualizacao: new Date().toISOString() })
+        await sbPost('crm_historico', {
+          cliente_id: clienteId,
+          descricao: '✕ Lote desvinculado',
+          tipo: 'sistema'
+        })
+        toast('Lote desvinculado', 'success')
+        fecharModalLote()
+        carregar()
+      } catch (err) { toast(traduzirErro(err), 'error') }
+    }
+
     // Automação: cria tarefa automaticamente se doc vence em ≤ 15 dias
     async function criarTarefasVencimento(docs, tarefasExistentes) {
       const hoje = new Date()
@@ -900,6 +999,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1778971811"></script>
+  <script src="js/sw-register.js?cb=1779012196"></script>
 </body>
 </html>
