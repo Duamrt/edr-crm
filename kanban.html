@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779012196">
-  <link rel="stylesheet" href="css/style.css?cb=1779012196">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779012423">
+  <link rel="stylesheet" href="css/style.css?cb=1779012423">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -15,6 +15,29 @@
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
   <script>document.documentElement.style.visibility = 'hidden'</script>
+  <style>
+    /* Modo seleção múltipla (Bulk Action) */
+    .kanban-bulk-bar{
+      position:fixed;bottom:0;left:var(--sidebar-width);right:0;
+      background:var(--sidebar-bg);
+      border-top:1px solid var(--sidebar-border);
+      box-shadow:0 -4px 16px rgba(0,0,0,.06);
+      padding:14px 24px;
+      display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+      z-index:150;
+      transform:translateY(110%);transition:transform .18s ease;
+    }
+    .kanban-bulk-bar.show{transform:translateY(0)}
+    .kanban-bulk-count{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.95rem;color:var(--text-primary)}
+    .kanban-bulk-count b{color:var(--verde);font-size:1.1rem}
+    .kanban-bulk-bar select{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:.88rem;font-family:inherit;background:#fff;cursor:pointer;color:var(--text-primary);min-width:180px}
+    .kanban-bulk-bar .grow{flex:1}
+    .kanban-card.bulk-selected{outline:3px solid var(--verde);outline-offset:1px;background:var(--verde-surface)!important}
+    .kanban-card.bulk-mode{cursor:pointer}
+    body.bulk-mode .kanban-card{user-select:none}
+    body.bulk-mode .kanban-wrap{padding-bottom:80px}
+    @media (max-width:780px){.kanban-bulk-bar{left:0}}
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -36,6 +59,7 @@
           <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-secondary);cursor:pointer;user-select:none;">
             <input type="checkbox" id="toggle-finalizados" style="cursor:pointer;"> Mostrar finalizados
           </label>
+          <button id="btn-modo-selecao" onclick="toggleModoSelecao()" class="btn btn-secondary btn-sm" title="Selecionar várias famílias e aplicar ação em lote">☑ Selecionar várias</button>
           <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
@@ -53,12 +77,33 @@
     </div>
   </div>
 
+  <!-- Barra de ações em lote (Bulk Action — Auto #9) -->
+  <div class="kanban-bulk-bar" id="bulk-bar">
+    <span class="kanban-bulk-count"><b id="bulk-count">0</b> família(s) selecionada(s)</span>
+    <span class="text-muted text-sm">·</span>
+    <span class="text-muted text-sm">Mover para:</span>
+    <select id="bulk-status">
+      <option value="">— Escolha a coluna —</option>
+      <option value="triagem">Triagem</option>
+      <option value="documentacao">Documentação</option>
+      <option value="correspondente">Com Correspondente</option>
+      <option value="aprovado">Aprovado/Ajustes</option>
+      <option value="prefeitura">Prefeitura/Projetos</option>
+      <option value="assinatura">Assinatura</option>
+      <option value="concluido">Concluído</option>
+      <option value="perdido">Perdido</option>
+    </select>
+    <button onclick="aplicarMoverBulk()" class="btn btn-primary btn-sm">Aplicar</button>
+    <span class="grow"></span>
+    <button onclick="toggleModoSelecao()" class="btn btn-secondary btn-sm">Cancelar</button>
+  </div>
+
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1779012196"></script>
-  <script src="js/auth.js?cb=1779012196"></script>
-  <script src="js/utils.js?cb=1779012196"></script>
-  <script src="js/data/clientes.js?cb=1779012196"></script>
+  <script src="js/supabase.js?cb=1779012423"></script>
+  <script src="js/auth.js?cb=1779012423"></script>
+  <script src="js/utils.js?cb=1779012423"></script>
+  <script src="js/data/clientes.js?cb=1779012423"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -81,6 +126,9 @@
     let _recusadoSet = new Set()
     let _impSet = new Set()
     let _triagemBloqSet = new Set()  // clientes BLOQUEADOS pelo Triador (CADMUT, renda fora, sem renda)
+    let _clientesAtuais = []           // bulk action — fonte de verdade pra status anterior + nome
+    let _modoSelecao = false           // bulk action — modo seleção ativo
+    let _selecionados = new Set()      // bulk action — IDs marcados
     // ETAPAS_BLOQUEADAS_AVANCO e podeAvancarEtapa() agora vivem em utils.js (fonte única)
 
     async function carregar() {
@@ -109,6 +157,7 @@
         const tarefaMap = {}
         tarefas.forEach(t => { if (!tarefaMap[t.cliente_id]) tarefaMap[t.cliente_id] = t })
 
+        _clientesAtuais = clientes
         renderKanban(clientes, _impSet, tarefaMap)
       } catch (err) {
         toast('Erro ao carregar: ' + traduzirErro(err), 'error')
@@ -157,8 +206,9 @@
           const badges = sla.badges.map(b => `<span class="badge badge-${b.tipo}">${b.texto}</span>`)
 
           const card = document.createElement('div')
-          card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${hasRecusado ? 'has-recusado' : ''} ${slaClass}`
-          card.draggable = true
+          const isBulkSel = _modoSelecao && _selecionados.has(c.id)
+          card.className = `kanban-card ${hasImp ? 'has-impedimento' : ''} ${hasRecusado ? 'has-recusado' : ''} ${slaClass} ${_modoSelecao ? 'bulk-mode' : ''} ${isBulkSel ? 'bulk-selected' : ''}`
+          card.draggable = !_modoSelecao
           card.dataset.id = c.id
           const tarefaTxt = tarefa ? '📋 ' + escapeHtml(tarefa.descricao.substring(0,35)) + ' · ' + fmtData(tarefa.prazo) : '<span class="text-muted">Sem próxima ação</span>'
           card.innerHTML = `
@@ -169,18 +219,26 @@
           `
 
           card.addEventListener('click', () => {
+            if (_modoSelecao) {
+              if (_selecionados.has(c.id)) { _selecionados.delete(c.id); card.classList.remove('bulk-selected') }
+              else { _selecionados.add(c.id); card.classList.add('bulk-selected') }
+              _atualizarBulkBar()
+              return
+            }
             window.location.href = `ficha.html?id=${c.id}`
           })
 
-          card.addEventListener('dragstart', e => {
-            _dragging = c.id
-            card.classList.add('dragging')
-            e.dataTransfer.effectAllowed = 'move'
-          })
-          card.addEventListener('dragend', () => {
-            card.classList.remove('dragging')
-            _dragging = null
-          })
+          if (!_modoSelecao) {
+            card.addEventListener('dragstart', e => {
+              _dragging = c.id
+              card.classList.add('dragging')
+              e.dataTransfer.effectAllowed = 'move'
+            })
+            card.addEventListener('dragend', () => {
+              card.classList.remove('dragging')
+              _dragging = null
+            })
+          }
 
           colEl.appendChild(card)
         })
@@ -218,6 +276,88 @@
       })
     }
 
+    // ── Bulk Action (Auto #9) ────────────────────────────────────
+    function toggleModoSelecao() {
+      _modoSelecao = !_modoSelecao
+      _selecionados.clear()
+      document.body.classList.toggle('bulk-mode', _modoSelecao)
+      document.getElementById('bulk-bar').classList.toggle('show', _modoSelecao)
+      const btn = document.getElementById('btn-modo-selecao')
+      btn.textContent = _modoSelecao ? '✕ Sair do modo seleção' : '☑ Selecionar várias'
+      btn.classList.toggle('btn-secondary', !_modoSelecao)
+      btn.classList.toggle('btn-danger', _modoSelecao)
+      _atualizarBulkBar()
+      carregar()
+    }
+
+    function _atualizarBulkBar() {
+      document.getElementById('bulk-count').textContent = _selecionados.size
+    }
+
+    async function aplicarMoverBulk() {
+      const novoStatus = document.getElementById('bulk-status').value
+      if (!novoStatus) { toast('Escolha a coluna de destino', 'error'); return }
+      if (_selecionados.size === 0) { toast('Selecione pelo menos 1 família', 'error'); return }
+
+      // Validar quais podem avançar
+      const validos = []
+      const bloqueados = []
+      _selecionados.forEach(id => {
+        const c = _clientesAtuais.find(x => x.id === id)
+        if (!c) return
+        if (c.status_kanban === novoStatus) return  // já tá lá, pula
+        const check = podeAvancarEtapa(novoStatus, {
+          temDocRecusado: _recusadoSet.has(id),
+          temImpedimentoAtivo: _impSet.has(id),
+          triagemBloqueada: _triagemBloqSet.has(id)
+        })
+        if (check.ok) validos.push({ id, statusAnterior: c.status_kanban, nome: c.nome })
+        else bloqueados.push({ nome: c.nome, motivo: check.motivo })
+      })
+
+      if (validos.length === 0) {
+        const msg = bloqueados.length ? `Nenhuma pode mover. ${bloqueados[0].motivo}` : 'Todas as selecionadas já estão nessa coluna'
+        toast(msg, 'error')
+        return
+      }
+
+      showLoading()
+      let sucesso = 0, erro = 0
+      await Promise.all(validos.map(async v => {
+        try { await moverStatusKanban(v.id, novoStatus); sucesso++ }
+        catch (err) { erro++; console.warn('Bulk move falhou:', v.id, err) }
+      }))
+      hideLoading()
+
+      // Sair do modo + recarregar
+      _modoSelecao = false
+      _selecionados.clear()
+      document.body.classList.remove('bulk-mode')
+      document.getElementById('bulk-bar').classList.remove('show')
+      const btn = document.getElementById('btn-modo-selecao')
+      btn.textContent = '☑ Selecionar várias'
+      btn.classList.remove('btn-danger')
+      btn.classList.add('btn-secondary')
+
+      // Toast com undo (reverte só os que deram sucesso)
+      const lbl = KANBAN_LABEL[novoStatus] || novoStatus
+      const aviso = bloqueados.length
+        ? `${sucesso} movida(s) pra ${lbl} · ${bloqueados.length} bloqueada(s)`
+        : `${sucesso} movida(s) pra ${lbl}`
+      if (sucesso > 0) {
+        toastUndo(aviso, async () => {
+          showLoading()
+          await Promise.all(validos.slice(0, sucesso).map(v => moverStatusKanban(v.id, v.statusAnterior).catch(()=>{})))
+          hideLoading()
+          toast('Movimentação revertida', 'success')
+          carregar()
+        }, { duration: 30000 })
+      } else {
+        toast(aviso, erro > 0 ? 'error' : 'info')
+      }
+      carregar()
+    }
+
     // Toggle "Mostrar finalizados" — persiste em localStorage
     const _toggleFin = document.getElementById('toggle-finalizados')
     _toggleFin.checked = localStorage.getItem('kanban_mostrar_finalizados') === '1'
@@ -228,6 +368,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1779012196"></script>
+  <script src="js/sw-register.js?cb=1779012423"></script>
 </body>
 </html>
