@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Dashboard</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779126358">
-  <link rel="stylesheet" href="css/style.css?cb=1779126358">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779126755">
+  <link rel="stylesheet" href="css/style.css?cb=1779126755">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="ficha.html">
@@ -194,7 +194,7 @@
         <a href="clientes.html">👥 Clientes</a>
         <a href="kanban.html">📋 Kanban</a>
         <a href="lotes.html">🏘️ Lotes</a>
-        <a href="#" id="nav-agenda" target="_blank" rel="noopener">📅 Agenda</a>
+        <a href="agenda.html">📅 Agenda</a>
       </div>
       <div class="sidebar-footer">
         <div id="sidebar-usuario"></div>
@@ -266,7 +266,7 @@
                 <h2 class="dash-card-title">📅 Minha agenda</h2>
                 <p class="dash-card-sub" id="ag-sub">Compromissos sincronizados</p>
               </div>
-              <a href="#" id="ag-link-full" class="link-toggle" style="font-size:12px">Abrir completa ↗</a>
+              <a href="agenda.html" id="ag-link-full" class="link-toggle" style="font-size:12px">Abrir completa →</a>
             </header>
             <div class="ag-tabs">
               <button class="ag-tab" data-tab="atrasado">Atrasado <span class="ag-count">0</span></button>
@@ -321,26 +321,11 @@
     </div>
   </div>
 
-  <script src="js/supabase.js?cb=1779126358"></script>
-  <script src="js/auth.js?cb=1779126358"></script>
-  <script src="js/utils.js?cb=1779126358"></script>
-  <script src="js/data/dashboard.js?cb=1779126358"></script>
-  <script src="js/data/agenda-widget.js?cb=1779126358"></script>
-  <script>
-    // Sidebar Agenda link → aponta pra agenda do EDR System (temporário até módulo 2)
-    (function(){
-      function setAgendaLink(){
-        const link = document.getElementById('nav-agenda')
-        if (!link || typeof getUsuario !== 'function') return
-        const u = getUsuario(); if (!u) return
-        const nome = (u.nome || u.email || '').toLowerCase()
-        if (nome.includes('iannaline')) link.href = 'https://sistema.edreng.com.br/agenda-iannaline.html'
-        else link.href = 'https://sistema.edreng.com.br/agenda.html'
-      }
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setAgendaLink)
-      else setAgendaLink()
-    })()
-  </script>
-  <script src="js/sw-register.js?cb=1779126358"></script>
+  <script src="js/supabase.js?cb=1779126755"></script>
+  <script src="js/auth.js?cb=1779126755"></script>
+  <script src="js/utils.js?cb=1779126755"></script>
+  <script src="js/data/dashboard.js?cb=1779126755"></script>
+  <script src="js/data/agenda-widget.js?cb=1779126755"></script>
+  <script src="js/sw-register.js?cb=1779126755"></script>
 </body>
 </html>

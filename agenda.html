@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>EDR CRM — Agenda</title>
+  <link rel="stylesheet" href="css/tokens.css?cb=1779126755">
+  <link rel="stylesheet" href="css/style.css?cb=1779126755">
+  <link rel="prefetch" href="dashboard.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script>document.documentElement.style.visibility = 'hidden'</script>
+  <style>
+    .ap-grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    @media (max-width:1100px){.ap-grid{grid-template-columns:1fr}}
+
+    .ap-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sombra);padding:20px}
+    .ap-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .ap-card-head h2{font-family:'Plus Jakarta Sans';margin:0;font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text-primary);text-transform:capitalize}
+    .ap-card-head h3{font-family:'Plus Jakarta Sans';margin:0;font-size:13px;font-weight:700;letter-spacing:-.015em;color:var(--text-primary);display:flex;align-items:center;gap:6px}
+    .ap-card-sub{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:10px}
+
+    .ap-cal-nav{display:flex;gap:6px;align-items:center}
+    .ap-cal-nav button{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:50%;cursor:pointer;font-size:14px;color:var(--text-primary);display:grid;place-items:center;transition:.15s;padding:0}
+    .ap-cal-nav button:hover{background:var(--verde-surface);border-color:var(--verde)}
+    .ap-cal-nav button.today{width:auto;padding:0 14px;border-radius:999px;font-size:11.5px;font-weight:700;font-family:'Plus Jakarta Sans';letter-spacing:.04em;text-transform:uppercase}
+
+    .ap-cont-pills{display:flex;gap:8px;flex-wrap:wrap}
+    .ap-pill{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px;display:flex;align-items:center;gap:7px;font-size:12px}
+    .ap-pill b{font-family:'Plus Jakarta Sans';font-weight:700;color:var(--verde);font-feature-settings:"tnum"}
+    .ap-pill span{color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;font-size:10.5px;font-weight:600}
+
+    .ap-dias-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px}
+    .ap-dias-sem span{text-align:center;font-family:'Plus Jakarta Sans';font-size:10.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;padding:6px 0}
+
+    .ap-grid-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .ap-dia{aspect-ratio:1/1;background:var(--bg);border-radius:10px;padding:8px;display:flex;flex-direction:column;cursor:pointer;border:1.5px solid transparent;transition:.15s;min-height:80px;position:relative}
+    .ap-dia:hover{border-color:var(--verde);background:var(--surface)}
+    .ap-dia.outro{opacity:.35}
+    .ap-dia.hoje{background:var(--verde);color:#fff}
+    .ap-dia.hoje:hover{background:var(--verde-hover)}
+    .ap-dia.selected{border-color:var(--amarelo);background:var(--amarelo-pale)}
+    .ap-dia.selected.hoje{background:var(--verde);border-color:#fff}
+    .ap-dia .num{font-family:'Plus Jakarta Sans';font-size:13px;font-weight:700;font-feature-settings:"tnum"}
+    .ap-dia .dots{display:flex;gap:3px;margin-top:auto;flex-wrap:wrap;max-width:100%}
+    .ap-dia .dot{width:6px;height:6px;border-radius:50%}
+    .ap-dia .dot.trabalho{background:var(--verde)}
+    .ap-dia .dot.compra{background:var(--amarelo)}
+    .ap-dia .dot.pessoal{background:#7C3AED}
+    .ap-dia .dot.lembrete{background:var(--vermelho)}
+    .ap-dia.hoje .dot{background:#fff}
+
+    .ap-painel{display:flex;flex-direction:column;gap:14px}
+
+    .ap-event{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+    .ap-event:last-child{border-bottom:none}
+    .ap-prio{width:3px;align-self:stretch;border-radius:2px;margin-top:3px;min-height:28px}
+    .ap-prio-alta{background:var(--vermelho)}
+    .ap-prio-media{background:var(--amarelo)}
+    .ap-prio-baixa{background:var(--border)}
+    .ap-time{min-width:48px;font-family:'JetBrains Mono';font-size:12.5px;font-weight:700;color:var(--verde);padding-top:2px;letter-spacing:-.01em}
+    .ap-body{flex:1;min-width:0}
+    .ap-title{font-family:'Plus Jakarta Sans';font-size:13.5px;font-weight:600;letter-spacing:-.015em;color:var(--text-primary);margin-bottom:3px;line-height:1.35}
+    .ap-event.done .ap-title{text-decoration:line-through;color:var(--text-tertiary)}
+    .ap-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+    .ap-obs{font-size:11.5px;color:var(--text-tertiary);margin-top:4px;line-height:1.4}
+    .ap-tag{font-family:'Plus Jakarta Sans';font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+    .ap-tag-trabalho{background:var(--verde-pale);color:var(--verde-hover)}
+    .ap-tag-compra{background:var(--amarelo-pale);color:#92400E}
+    .ap-tag-pessoal{background:#EDE9FE;color:#5B21B6}
+    .ap-tag-lembrete{background:var(--vermelho-pale);color:#991B1B}
+    .ap-actions{display:flex;gap:4px}
+    .ap-btn-ico{width:26px;height:26px;border:1px solid var(--border);background:var(--surface);border-radius:6px;cursor:pointer;display:grid;place-items:center;font-size:12px;color:var(--text-secondary);transition:.15s;padding:0}
+    .ap-btn-ico:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-surface)}
+    .ap-btn-ico.del:hover{border-color:var(--vermelho);color:var(--vermelho);background:var(--vermelho-pale)}
+    .ap-btn-ico:disabled{opacity:.5;cursor:wait}
+    .ap-event.done .ap-btn-ico.check{background:var(--verde);border-color:var(--verde);color:#fff}
+
+    .ap-empty{padding:30px 14px;text-align:center;color:var(--text-tertiary);font-size:13px}
+
+    .ap-form{display:flex;flex-direction:column;gap:9px}
+    .ap-form input,.ap-form select,.ap-form textarea{padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text-primary);background:var(--surface);outline:none;transition:.15s}
+    .ap-form input:focus,.ap-form select:focus,.ap-form textarea:focus{border-color:var(--verde)}
+    .ap-form textarea{min-height:55px;resize:vertical}
+    .ap-form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .ap-btn-add{background:var(--amarelo);color:#78350F;border:none;padding:11px;border-radius:999px;font-family:'Plus Jakarta Sans';font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.04em;text-transform:uppercase;transition:.15s}
+    .ap-btn-add:hover{background:#F59E0B;color:#fff}
+
+    .ap-saving{position:fixed;bottom:18px;right:18px;background:var(--verde);color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:600;font-family:'Plus Jakarta Sans';box-shadow:0 6px 20px rgba(45,106,79,.35);display:none;align-items:center;gap:8px}
+    .ap-saving.show{display:flex}
+    .ap-saving .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.2s infinite}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="clientes.html">👥 Clientes</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="lotes.html">🏘️ Lotes</a>
+        <a href="agenda.html" class="active">📅 Agenda</a>
+      </div>
+      <div class="sidebar-footer"><div id="sidebar-usuario"></div><div id="crm-versao-footer" class="crm-versao"></div></div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">📅 <span id="ap-titulo-user">Minha agenda</span></span>
+        <div class="flex gap-8" style="align-items:center">
+          <div class="ap-cont-pills">
+            <div class="ap-pill"><b id="ap-cnt-hoje">0</b><span>hoje</span></div>
+            <div class="ap-pill"><b id="ap-cnt-sem">0</b><span>semana</span></div>
+            <div class="ap-pill"><b id="ap-cnt-mes">0</b><span>mês</span></div>
+          </div>
+          <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <div class="ap-grid">
+          <!-- CALENDÁRIO -->
+          <section class="ap-card">
+            <div class="ap-card-head">
+              <h2 id="ap-titulo-mes">···</h2>
+              <div class="ap-cal-nav">
+                <button id="ap-mes-prev" title="Mês anterior">◀</button>
+                <button class="today" id="ap-btn-hoje">Hoje</button>
+                <button id="ap-mes-next" title="Próximo mês">▶</button>
+              </div>
+            </div>
+            <div class="ap-dias-sem">
+              <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+            </div>
+            <div class="ap-grid-dias" id="ap-grid"></div>
+          </section>
+
+          <!-- PAINEL LATERAL -->
+          <aside class="ap-painel">
+            <div class="ap-card">
+              <div class="ap-card-head"><h3>📌 <span id="ap-dia-titulo">Selecione um dia</span></h3></div>
+              <div id="ap-dia-lista"><div class="ap-empty">Clique em um dia do calendário pra ver os compromissos</div></div>
+            </div>
+
+            <div class="ap-card">
+              <div class="ap-card-head"><h3>➕ Novo compromisso</h3></div>
+              <form class="ap-form" id="ap-form" onsubmit="return false">
+                <input type="text" id="ap-f-titulo" placeholder="O que precisa fazer?" required>
+                <div class="ap-form-row">
+                  <input type="time" id="ap-f-hora" value="08:00">
+                  <select id="ap-f-cat">
+                    <option value="trabalho">Trabalho</option>
+                    <option value="pessoal">Pessoal</option>
+                    <option value="compra">Compra</option>
+                    <option value="lembrete">Lembrete</option>
+                  </select>
+                  <select id="ap-f-prio">
+                    <option value="baixa">Normal</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <input type="date" id="ap-f-data">
+                <textarea id="ap-f-obs" placeholder="Observações (opcional)"></textarea>
+                <button type="submit" class="ap-btn-add" id="ap-btn-add">+ Adicionar</button>
+              </form>
+            </div>
+
+            <div class="ap-card">
+              <div class="ap-card-head"><h3>⏭ Próximos 7 dias</h3></div>
+              <div id="ap-proximos"><div class="ap-empty">Carregando…</div></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ap-saving" id="ap-saving"><span class="dot"></span>sincronizando</div>
+
+  <script src="js/supabase.js?cb=1779126755"></script>
+  <script src="js/auth.js?cb=1779126755"></script>
+  <script src="js/utils.js?cb=1779126755"></script>
+  <script src="js/data/agenda-page.js?cb=1779126755"></script>
+  <script src="js/sw-register.js?cb=1779126755"></script>
+</body>
+</html>
