@@ -219,13 +219,7 @@
     _state.key = ctx.key
     _state.url = ctx.url
 
-    // Link "Abrir completa"
-    const link = document.getElementById('ag-link-full')
-    if (link && ctx.url) {
-      link.href = ctx.url
-      link.target = '_blank'
-      link.rel = 'noopener'
-    }
+    // "Abrir completa" já aponta pra agenda.html interna (definido no HTML)
 
     const eventos = await fetchEventos(ctx.key)
     _state.eventos = eventos
