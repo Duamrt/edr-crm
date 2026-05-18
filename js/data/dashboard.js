@@ -148,7 +148,7 @@
         <div class="kpi-sub">clientes ativos</div>
       </div>
       <div class="kpi ${lotesAttn}">
-        <div class="kpi-label">Lotes Josué</div>
+        <div class="kpi-label">Lotes</div>
         <div class="kpi-value">${k.josue_reservados}<span class="frac">/${k.josue_total}</span></div>
         <div class="kpi-sub">${k.josue_total - k.josue_reservados} livres</div>
       </div>
