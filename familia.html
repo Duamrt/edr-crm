@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Cadastro de Família</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779017539">
-  <link rel="stylesheet" href="css/style.css?cb=1779017539">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779105237">
+  <link rel="stylesheet" href="css/style.css?cb=1779105237">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -57,6 +57,10 @@
               <div class="form-group">
                 <label>Telefone (WhatsApp) *</label>
                 <input type="text" id="telefone" required placeholder="(87) 99999-9999" maxlength="15">
+              </div>
+              <div class="form-group">
+                <label>Data de nascimento</label>
+                <input type="date" id="data_nascimento">
               </div>
             </div>
           </div>
@@ -167,10 +171,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1779017539"></script>
-  <script src="js/auth.js?cb=1779017539"></script>
-  <script src="js/utils.js?cb=1779017539"></script>
-  <script src="js/data/clientes.js?cb=1779017539"></script>
+  <script src="js/supabase.js?cb=1779105237"></script>
+  <script src="js/auth.js?cb=1779105237"></script>
+  <script src="js/utils.js?cb=1779105237"></script>
+  <script src="js/data/clientes.js?cb=1779105237"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -248,7 +252,10 @@
           document.getElementById('cpf').value = r.cpf
           preenchidos.push('CPF')
         }
-        // (RG e data nascimento não têm campos no form atual — guardar pra futuro)
+        if (r.data_nascimento && !document.getElementById('data_nascimento').value) {
+          document.getElementById('data_nascimento').value = r.data_nascimento
+          preenchidos.push('Nascimento')
+        }
         if (preenchidos.length === 0) {
           toast('Documento lido, mas campos já estavam preenchidos ou não detectados', 'info')
         } else {
@@ -387,6 +394,7 @@
         document.getElementById('nome').value = c.nome || ''
         document.getElementById('cpf').value = fmtCpf(c.cpf) || ''
         document.getElementById('telefone').value = fmtTel(c.telefone) || ''
+        document.getElementById('data_nascimento').value = c.data_nascimento || ''
         document.getElementById('tipo_renda').value = c.tipo_renda || ''
         document.getElementById('renda_simulada').value = c.renda_total_simulada || ''
         document.getElementById('renda_confirmada').value = c.renda_total_confirmada || ''
@@ -437,6 +445,7 @@
         fgts_valor: parseFloat(document.getElementById('fgts_valor').value) || null,
         status_kanban: document.getElementById('status_kanban').value,
         lote_id: loteId,
+        data_nascimento: document.getElementById('data_nascimento').value || null,
         data_primeiro_contato: document.getElementById('data_contato').value || null,
         observacoes: document.getElementById('observacoes').value.trim() || null
       }
@@ -510,6 +519,6 @@
       })
     }
   </script>
-  <script src="js/sw-register.js?cb=1779017539"></script>
+  <script src="js/sw-register.js?cb=1779105237"></script>
 </body>
 </html>
