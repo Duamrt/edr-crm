@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <title>EDR CRM — Famílias</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779124389">
-  <link rel="stylesheet" href="css/style.css?cb=1779124389">
+  <title>EDR CRM — Clientes</title>
+  <link rel="stylesheet" href="css/tokens.css?cb=1779124694">
+  <link rel="stylesheet" href="css/style.css?cb=1779124694">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -26,7 +26,7 @@
       <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
         <a href="dashboard.html">📊 Dashboard</a>
-        <a href="clientes.html" class="active">👥 Famílias</a>
+        <a href="clientes.html" class="active">👥 Clientes</a>
         <a href="kanban.html">📋 Kanban</a>
         <a href="lotes.html">🏘️ Lotes</a>
       </div>
@@ -35,9 +35,9 @@
 
     <div class="main">
       <div class="topbar">
-        <span class="topbar-title">Famílias cadastradas</span>
+        <span class="topbar-title">Clientes cadastrados</span>
         <div class="flex gap-8">
-          <a href="familia.html" class="btn btn-primary btn-sm">+ Nova família</a>
+          <a href="familia.html" class="btn btn-primary btn-sm">+ Novo cliente</a>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
       </div>
@@ -101,9 +101,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1779124389"></script>
-  <script src="js/auth.js?cb=1779124389"></script>
-  <script src="js/utils.js?cb=1779124389"></script>
+  <script src="js/supabase.js?cb=1779124694"></script>
+  <script src="js/auth.js?cb=1779124694"></script>
+  <script src="js/utils.js?cb=1779124694"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -296,6 +296,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1779124389"></script>
+  <script src="js/sw-register.js?cb=1779124694"></script>
 </body>
 </html>
