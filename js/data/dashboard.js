@@ -126,7 +126,7 @@
     const tarefasHoje = briefing.tarefas_hoje
     let partes = [`Hoje é ${dia}.`]
     if (cobrar > 0) partes.push(`Você tem <b>${cobrar} ${cobrar === 1 ? 'cliente' : 'clientes'}</b> precisando de ação`)
-    else partes.push(`Nenhuma família urgente`)
+    else partes.push(`Nenhum cliente urgente`)
     if (tarefasHoje > 0) partes.push(`e <b>${tarefasHoje} ${tarefasHoje === 1 ? 'tarefa' : 'tarefas'}</b> vencendo hoje.`)
     else partes[partes.length-1] += '.'
     document.getElementById('hero-sub').innerHTML = partes.join(' ')
@@ -172,7 +172,7 @@
 
     if (total === 0) {
       elBadge.innerHTML = ''
-      elSub.textContent = 'Tudo em dia — nenhuma família passou do SLA.'
+      elSub.textContent = 'Tudo em dia — nenhum cliente passou do SLA.'
       elLista.innerHTML = `<div class="empty-state"><span class="icon">✅</span>Nada pra cobrar hoje. Aproveita pra adiantar as próximas etapas.</div>`
       elFoot.style.display = 'none'
       return
