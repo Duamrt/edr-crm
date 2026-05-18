@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1779126963'
+const CRM_VERSION = '1779126987'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
