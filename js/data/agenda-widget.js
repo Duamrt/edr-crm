@@ -263,11 +263,14 @@
         else check.disabled = false
         return
       }
-      // Quick-add
-      if (e.target.id === 'ag-add-btn') {
+      // Quick-add (robusto contra clique em filhos do botão)
+      const addBtn = e.target.closest('#ag-add-btn')
+      if (addBtn) {
+        e.preventDefault()
         const input = document.getElementById('ag-add-input')
         const titulo = (input?.value || '').trim()
-        if (!titulo) return
+        if (!titulo) { input?.focus(); return }
+        addBtn.disabled = true
         const novo = {
           id: Date.now(),
           titulo,
@@ -282,8 +285,9 @@
         const ok = await saveEventos(_state.key, _state.eventos)
         if (ok) {
           input.value = ''
-          carregar()
+          await carregar()
         }
+        addBtn.disabled = false
       }
     })
 

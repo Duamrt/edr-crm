@@ -1,4 +1,4 @@
-const VERSION = '1779126987'
+const VERSION = '1779127150'
 const CACHE = 'edr-crm-v' + VERSION
 
 // Assets pré-cacheados na instalação do SW
@@ -10,6 +10,9 @@ const ASSETS = [
   'js/utils.js?cb=' + VERSION,
   'js/data/clientes.js?cb=' + VERSION,
   'js/data/documentos.js?cb=' + VERSION,
+  'js/data/dashboard.js?cb=' + VERSION,
+  'js/data/agenda-widget.js?cb=' + VERSION,
+  'js/data/agenda-page.js?cb=' + VERSION,
   'favicon.svg'
   // mapa-lotes.jpg (282KB) removido do precache em 17/05/2026
   // Carrega via <link rel="preload"> em lotes.html (lazy) e fica em cache-first depois
@@ -43,23 +46,18 @@ self.addEventListener('fetch', e => {
   const isHtml = url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname === ''
 
   if (isHtml) {
-    // HTML: stale-while-revalidate
-    // Devolve cache imediato (tela instantânea) + atualiza em background pra próxima visita
+    // HTML: network-first (sempre busca versão nova; cache só como fallback offline)
+    // Evita que usuária fique presa em versão antiga após deploy.
     e.respondWith(
-      caches.open(CACHE).then(cache =>
-        cache.match(e.request).then(cached => {
-          const networkFetch = fetch(e.request)
-            .then(response => {
-              // Só cacheia respostas válidas — pula redirects (302) e respostas opacas
-              if (response && response.status === 200 && !response.redirected && response.type === 'basic') {
-                cache.put(e.request, response.clone())
-              }
-              return response
-            })
-            .catch(() => cached)  // offline: usa cache
-          return cached || networkFetch
+      fetch(e.request)
+        .then(response => {
+          if (response && response.status === 200 && !response.redirected && response.type === 'basic') {
+            const clone = response.clone()
+            caches.open(CACHE).then(cache => cache.put(e.request, clone))
+          }
+          return response
         })
-      )
+        .catch(() => caches.match(e.request))
     )
     return
   }
