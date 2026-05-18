@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1779017539'
+const CRM_VERSION = '1779105237'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -765,6 +765,16 @@ const TIPO_RENDA_LABEL = {
   informal: 'Informal',
   autonomo: 'Autônomo',
   misto: 'Misto'
+}
+
+// Calcula idade em anos a partir de data ISO (YYYY-MM-DD)
+function idadeAnos(dataNasc) {
+  if (!dataNasc) return null
+  const [y, m, d] = dataNasc.split('-').map(Number)
+  const hoje = new Date()
+  let idade = hoje.getFullYear() - y
+  if (hoje.getMonth() + 1 < m || (hoje.getMonth() + 1 === m && hoje.getDate() < d)) idade--
+  return idade >= 0 ? idade : null
 }
 
 // Máscara CPF ao digitar
