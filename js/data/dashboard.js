@@ -125,7 +125,7 @@
     const cobrar = briefing.cobrar_hoje_total
     const tarefasHoje = briefing.tarefas_hoje
     let partes = [`Hoje é ${dia}.`]
-    if (cobrar > 0) partes.push(`Você tem <b>${cobrar} ${cobrar === 1 ? 'família' : 'famílias'}</b> precisando de ação`)
+    if (cobrar > 0) partes.push(`Você tem <b>${cobrar} ${cobrar === 1 ? 'cliente' : 'clientes'}</b> precisando de ação`)
     else partes.push(`Nenhuma família urgente`)
     if (tarefasHoje > 0) partes.push(`e <b>${tarefasHoje} ${tarefasHoje === 1 ? 'tarefa' : 'tarefas'}</b> vencendo hoje.`)
     else partes[partes.length-1] += '.'
@@ -140,12 +140,12 @@
       <div class="kpi ${urgentClass}">
         <div class="kpi-label">Cobrar hoje</div>
         <div class="kpi-value">${k.cobrar_hoje}</div>
-        <div class="kpi-sub">${k.cobrar_hoje === 0 ? 'tudo em dia' : 'famílias críticas'}</div>
+        <div class="kpi-sub">${k.cobrar_hoje === 0 ? 'tudo em dia' : 'clientes críticos'}</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Em movimento</div>
         <div class="kpi-value">${k.em_movimento}</div>
-        <div class="kpi-sub">famílias ativas</div>
+        <div class="kpi-sub">clientes ativos</div>
       </div>
       <div class="kpi ${lotesAttn}">
         <div class="kpi-label">Lotes Josué</div>
@@ -183,7 +183,7 @@
     elBadge.innerHTML = reds > 0
       ? `<span class="badge-fire">${reds} ${reds === 1 ? 'crítica' : 'críticas'}</span>`
       : `<span class="badge-attn">${yellows} atenção</span>`
-    elSub.textContent = `${total} ${total === 1 ? 'família' : 'famílias'} — ordenadas por etapa + gravidade`
+    elSub.textContent = `${total} ${total === 1 ? 'cliente' : 'clientes'} — ordenadas por etapa + gravidade`
 
     const exibir = _expandido ? lista : lista.slice(0, 3)
     elLista.innerHTML = exibir.map(f => renderFamCard(f)).join('')
