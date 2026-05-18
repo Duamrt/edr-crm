@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Clientes</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779126755">
-  <link rel="stylesheet" href="css/style.css?cb=1779126755">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779126963">
+  <link rel="stylesheet" href="css/style.css?cb=1779126963">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -102,9 +102,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1779126755"></script>
-  <script src="js/auth.js?cb=1779126755"></script>
-  <script src="js/utils.js?cb=1779126755"></script>
+  <script src="js/supabase.js?cb=1779126963"></script>
+  <script src="js/auth.js?cb=1779126963"></script>
+  <script src="js/utils.js?cb=1779126963"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -231,22 +231,22 @@
           <td class="col-acoes">
             <a href="ficha.html?id=${c.id}" class="btn btn-secondary btn-sm">Ver</a>
             <a href="familia.html?id=${c.id}" class="btn btn-secondary btn-sm">Editar</a>
-            <button onclick="excluirFamilia('${c.id}', this.dataset.nome)" data-nome="${nomeEsc}" class="btn btn-danger btn-sm" title="Arquivar família">🗑️</button>
+            <button onclick="excluirFamilia('${c.id}', this.dataset.nome)" data-nome="${nomeEsc}" class="btn btn-danger btn-sm" title="Arquivar cliente">🗑️</button>
           </td>
         </tr>`
       }).join('')
     }
 
     async function excluirFamilia(id, nome) {
-      if (!confirm(`Arquivar família "${nome}"?\n\nA família sai da lista, libera o lote automaticamente e a pasta no Google Drive é preservada. Pode ser recuperada depois via banco se precisar.`)) return
+      if (!confirm(`Arquivar cliente "${nome}"?\n\nO cliente sai da lista, libera o lote automaticamente e a pasta no Google Drive é preservada. Pode ser recuperado depois via banco se precisar.`)) return
       try {
         await sbPatch('crm_clientes', id, { deleted_at: new Date().toISOString() })
         await sbPost('crm_historico', {
           cliente_id: id,
-          descricao: `Família arquivada por ${getUsuario()?.nome || 'usuário'}`,
+          descricao: `Cliente arquivado por ${getUsuario()?.nome || 'usuário'}`,
           tipo: 'sistema'
         })
-        toast('Família arquivada', 'success')
+        toast('Cliente arquivado', 'success')
         carregar()
       } catch (err) {
         toast('Erro ao arquivar: ' + traduzirErro(err), 'error')
@@ -297,6 +297,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1779126755"></script>
+  <script src="js/sw-register.js?cb=1779126963"></script>
 </body>
 </html>
