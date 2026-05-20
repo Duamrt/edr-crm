@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Dashboard</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779277903">
-  <link rel="stylesheet" href="css/style.css?cb=1779277903">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779278491">
+  <link rel="stylesheet" href="css/style.css?cb=1779278491">
   <link rel="prefetch" href="clientes.html">
   <link rel="prefetch" href="kanban.html">
   <link rel="prefetch" href="ficha.html">
@@ -237,6 +237,17 @@
           </div>
         </div>
 
+        <!-- Documentos vencendo (próximos 15 dias) -->
+        <section class="dash-card hidden" id="vencendo-card" style="margin-bottom:16px;border-left:3px solid #f59e0b;">
+          <header class="dash-card-head">
+            <div>
+              <h2 class="dash-card-title">⏰ Documentos vencendo <span id="vencendo-badge" style="background:#f59e0b;color:#fff;border-radius:10px;padding:1px 8px;font-size:.75rem;font-weight:700;"></span></h2>
+              <p class="dash-card-sub">Renove antes de vencer — próximos 15 dias</p>
+            </div>
+          </header>
+          <div class="broken-list" id="vencendo-lista"></div>
+        </section>
+
         <!-- Cobrar Hoje + O que tá quebrado -->
         <div class="dash-grid">
           <section class="dash-card">
@@ -321,11 +332,11 @@
     </div>
   </div>
 
-  <script src="js/supabase.js?cb=1779277903"></script>
-  <script src="js/auth.js?cb=1779277903"></script>
-  <script src="js/utils.js?cb=1779277903"></script>
-  <script src="js/data/dashboard.js?cb=1779277903"></script>
-  <script src="js/data/agenda-widget.js?cb=1779277903"></script>
-  <script src="js/sw-register.js?cb=1779277903"></script>
+  <script src="js/supabase.js?cb=1779278491"></script>
+  <script src="js/auth.js?cb=1779278491"></script>
+  <script src="js/utils.js?cb=1779278491"></script>
+  <script src="js/data/dashboard.js?cb=1779278491"></script>
+  <script src="js/data/agenda-widget.js?cb=1779278491"></script>
+  <script src="js/sw-register.js?cb=1779278491"></script>
 </body>
 </html>
