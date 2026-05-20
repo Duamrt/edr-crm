@@ -271,6 +271,29 @@
     `
   }
 
+  function renderVencendo(v) {
+    const card = document.getElementById('vencendo-card')
+    const el = document.getElementById('vencendo-lista')
+    const badge = document.getElementById('vencendo-badge')
+    if (!card || !el) return
+    const itens = []
+    ;(v?.lista || []).forEach(f => (f.docs || []).forEach(d => itens.push({
+      id: f.id, nome: f.nome, label: (d.descricao || DOC_LABEL[d.tipo] || d.tipo), dias: d.dias
+    })))
+    if (!itens.length) { card.classList.add('hidden'); return }
+    itens.sort((a, b) => a.dias - b.dias)
+    card.classList.remove('hidden')
+    if (badge) badge.textContent = itens.length
+    el.innerHTML = itens.map(it => {
+      const urgente = it.dias <= 5
+      const txt = it.dias <= 0 ? 'vence hoje' : it.dias === 1 ? 'vence amanhã' : `${it.dias}d p/ vencer`
+      return `<a class="broken-row" href="ficha.html?id=${it.id}" style="text-decoration:none;color:inherit;">
+        <span class="broken-label"><span class="broken-icon ${urgente ? 'bi-r' : 'bi-y'}">⏰</span> ${escapeHtml(capitalizar(primeiroNome(it.nome)))} — ${escapeHtml(it.label)}</span>
+        <span class="broken-count" style="color:${urgente ? 'var(--vermelho)' : '#b45309'};white-space:nowrap;font-size:.78rem;">${txt}</span>
+      </a>`
+    }).join('')
+  }
+
   function renderQuebrado(q) {
     const el = document.getElementById('quebrado-lista')
     const linha = (icoClass, ico, label, count) => {
@@ -401,13 +424,17 @@
   // ─── Loader ─────────────────────────────────────────────────────
   async function dashboardCarregar() {
     try {
-      const data = await sbRpc('get_crm_dashboard_summary')
+      const [data, vencendo] = await Promise.all([
+        sbRpc('get_crm_dashboard_summary'),
+        sbRpc('get_crm_docs_vencendo', { p_dias: 15 }).catch(() => null)
+      ])
       if (!data) throw new Error('Resposta vazia do servidor')
       _dados = data
       _ultimaSync = Date.now()
 
       renderHero(data.briefing)
       renderKpis(data.kpis)
+      renderVencendo(vencendo)
       renderCobrarHoje(data.cobrar_hoje)
       renderQuebrado(data.quebrado)
       renderFunil(data.funil)
