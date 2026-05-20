@@ -8,14 +8,21 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400'
 };
 
-// Rótulos/cabeçalhos que NUNCA são nome de pessoa
-const TOKENS_NAO_NOME = /REP[UÚ]BLICA|FEDERATIVA|BRASIL|CARTEIRA|IDENTIDADE|REGISTRO|GERAL|FILIA|\bM[AÃ]E\b|\bPAI\b|NATURALIDADE|NASCIMENTO|\bDATA\b|\bCPF\b|\bRG\b|\bDOC\b|ORIGEM|ASSINATURA|DIRETOR|SECRETARI|SEGURAN|VALIDADE|EXPEDI|HABILITA|MINIST[EÉ]RIO|INSTITUTO|\bVIA\b|DECRETO|OBSERVA|FOLHA|TERMO|MATR[IÍ]CULA/;
+// Rótulos/cabeçalhos que NUNCA são nome de pessoa (inclui cabeçalho do RG)
+const TOKENS_NAO_NOME = /REP[UÚ]BLICA|FEDERATIVA|BRASIL|NACIONAL|TERRIT[OÓ]RIO|V[AÁ]LIDA|CARTEIRA|IDENTIDADE|REGISTRO|GERAL|FILIA|\bM[AÃ]E\b|\bPAI\b|NATURALIDADE|NASCIMENTO|\bDATA\b|\bCPF\b|\bRG\b|\bDOC\b|ORIGEM|ASSINATURA|DIRETOR|SECRETARI|SEGURAN|VALIDADE|EXPEDI|HABILITA|MINIST[EÉ]RIO|INSTITUTO|\bVIA\b|DECRETO|OBSERVA|FOLHA|TERMO|MATR[IÍ]CULA/;
 
 const SO_LETRAS = /[A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ]/g;
 
-// Remove ruído de OCR (dígitos, pontuação) mantendo só letras e espaços
+// Limpa nome: remove chevrons («« »») e ruído de OCR, descarta letras soltas (artefato)
 function limparNome(s: string): string {
-  return s.replace(/[^A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  return s
+    .replace(/[<>]+/g, ' ')
+    .replace(/[^A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(w => w.length >= 2) // mata "C" / "<<" lidos como letra solta
+    .join(' ');
 }
 
 // Heurística: a linha parece um nome de pessoa?
@@ -24,7 +31,7 @@ function pareceNome(linha: string | undefined): boolean {
   const semEspaco = linha.replace(/\s/g, '');
   if (!semEspaco.length) return false;
   const letras = (linha.match(SO_LETRAS) || []).length;
-  if (letras / semEspaco.length < 0.7) return false; // muito ruído = não é nome
+  if (letras / semEspaco.length < 0.6) return false; // muito ruído = não é nome
   const limpo = limparNome(linha);
   const palavras = limpo.split(' ').filter(p => p.length >= 2);
   return limpo.length >= 6 && palavras.length >= 2;
@@ -49,10 +56,9 @@ function parseDocumento(textoOriginal: string) {
   const nasc = candidatos.find(c => c.idade >= 18 && c.idade <= 90) || candidatos[0];
   const data_nascimento = nasc ? nasc.iso : null;
 
-  // Nome — 3 camadas de tolerância (OCR de RG/CPF é ruidoso)
+  // Nome — SÓ pela linha do rótulo NOME (inline ou linha seguinte).
+  // Sem fallback por linha solta: melhor vazio que errado (pegava cabeçalho do RG).
   let nome: string | null = null;
-
-  // 1) Via rótulo NOME/NAME — inline ou linha seguinte
   for (let i = 0; i < linhas.length && !nome; i++) {
     const l = linhas[i];
     if ((/\bNOME\b|\bNAME\b/.test(l)) && !/\bM[AÃ]E\b|\bPAI\b|FILIA/.test(l)) {
@@ -60,20 +66,6 @@ function parseDocumento(textoOriginal: string) {
       if (pareceNome(inline)) { nome = limparNome(inline); break; }
       if (pareceNome(linhas[i + 1])) { nome = limparNome(linhas[i + 1]); break; }
     }
-  }
-
-  // 2) Fallback — primeira linha "cara de nome" ANTES da filiação (titular vem antes de mãe/pai)
-  if (!nome) {
-    for (const l of linhas) {
-      if (/FILIA|\bM[AÃ]E\b|\bPAI\b/.test(l)) break;
-      if (pareceNome(l)) { nome = limparNome(l); break; }
-    }
-  }
-
-  // 3) Último recurso — maior linha "cara de nome" do documento todo
-  if (!nome) {
-    const cands = linhas.filter(pareceNome).sort((a, b) => b.length - a.length);
-    if (cands.length) nome = limparNome(cands[0]);
   }
 
   const rgMatch = texto.match(/\bRG[\s:NO\.°º]*([\d\.X-]{6,15})/i) || texto.match(/REGISTRO[\s:NO\.°º]*([\d\.X-]{6,15})/i);
