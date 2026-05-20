@@ -1,5 +1,5 @@
 // EDR CRM — Utilitários
-const CRM_VERSION = '1779127150'
+const CRM_VERSION = '1779277903'
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = new Date(parseInt(CRM_VERSION) * 1000)
@@ -385,7 +385,7 @@ function classificarSlaCard(cliente, opts = {}) {
 
 // Docs essenciais por etapa do kanban — travam avanço
 const MCMV_DOCS_ESSENCIAIS_CORRESPONDENTE = ['rg_cpf_titular','comp_residencia','comp_renda','cadunico']
-const MCMV_DOCS_TODOS = ['rg_cpf_titular','rg_cpf_conjuge','certidao','comp_residencia','comp_renda','ctps','fgts','ir','certidao_negativa','cadunico']
+const MCMV_DOCS_TODOS = ['rg_cpf_titular','rg_cpf_conjuge','certidao','comp_residencia','comp_renda','ctps','fgts','ir','certidao_negativa','cadunico','scr','inteiro_teor']
 const MCMV_DOCS_POR_ETAPA = {
   triagem: [],
   documentacao: [],
@@ -395,6 +395,19 @@ const MCMV_DOCS_POR_ETAPA = {
   assinatura: MCMV_DOCS_TODOS,
   concluido: [],
   perdido: []
+}
+
+// Validade (em dias) de documentos que expiram — base do alerta de vencimento.
+// Vencimento = data de emissão + estes dias. Quem não está aqui não vence.
+const DOC_VALIDADE_DIAS = { scr: 30, inteiro_teor: 30, comp_residencia: 30, comp_renda: 90 }
+
+// Soma dias a uma data ISO (YYYY-MM-DD) sem sofrer com fuso. Devolve ISO.
+function somarDias(dataISO, dias) {
+  if (!dataISO) return null
+  const [y, m, d] = dataISO.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + dias)
+  return dt.toISOString().slice(0, 10)
 }
 
 // Faixa MCMV a partir da renda (tabela MCMV 2024-2025 urbano)
@@ -748,7 +761,9 @@ const DOC_LABEL = {
   fgts: 'Extrato do FGTS',
   ir: 'Declaração de IR ou isento',
   certidao_negativa: 'Certidão negativa de débitos',
-  cadunico: 'CadÚnico atualizado'
+  cadunico: 'CadÚnico atualizado',
+  scr: 'SCR (Banco Central)',
+  inteiro_teor: 'Certidão de inteiro teor'
 }
 
 const IMPEDIMENTO_LABEL = {

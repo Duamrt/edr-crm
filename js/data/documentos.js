@@ -21,6 +21,23 @@ async function atualizarVencimentoDoc(docId, dataVencimento) {
   await sbPatch('crm_documentos', docId, { data_vencimento: dataVencimento || null })
 }
 
+// Registrar data de emissão e calcular o vencimento automático (emissão + validade do tipo)
+async function atualizarEmissaoDoc(docId, clienteId, tipo, dataEmissao) {
+  const dias = DOC_VALIDADE_DIAS[tipo]
+  const vencimento = (dataEmissao && dias) ? somarDias(dataEmissao, dias) : null
+  await sbPatch('crm_documentos', docId, {
+    data_emissao: dataEmissao || null,
+    data_vencimento: vencimento
+  })
+  await sbPost('crm_historico', {
+    cliente_id: clienteId,
+    descricao: dataEmissao
+      ? `Emissão registrada (${dataEmissao}) — vence ${vencimento}`
+      : 'Data de emissão removida',
+    tipo: 'documento'
+  })
+}
+
 // Marcar lote de docs como N/A com 1 único evento histórico consolidado
 // Retorna lista detalhada pra possibilitar undo: [{ id, tipo, status_anterior }]
 async function aplicarNAEmLote(docs, clienteId) {
@@ -56,5 +73,6 @@ async function desfazerNAEmLote(alterados, clienteId) {
 
 window.atualizarStatusDoc = atualizarStatusDoc
 window.atualizarVencimentoDoc = atualizarVencimentoDoc
+window.atualizarEmissaoDoc = atualizarEmissaoDoc
 window.aplicarNAEmLote = aplicarNAEmLote
 window.desfazerNAEmLote = desfazerNAEmLote
