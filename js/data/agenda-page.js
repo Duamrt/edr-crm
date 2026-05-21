@@ -302,48 +302,11 @@
     if (f) f.value = iso
   }
 
-  document.getElementById('ap-mes-prev').addEventListener('click', () => {
-    _state.mesAtual--
-    if (_state.mesAtual < 0) { _state.mesAtual = 11; _state.anoAtual-- }
-    renderCalendario()
-  })
-  document.getElementById('ap-mes-next').addEventListener('click', () => {
-    _state.mesAtual++
-    if (_state.mesAtual > 11) { _state.mesAtual = 0; _state.anoAtual++ }
-    renderCalendario()
-  })
-  document.getElementById('ap-btn-hoje').addEventListener('click', () => {
-    const now = new Date()
-    _state.mesAtual = now.getMonth()
-    _state.anoAtual = now.getFullYear()
-    _state.diaSelecionado = ymd(now)
-    setDiaForm(_state.diaSelecionado)
-    renderAll()
-  })
-
-  document.getElementById('ap-grid').addEventListener('click', (e) => {
-    const cel = e.target.closest('.ap-dia')
-    if (!cel) return
-    const iso = cel.dataset.data
-    if (!iso) return
-    _state.diaSelecionado = iso
-    // se clicou em outro mês, navega
-    const [y, m] = iso.split('-').map(Number)
-    if (y !== _state.anoAtual || m - 1 !== _state.mesAtual) {
-      _state.anoAtual = y
-      _state.mesAtual = m - 1
-    }
-    setDiaForm(iso)
-    renderCalendario()
-    renderDia()
-  })
-
   async function handleEventAction(btn) {
     const id = btn.dataset.id
     const act = btn.dataset.act
     const ev = _state.eventos.find(x => String(x.id) === String(id))
     if (!ev) return
-
     btn.disabled = true
     if (act === 'toggle') {
       ev.concluido = !ev.concluido
@@ -355,50 +318,83 @@
     renderAll()
   }
 
-  document.getElementById('ap-dia-lista').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.ap-btn-ico')
-    if (!btn) return
-    await handleEventAction(btn)
-  })
+  function g(id) { return document.getElementById(id) }
 
-  const _atrasadosLista = document.getElementById('ap-atrasados-lista')
-  if (_atrasadosLista) {
-    _atrasadosLista.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.ap-btn-ico')
-      if (!btn) return
-      await handleEventAction(btn)
+  // Bindings — try/finally garante que boot() sempre roda
+  try {
+    g('ap-mes-prev').addEventListener('click', () => {
+      _state.mesAtual--
+      if (_state.mesAtual < 0) { _state.mesAtual = 11; _state.anoAtual-- }
+      renderCalendario()
     })
+    g('ap-mes-next').addEventListener('click', () => {
+      _state.mesAtual++
+      if (_state.mesAtual > 11) { _state.mesAtual = 0; _state.anoAtual++ }
+      renderCalendario()
+    })
+    g('ap-btn-hoje').addEventListener('click', () => {
+      const now = new Date()
+      _state.mesAtual = now.getMonth()
+      _state.anoAtual = now.getFullYear()
+      _state.diaSelecionado = ymd(now)
+      setDiaForm(_state.diaSelecionado)
+      renderAll()
+    })
+    g('ap-grid').addEventListener('click', (e) => {
+      const cel = e.target.closest('.ap-dia')
+      if (!cel) return
+      const iso = cel.dataset.data
+      if (!iso) return
+      _state.diaSelecionado = iso
+      const [y, m] = iso.split('-').map(Number)
+      if (y !== _state.anoAtual || m - 1 !== _state.mesAtual) {
+        _state.anoAtual = y; _state.mesAtual = m - 1
+      }
+      setDiaForm(iso)
+      renderCalendario()
+      renderDia()
+    })
+    g('ap-dia-lista').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.ap-btn-ico')
+      if (btn) await handleEventAction(btn)
+    })
+    const _al = g('ap-atrasados-lista')
+    if (_al) _al.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.ap-btn-ico')
+      if (btn) await handleEventAction(btn)
+    })
+    g('ap-form').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const tit = g('ap-f-titulo').value.trim()
+      if (!tit) return
+      const novo = {
+        id: Date.now(),
+        titulo: tit,
+        data: g('ap-f-data').value || ymd(new Date()),
+        hora: g('ap-f-hora').value || '',
+        categoria: g('ap-f-cat').value,
+        prioridade: g('ap-f-prio').value,
+        obs: g('ap-f-obs').value.trim(),
+        concluido: false
+      }
+      const btn = g('ap-btn-add')
+      btn.disabled = true; btn.textContent = 'Salvando…'
+      _state.eventos.unshift(novo)
+      await saveEventos()
+      _state.diaSelecionado = novo.data
+      const [y, m] = novo.data.split('-').map(Number)
+      _state.anoAtual = y; _state.mesAtual = m - 1
+      renderAll()
+      g('ap-f-titulo').value = ''
+      g('ap-f-obs').value = ''
+      btn.disabled = false; btn.textContent = '+ Adicionar'
+    })
+  } catch (bindErr) {
+    console.error('[agenda] binding error (non-fatal):', bindErr)
   }
 
-  document.getElementById('ap-form').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const tit = document.getElementById('ap-f-titulo').value.trim()
-    if (!tit) return
-    const novo = {
-      id: Date.now(),
-      titulo: tit,
-      data: document.getElementById('ap-f-data').value || ymd(new Date()),
-      hora: document.getElementById('ap-f-hora').value || '',
-      categoria: document.getElementById('ap-f-cat').value,
-      prioridade: document.getElementById('ap-f-prio').value,
-      obs: document.getElementById('ap-f-obs').value.trim(),
-      concluido: false
-    }
-    const btn = document.getElementById('ap-btn-add')
-    btn.disabled = true; btn.textContent = 'Salvando…'
-    _state.eventos.unshift(novo)
-    await saveEventos()
-    _state.diaSelecionado = novo.data
-    const [y, m] = novo.data.split('-').map(Number)
-    _state.anoAtual = y; _state.mesAtual = m - 1
-    renderAll()
-    document.getElementById('ap-f-titulo').value = ''
-    document.getElementById('ap-f-obs').value = ''
-    btn.disabled = false; btn.textContent = '+ Adicionar'
-  })
-
-  // ─── Boot ───────────────────────────────────────────────
-  (async function boot() {
+  // ─── Boot — sempre executa independente de erros de binding ──────
+  ;(async function boot() {
     setDiaForm(_state.diaSelecionado)
     await fetchEventos()
     renderAll()
