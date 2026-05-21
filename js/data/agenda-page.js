@@ -361,11 +361,14 @@
     await handleEventAction(btn)
   })
 
-  document.getElementById('ap-atrasados-lista').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.ap-btn-ico')
-    if (!btn) return
-    await handleEventAction(btn)
-  })
+  const _atrasadosLista = document.getElementById('ap-atrasados-lista')
+  if (_atrasadosLista) {
+    _atrasadosLista.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.ap-btn-ico')
+      if (!btn) return
+      await handleEventAction(btn)
+    })
+  }
 
   document.getElementById('ap-form').addEventListener('submit', async (e) => {
     e.preventDefault()
