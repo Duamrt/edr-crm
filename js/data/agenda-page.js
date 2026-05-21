@@ -233,15 +233,65 @@
     const cHoje = _state.eventos.filter(e => e.data === hoje && !e.concluido).length
     const cSem = _state.eventos.filter(e => e.data >= hoje && e.data <= fimSemanaYmd && !e.concluido).length
     const cMes = _state.eventos.filter(e => e.data?.startsWith(prefixoMes) && !e.concluido).length
+    const cAtrasado = _state.eventos.filter(e => e.data && e.data < hoje && !e.concluido).length
 
     document.getElementById('ap-cnt-hoje').textContent = cHoje
     document.getElementById('ap-cnt-sem').textContent = cSem
     document.getElementById('ap-cnt-mes').textContent = cMes
+
+    const pillAtrasado = document.getElementById('ap-pill-atrasado')
+    const cntAtrasado = document.getElementById('ap-cnt-atrasado')
+    if (pillAtrasado && cntAtrasado) {
+      cntAtrasado.textContent = cAtrasado
+      pillAtrasado.style.display = cAtrasado > 0 ? '' : 'none'
+    }
+  }
+
+  function renderAtrasados() {
+    const card = document.getElementById('ap-atrasados-card')
+    const lista = document.getElementById('ap-atrasados-lista')
+    const badge = document.getElementById('ap-cnt-atrasado-card')
+    if (!card || !lista) return
+
+    const hoje = ymd(new Date())
+    const evs = _state.eventos
+      .filter(e => e.data && e.data < hoje && !e.concluido)
+      .sort((a, b) => a.data.localeCompare(b.data))
+
+    if (!evs.length) {
+      card.style.display = 'none'
+      return
+    }
+
+    card.style.display = ''
+    if (badge) badge.textContent = `(${evs.length})`
+
+    lista.innerHTML = evs.map(ev => {
+      const dataLabel = parseLocalDate(ev.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+      return `
+        <div class="ap-event ap-event-late" data-id="${ev.id}">
+          <div class="ap-prio ap-prio-alta"></div>
+          <div class="ap-time" style="color:var(--vermelho)">${dataLabel}</div>
+          <div class="ap-body">
+            <div class="ap-title">${escapeHtml(ev.titulo || '')}</div>
+            <div class="ap-meta">
+              <span class="ap-tag ap-tag-${ev.categoria || 'trabalho'}">${ev.categoria || 'trabalho'}</span>
+              ${ev.obs ? `<span style="font-size:11px;color:var(--text-tertiary)">${escapeHtml(ev.obs.slice(0,40))}${ev.obs.length>40?'…':''}</span>` : ''}
+            </div>
+          </div>
+          <div class="ap-actions">
+            <button class="ap-btn-ico check" data-act="toggle" data-id="${ev.id}" title="Marcar concluído">○</button>
+            <button class="ap-btn-ico del" data-act="del" data-id="${ev.id}" title="Excluir">🗑</button>
+          </div>
+        </div>
+      `
+    }).join('')
   }
 
   function renderAll() {
     renderCalendario()
     renderDia()
+    renderAtrasados()
     renderProximos()
     renderContadores()
   }
@@ -288,9 +338,7 @@
     renderDia()
   })
 
-  document.getElementById('ap-dia-lista').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.ap-btn-ico')
-    if (!btn) return
+  async function handleEventAction(btn) {
     const id = btn.dataset.id
     const act = btn.dataset.act
     const ev = _state.eventos.find(x => String(x.id) === String(id))
@@ -305,6 +353,18 @@
     }
     await saveEventos()
     renderAll()
+  }
+
+  document.getElementById('ap-dia-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.ap-btn-ico')
+    if (!btn) return
+    await handleEventAction(btn)
+  })
+
+  document.getElementById('ap-atrasados-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.ap-btn-ico')
+    if (!btn) return
+    await handleEventAction(btn)
   })
 
   document.getElementById('ap-form').addEventListener('submit', async (e) => {

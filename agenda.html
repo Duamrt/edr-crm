@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Agenda</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779278491">
-  <link rel="stylesheet" href="css/style.css?cb=1779278491">
+  <link rel="stylesheet" href="css/tokens.css?cb=1779374640">
+  <link rel="stylesheet" href="css/style.css?cb=1779374640">
   <link rel="prefetch" href="dashboard.html">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +31,11 @@
     .ap-pill{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px;display:flex;align-items:center;gap:7px;font-size:12px}
     .ap-pill b{font-family:'Plus Jakarta Sans';font-weight:700;color:var(--verde);font-feature-settings:"tnum"}
     .ap-pill span{color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;font-size:10.5px;font-weight:600}
+    .ap-pill-atrasado{border-color:var(--vermelho)!important;background:var(--vermelho-pale)!important}
+    .ap-pill-atrasado b{color:var(--vermelho)!important}
+    .ap-pill-atrasado span{color:#991B1B!important}
+    .ap-card-atrasados{border-color:var(--vermelho)!important}
+    .ap-event-late{background:var(--vermelho-pale,.1)}
 
     .ap-dias-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px}
     .ap-dias-sem span{text-align:center;font-family:'Plus Jakarta Sans';font-size:10.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;padding:6px 0}
@@ -112,6 +117,7 @@
         <span class="topbar-title">📅 <span id="ap-titulo-user">Minha agenda</span></span>
         <div class="flex gap-8" style="align-items:center">
           <div class="ap-cont-pills">
+            <div class="ap-pill ap-pill-atrasado" id="ap-pill-atrasado" style="display:none"><b id="ap-cnt-atrasado">0</b><span>atrasado</span></div>
             <div class="ap-pill"><b id="ap-cnt-hoje">0</b><span>hoje</span></div>
             <div class="ap-pill"><b id="ap-cnt-sem">0</b><span>semana</span></div>
             <div class="ap-pill"><b id="ap-cnt-mes">0</b><span>mês</span></div>
@@ -169,6 +175,11 @@
               </form>
             </div>
 
+            <div class="ap-card ap-card-atrasados" id="ap-atrasados-card" style="display:none">
+              <div class="ap-card-head"><h3 style="color:var(--vermelho)">⚠ Atrasados <span id="ap-cnt-atrasado-card" style="font-size:12px;font-weight:600;opacity:.8"></span></h3></div>
+              <div id="ap-atrasados-lista"><div class="ap-empty">Carregando…</div></div>
+            </div>
+
             <div class="ap-card">
               <div class="ap-card-head"><h3>⏭ Próximos 7 dias</h3></div>
               <div id="ap-proximos"><div class="ap-empty">Carregando…</div></div>
@@ -181,10 +192,10 @@
 
   <div class="ap-saving" id="ap-saving"><span class="dot"></span>sincronizando</div>
 
-  <script src="js/supabase.js?cb=1779278491"></script>
-  <script src="js/auth.js?cb=1779278491"></script>
-  <script src="js/utils.js?cb=1779278491"></script>
-  <script src="js/data/agenda-page.js?cb=1779278491"></script>
-  <script src="js/sw-register.js?cb=1779278491"></script>
+  <script src="js/supabase.js?cb=1779374640"></script>
+  <script src="js/auth.js?cb=1779374640"></script>
+  <script src="js/utils.js?cb=1779374640"></script>
+  <script src="js/data/agenda-page.js?cb=1779374640"></script>
+  <script src="js/sw-register.js?cb=1779374640"></script>
 </body>
 </html>
