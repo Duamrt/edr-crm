@@ -912,6 +912,8 @@ tbody tr:hover { background: #f4f7ee; }
 .triagem-status.status-verde { background: var(--verde); color: #fff; }
 .triagem-status.status-amarelo { background: var(--amarelo); color: #fff; }
 .triagem-status.status-vermelho { background: var(--vermelho); color: #fff; }
+/* Azul = rota alternativa (fora do MCMV, segue atendível) — NÃO é bloqueio */
+.triagem-status.status-azul { background: #1E40AF; color: #fff; }
 
 .triagem-body { padding: 14px 18px 16px; }
 .triagem-resumo {
@@ -961,6 +963,7 @@ tbody tr:hover { background: #f4f7ee; }
 .triagem-grupo[data-tipo="risco"] { border-left-color: var(--amarelo); background: rgba(217,119,6,.05); }
 .triagem-grupo[data-tipo="operacional"] { border-left-color: var(--text-tertiary); background: rgba(107,114,128,.04); }
 .triagem-grupo[data-tipo="positivo"] { border-left-color: var(--verde); background: rgba(45,106,79,.04); }
+.triagem-grupo[data-tipo="desvio"] { border-left-color: #1E40AF; background: rgba(30,64,175,.05); }
 
 .triagem-grupo-titulo {
   display: flex;
@@ -982,6 +985,7 @@ tbody tr:hover { background: #f4f7ee; }
 .triagem-grupo[data-tipo="bloqueador"] .triagem-grupo-contagem { background: var(--vermelho); color: #fff; }
 .triagem-grupo[data-tipo="risco"] .triagem-grupo-contagem { background: var(--amarelo); color: #fff; }
 .triagem-grupo[data-tipo="positivo"] .triagem-grupo-contagem { background: var(--verde); color: #fff; }
+.triagem-grupo[data-tipo="desvio"] .triagem-grupo-contagem { background: #1E40AF; color: #fff; }
 
 .triagem-grupo-itens {
   display: grid;
@@ -1164,6 +1168,8 @@ tbody tr:hover { background: #f4f7ee; }
 .pill-faixa-1 { background: #D1FAE5; color: #065F46; border-color: #A7F3D0; }
 .pill-faixa-2 { background: #DBEAFE; color: #1E40AF; border-color: #BFDBFE; }
 .pill-faixa-3 { background: #EDE9FE; color: #5B21B6; border-color: #DDD6FE; }
+/* Faixa 4 (MCMV Classe Média — Portaria MCID 333/2026) */
+.pill-faixa-4 { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
 
 /* Undo Toast — sistema reutilizável (UX05) */
 .undo-toast {

@@ -305,7 +305,11 @@ function wppAtualizacao(nomeCliente, status) {
 }
 
 // Tetos MCMV (fácil de atualizar quando vier decreto novo)
-const MCMV_LIMITES = { faixa1_max: 2640, faixa2_max: 4400, faixa3_max: 8000 }
+// Vigência: Portaria MCID 333/2026 — inclui Faixa 4 (MCMV Classe Média).
+// Faixa 1: até 3.200 · Faixa 2: até 5.000 · Faixa 3: até 9.600 · Faixa 4: até 13.000
+// Acima de faixa4_max o cliente sai do MCMV, mas SEGUE ATENDÍVEL (rota SBPE/tradicional).
+const MCMV_LIMITES = { faixa1_max: 3200, faixa2_max: 5000, faixa3_max: 9600, faixa4_max: 13000 }
+const MCMV_VIGENCIA = 'Portaria MCID 333/2026'
 
 // Limiar de dias sem interação real antes de virar pendência operacional
 const MCMV_DIAS_PARADO = 7
@@ -341,7 +345,7 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
   // Triagem → Documentação: Triador (Agente 1) não pode dizer BLOQUEADO
   // Evita Elyda perder tempo cobrando docs de lead que nunca vai aprovar
   if (novoStatus === 'documentacao' && triagemBloqueada) {
-    return { ok: false, motivo: '🛑 Triador detectou BLOQUEIO (CADMUT, renda fora MCMV, etc). Lead não vai aprovar — mova pra Perdido ou resolva o impedimento antes.' }
+    return { ok: false, motivo: '🛑 Triador detectou BLOQUEIO (CADMUT ou renda não informada). Resolva o impedimento antes de cobrar documentos. Renda acima do MCMV NÃO bloqueia — segue por SBPE.' }
   }
   if (!ETAPAS_BLOQUEADAS_AVANCO.includes(novoStatus)) return { ok: true }
   if (temDocRecusado) {
@@ -355,12 +359,15 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
 
 // Derivação compacta usada pelo Kanban/listagem pra decidir se família está bloqueada
 // pelos critérios "rápidos" do Triador (sem rodar triagemMCMV completo, que precisa de docs+histórico).
-// Inclui: renda zero, renda > teto MCMV, CADMUT, renda_insuficiente — subset intencional do triagemMCMV.
+// Inclui: renda zero, CADMUT, renda_insuficiente — subset intencional do triagemMCMV.
 // Wrapper isolado pra qualquer mudança aqui ser refletida em todos os consumidores.
+//
+// NÃO bloqueia por renda acima do teto MCMV (Fase 0, 2026-07-24): renda alta é DESVIO DE ROTA
+// (Faixa 4 ou SBPE), não impedimento. Bloquear travava atendimento de cliente documentalmente
+// pronto e sugeria "Perdido" indevidamente. Ver rotaFinanciamento().
 function isTriagemBloqueadaSimples(cliente, impedimentosDoCliente = []) {
   const renda = Number(cliente.renda_total_confirmada) || Number(cliente.renda_total_simulada) || 0
   if (renda === 0) return true
-  if (renda > MCMV_LIMITES.faixa3_max) return true
   return impedimentosDoCliente.some(i => i.tipo === 'cadmut' || i.tipo === 'renda_insuficiente')
 }
 
@@ -410,13 +417,36 @@ function somarDias(dataISO, dias) {
   return dt.toISOString().slice(0, 10)
 }
 
-// Faixa MCMV a partir da renda (tabela MCMV 2024-2025 urbano)
+// Faixa MCMV a partir da renda (Portaria MCID 333/2026 — urbano)
+// Retorna 1..4, ou null se renda ausente/zero OU acima do teto do programa.
+// Para distinguir os dois casos de null, usar rotaFinanciamento().
 function calcFaixaMcmv(renda) {
   if (!renda) return null
   if (renda <= MCMV_LIMITES.faixa1_max) return 1
   if (renda <= MCMV_LIMITES.faixa2_max) return 2
   if (renda <= MCMV_LIMITES.faixa3_max) return 3
+  if (renda <= MCMV_LIMITES.faixa4_max) return 4
   return null
+}
+
+// Rota de financiamento recomendada — separa ELEGIBILIDADE de BLOQUEIO OPERACIONAL.
+// Renda acima do MCMV NÃO impede atendimento: encaminha para SBPE/tradicional.
+// Retorna { rota, faixa, label, alerta } — alerta=true só sinaliza mudança de rota.
+function rotaFinanciamento(renda) {
+  const r = Number(renda) || 0
+  if (r <= 0) {
+    return { rota: 'indefinida', faixa: null, label: 'Renda não informada', alerta: false }
+  }
+  const faixa = calcFaixaMcmv(r)
+  if (faixa) {
+    return { rota: 'mcmv', faixa, label: `Faixa ${faixa} MCMV`, alerta: false }
+  }
+  return {
+    rota: 'sbpe',
+    faixa: null,
+    label: 'Acima do MCMV — SBPE',
+    alerta: true
+  }
 }
 
 // Dias desde a última interação REAL (não apenas UPDATE no registro)
@@ -440,11 +470,12 @@ function diasSemInteracaoReal(cliente, historico = []) {
 
 // === AGENTE 1: TRIADOR DE ELEGIBILIDADE MCMV (determinístico) ===
 // Retorna análise em 3 categorias de gravidade:
-//   - bloqueadores: impedem definitivamente (CADMUT, renda fora, doc recusado)
+//   - bloqueadores: impedem definitivamente (CADMUT, sem renda, doc recusado)
 //   - riscos: afetam aprovação bancária (score, nome sujo, FGTS bloqueado)
 //   - operacionais: fricção resolvível (doc pendente, sem lote, parado)
+//   - desvios: muda a ROTA de financiamento, NÃO bloqueia atendimento (renda acima do MCMV → SBPE)
 function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
-  const grupos = { bloqueadores: [], riscos: [], operacionais: [] }
+  const grupos = { bloqueadores: [], riscos: [], operacionais: [], desvios: [] }
   const positivos = []
   const acoes = []
 
@@ -472,8 +503,10 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
       acoes.push(`Ajustar faixa cadastrada para Faixa ${faixaCalculada}`)
     }
   } else if (rendaUsada > 0) {
-    grupos.bloqueadores.push({ icone: '🚫', texto: `Renda ${fmtMoeda(rendaUsada)} acima do teto MCMV (${fmtMoeda(MCMV_LIMITES.faixa3_max)})` })
-    acoes.push('Renda fora do programa — encaminhar para financiamento tradicional')
+    // Renda acima do teto do MCMV: NÃO é bloqueio — é mudança de rota (SBPE/tradicional).
+    // Cliente segue trabalhável normalmente. Ver rotaFinanciamento().
+    grupos.desvios.push({ icone: '🧭', texto: `Renda ${fmtMoeda(rendaUsada)} acima do teto MCMV (${fmtMoeda(MCMV_LIMITES.faixa4_max)}) — rota SBPE` })
+    acoes.push('Encaminhar para SBPE / financiamento tradicional — cliente segue em atendimento')
   }
 
   // Lote
@@ -540,11 +573,18 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
   }
 
   // === STATUS FINAL ===
+  // Ordem importa: bloqueio real primeiro. 'fora_mcmv' NÃO é bloqueio — é rota alternativa,
+  // e por isso vem depois dos bloqueadores mas antes de riscos/operacionais (é a info dominante).
   let status, statusLabel, statusCor, motivoRessalva = null
   if (grupos.bloqueadores.length > 0) {
     status = 'bloqueado'
     statusLabel = 'BLOQUEADO'
     statusCor = 'vermelho'
+  } else if (grupos.desvios.length > 0) {
+    status = 'fora_mcmv'
+    statusLabel = 'FORA DO MCMV'
+    statusCor = 'azul'
+    motivoRessalva = 'rota SBPE'
   } else if (grupos.riscos.length > 0) {
     status = 'apto_ressalva'
     statusLabel = 'APTO COM RESSALVA'
@@ -567,6 +607,7 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
     statusCor,
     motivoRessalva,
     faixaCalculada,
+    rota: rotaFinanciamento(rendaUsada),
     grupos,
     positivos,
     acoes

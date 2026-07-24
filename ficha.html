@@ -367,11 +367,15 @@
         : t.statusLabel
 
       // Resumo: faixa + subsídio honesto
+      // Renda acima do MCMV mostra a ROTA (SBPE), não "Fora do MCMV" em vermelho —
+      // o cliente continua atendível, só muda o produto de financiamento.
       const resumo = []
       if (t.faixaCalculada) {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong>Faixa ${t.faixaCalculada}</strong></div>`)
+      } else if (t.rota.rota === 'sbpe') {
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Rota</span><strong style="color:var(--azul,#1E40AF)">SBPE / tradicional</strong></div>`)
       } else {
-        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-danger">Fora do MCMV</strong></div>`)
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-muted">Renda não informada</strong></div>`)
       }
       resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio</span><strong style="font-weight:500;font-size:.88rem;color:var(--text-secondary)">Confirmar com correspondente</strong></div>`)
       document.getElementById('triagem-resumo').innerHTML = resumo.join('')
@@ -382,6 +386,9 @@
 
       if (t.grupos.bloqueadores.length) {
         blocos.push(renderGrupo('bloqueador', '🛑 Bloqueadores', t.grupos.bloqueadores))
+      }
+      if (t.grupos.desvios?.length) {
+        blocos.push(renderGrupo('desvio', '🧭 Rota alternativa (não bloqueia)', t.grupos.desvios))
       }
       if (t.grupos.riscos.length) {
         blocos.push(renderGrupo('risco', '💳 Riscos de crédito', t.grupos.riscos))

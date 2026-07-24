@@ -126,7 +126,7 @@
     let _dragging = null
     let _recusadoSet = new Set()
     let _impSet = new Set()
-    let _triagemBloqSet = new Set()  // clientes BLOQUEADOS pelo Triador (CADMUT, renda fora, sem renda)
+    let _triagemBloqSet = new Set()  // clientes BLOQUEADOS pelo Triador (CADMUT, sem renda) — renda alta NÃO bloqueia
     let _clientesAtuais = []           // bulk action — fonte de verdade pra status anterior + nome
     let _modoSelecao = false           // bulk action — modo seleção ativo
     let _selecionados = new Set()      // bulk action — IDs marcados
