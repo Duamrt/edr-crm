@@ -362,15 +362,26 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
 // Inclui: renda zero, CADMUT — subset intencional do triagemMCMV.
 // Wrapper isolado pra qualquer mudança aqui ser refletida em todos os consumidores.
 //
-// CONTRATO DE PARIDADE (Fase 0, 2026-07-24): esta função é o atalho do Kanban para
-// triagemMCMV().status === 'bloqueado'. As duas DEVEM concordar sobre o que bloqueia.
-// O Kanban não pode rodar o triador completo (não carrega docs/histórico), por isso o atalho.
-// Coberto por teste de paridade em tests/triagem-renda.test.js — não editar uma sem a outra.
+// CONTRATO DE PARIDADE (Fase 0, 2026-07-24) — CRITÉRIOS COMPARTILHADOS:
+// esta função é o atalho do Kanban para triagemMCMV().elegibilidadeBloqueada
+// (NÃO para `.status === 'bloqueado'`, que também inclui documento recusado).
+// As duas DEVEM concordar sobre renda e impedimentos ativos — os critérios que
+// ambas enxergam. O Kanban não pode rodar o triador completo (não carrega
+// docs/histórico), por isso o atalho.
+//
+// ESCOPO: esta função NÃO vê documentos. Doc recusado é tratado à parte, pelo
+// `_recusadoSet` do Kanban (kanban.html:145) e por `temDocRecusado` em
+// podeAvancarEtapa() — em ambas as telas.
+//
+// Coberto por 2 blocos de teste em tests/triagem-renda.test.js:
+//   - "paridade:"   → critérios compartilhados (renda + impedimentos)
+//   - "composição:" → veredito final de cada tela, incluindo documentos
+// Não editar uma tela sem a outra. Ver docs/CONTRATO-TRIAGEM.md.
 //
 // O QUE BLOQUEIA: CADMUT (impedimento legal definitivo) e renda zero (sem dado pra avaliar).
 // O QUE NÃO BLOQUEIA:
 //   - renda acima do teto MCMV → desvio de rota (Faixa 4 ou SBPE). Ver rotaFinanciamento().
-//   - renda_insuficiente → é RISCO DE CRÉDITO, igual score_baixo/nome_sujo (linha ~527).
+//   - renda_insuficiente → é RISCO DE CRÉDITO, igual score_baixo/nome_sujo.
 //     Condição reversível (muda a composição familiar, a renda sobe). Quem decide é o banco.
 function isTriagemBloqueadaSimples(cliente, impedimentosDoCliente = []) {
   const renda = Number(cliente.renda_total_confirmada) || Number(cliente.renda_total_simulada) || 0

@@ -82,7 +82,7 @@ t('CRÍTICO: pode avançar Triagem → Documentação', () => {
   const r = triagemMCMV({ renda_total_confirmada: 9738.65 }, [], [], [])
   const check = podeAvancarEtapa('documentacao', {
     temDocRecusado: false, temImpedimentoAtivo: false,
-    triagemBloqueada: r.status === 'bloqueado'
+    triagemBloqueada: r.elegibilidadeBloqueada
   })
   ok(check.ok, `bloqueou com motivo: ${check.motivo}`)
 })
@@ -106,7 +106,7 @@ t('CRÍTICO: pode avançar para Documentação mesmo fora do MCMV', () => {
   const r = triagemMCMV(RICO, [], [], [])
   const check = podeAvancarEtapa('documentacao', {
     temDocRecusado: false, temImpedimentoAtivo: false,
-    triagemBloqueada: r.status === 'bloqueado'
+    triagemBloqueada: r.elegibilidadeBloqueada
   })
   ok(check.ok, `bloqueou: ${check.motivo}`)
 })
@@ -140,7 +140,7 @@ t('doc recusado AINDA impede avanço para correspondente', () => {
 console.log('\n=== PARIDADE Kanban × Ficha — critérios compartilhados (renda + impedimentos) ===')
 // ESCOPO DESTE BLOCO: isTriagemBloqueadaSimples() cobre APENAS renda e impedimentos ativos.
 // Documento recusado NÃO passa por aqui — o Kanban carrega `_recusadoSet` numa query
-// separada (kanban.html:145) e entrega direto a podeAvancarEtapa(). Por isso os casos
+// separada (carregar() em kanban.html) e entrega direto a podeAvancarEtapa(). Por isso os casos
 // abaixo usam docs=[]: comparam o que as duas funções de fato compartilham.
 // A paridade da composição COMPLETA (incluindo docs) é testada no bloco seguinte.
 const CASOS_PARIDADE = [
@@ -180,7 +180,7 @@ t('cliente com renda_insuficiente avança para Documentação', () => {
   const r = triagemMCMV(cli, [], imps, [])
   const check = podeAvancarEtapa('documentacao', {
     temDocRecusado: false, temImpedimentoAtivo: false,
-    triagemBloqueada: r.status === 'bloqueado'
+    triagemBloqueada: r.elegibilidadeBloqueada
   })
   ok(check.ok, `bloqueou: ${check.motivo}`)
 })
@@ -188,8 +188,8 @@ t('cliente com renda_insuficiente avança para Documentação', () => {
 console.log('\n=== PARIDADE da COMPOSIÇÃO COMPLETA (inclui documento recusado) ===')
 // Cada tela monta a decisão final de forma diferente — o que precisa bater é o VEREDITO:
 //
-//   Kanban (kanban.html:263-266): _recusadoSet (query própria) + _impSet + _triagemBloqSet
-//   Ficha  (ficha.html:848-853):  tudo derivado de triagemMCMV(cliente, docs, imps)
+//   Kanban (kanban.html, handler de drop): _recusadoSet (query própria) + _impSet + _triagemBloqSet
+//   Ficha  (ficha.html, salvarStatus()):  tudo derivado de triagemMCMV(cliente, docs, imps)
 //
 // Simula as duas composições e exige o mesmo resultado de podeAvancarEtapa().
 function vereditoKanban(cli, imps, docs, etapa) {
@@ -204,7 +204,7 @@ function vereditoFicha(cli, imps, docs, etapa) {
   return podeAvancarEtapa(etapa, {
     temDocRecusado: docs.some(d => d.status === 'recusado'),
     temImpedimentoAtivo: imps.some(i => i.ativo),
-    triagemBloqueada: t.elegibilidadeBloqueada   // espelha ficha.html:851
+    triagemBloqueada: t.elegibilidadeBloqueada   // espelha salvarStatus() em ficha.html
   }).ok
 }
 
@@ -239,7 +239,7 @@ t('doc recusado NÃO impede Triagem → Documentação (só etapas avançadas)',
   ok(vereditoFicha(cli, [], DOC_RECUSADO, 'documentacao'), 'Ficha deveria permitir')
 })
 
-console.log('\n=== ficha.html:850 — prova de que NÃO é bug (ternário devolve booleano) ===')
+console.log('\n=== ternário de triagemBloqueada em ficha.html — prova de que NÃO é bug ===')
 t('padrão `_auditoria ? triagemMCMV(...).status === "bloqueado" : false` é booleano', () => {
   const _auditoria = { qualquer: 'objeto' }   // truthy, como na ficha real
   const _cliente = { renda_total_confirmada: 9738.65 }

@@ -74,14 +74,16 @@ do que o teste prova gera confiança falsa.
 
 ### Regressão coberta
 
-`tests/triagem-renda.test.js` — **45/45 verde**:
+`tests/triagem-renda.test.js` — **54/54 verde**:
 
 - Fronteiras exatas de cada faixa (3200/3200.01, 5000/5000.01, 9600/9600.01, 13000/13000.01)
 - Caso EDMARCIO: Faixa 4, não bloqueia, avança para Documentação
 - Renda > 13.000: `FORA DO MCMV`, avança mesmo assim, ações não citam "Perdido"
 - Não-regressão: CADMUT, renda zero e doc recusado continuam bloqueando
-- **Paridade Kanban × Ficha** em 9 cenários
-- Prova de que `ficha.html:850` **não** é bug (ternário devolve booleano)
+- **Paridade de critérios compartilhados** (renda + impedimentos): 9 cenários
+- **Paridade de composição completa** (inclui documento recusado): 9 cenários
+- Prova de que o ternário de `triagemBloqueada` em `salvarStatus()` (`ficha.html`)
+  **não** é bug — devolve booleano, não o objeto `_auditoria`
 
 Validado também em navegador real via Playwright (o Browser pane bloqueia localhost).
 

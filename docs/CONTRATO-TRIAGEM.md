@@ -55,9 +55,12 @@ de um jeito diferente. O que precisa bater é o **veredito final**, não as fun�
 | Critério | Kanban | Ficha |
 |---|---|---|
 | Renda + impedimentos | `isTriagemBloqueadaSimples()` → `_triagemBloqSet` | `triagemMCMV().elegibilidadeBloqueada` |
-| Documento recusado | `_recusadoSet` (query própria, `kanban.html:145`) | `_docs.some(d => d.status === 'recusado')` |
+| Documento recusado | `_recusadoSet` (query própria em `carregar()`) | `_docs.some(d => d.status === 'recusado')` |
 | Impedimento ativo | `_impSet` | `_imps.some(i => i.ativo)` |
-| **Combinação** | `podeAvancarEtapa()` (`kanban.html:263`) | `podeAvancarEtapa()` (`ficha.html:853`) |
+| **Combinação** | `podeAvancarEtapa()` no handler de `drop` | `podeAvancarEtapa()` em `salvarStatus()` |
+
+> Localizar com `rg -n "podeAvancarEtapa" kanban.html ficha.html` — números de linha
+> envelhecem, nomes de função não.
 
 ### O que a paridade cobre — e o que não cobre
 
@@ -102,7 +105,15 @@ Checagens rápidas:
 rg -n "grupos\.bloqueadores\.push" js/utils.js
 ```
 
-Cada resultado precisa passar no teste mental acima. Hoje são: renda zero, CADMUT, doc recusado.
+Cada resultado precisa passar no teste mental acima. Hoje são: renda zero, CADMUT, doc recusado
+(este último marcado com `origem: 'documento'`).
+
+```bash
+rg -n "triagemBloqueada:.*status === 'bloqueado'" ficha.html kanban.html tests/
+```
+
+Deve retornar **vazio** — `triagemBloqueada` só aceita `elegibilidadeBloqueada`.
+Usar `status === 'bloqueado'` aqui reintroduz a contagem dupla de documento recusado.
 
 ```bash
 rg -n "renda > MCMV_LIMITES" js/utils.js

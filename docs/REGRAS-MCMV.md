@@ -46,7 +46,8 @@ Checklist:
 3. Atualizar os `<option>` do select em `familia.html` (rótulos mostram os tetos)
 4. Atualizar a tabela deste documento + a data de vigência
 5. Ajustar os valores esperados em `tests/triagem-renda.test.js` (bloco "fronteiras exatas")
-6. Rodar `node tests/triagem-renda.test.js` — deve dar 45/45
+6. Rodar `node tests/triagem-renda.test.js` — deve dar **54/54 verde**
+   (se a contagem mudar por testes novos, atualizar este número junto)
 7. Se houver faixa nova, adicionar `.pill-faixa-N` em `css/style.css`
 
 ### ⚠️ Dados históricos não são recalculados
