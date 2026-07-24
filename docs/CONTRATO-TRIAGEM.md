@@ -101,22 +101,25 @@ Corrigir antes de commitar — nunca ajustar o teste para passar sem entender a 
 
 Checagens rápidas:
 
+Todos os comandos abaixo rodam **da raiz do repo** e varrem tudo — nunca uma lista fechada
+de arquivos, para não ficarem cegos a módulos criados depois.
+
 ```bash
-rg -n "grupos\.bloqueadores\.push" js/utils.js
+rg -n --hidden -g '!.git' -g '!node_modules' "grupos\.bloqueadores\.push" .
 ```
 
 Cada resultado precisa passar no teste mental acima. Hoje são: renda zero, CADMUT, doc recusado
 (este último marcado com `origem: 'documento'`).
 
 ```bash
-rg -n "triagemBloqueada:.*status === 'bloqueado'" ficha.html kanban.html tests/
+rg -n --hidden -g '!.git' -g '!node_modules' "triagemBloqueada\s*:.*status\s*===\s*'bloqueado'" .
 ```
 
 Deve retornar **vazio** — `triagemBloqueada` só aceita `elegibilidadeBloqueada`.
 Usar `status === 'bloqueado'` aqui reintroduz a contagem dupla de documento recusado.
 
 ```bash
-rg -n "(kanban|ficha|familia|clientes|lotes|dashboard|agenda|index)\.html:[0-9]+|(utils|auth|supabase|clientes|documentos)\.js:[0-9]+" js/ tests/ docs/
+rg -n --hidden -g '!.git' -g '!node_modules' -g '!.playwright-mcp' "[A-Za-z0-9_./-]+\.(js|html|css|ts|md|sh):[0-9]+" .
 ```
 
 Deve retornar **vazio** — documentação e comentários citam **nome de função ou constante**,
@@ -124,8 +127,16 @@ nunca número de linha. Ponteiro de linha envelhece na primeira edição do arqu
 descrever um estado que não existe mais; foi a causa de três rodadas seguidas de correção
 em 2026-07-24.
 
+Rodar **da raiz do repo**, com regex genérica: qualquer arquivo, inclusive módulos que
+ainda não existem. Uma lista fechada de nomes deixaria passar um ponteiro para um arquivo
+novo — exatamente o tipo de lacuna que a regra promete cobrir.
+
+> Se precisar citar um exemplo de ponteiro neste documento, escreva-o de forma que a
+> própria varredura não o capture (ex.: `arquivo.js` + `:` + número, separados) — senão
+> o contrato falha contra si mesmo.
+
 ```bash
-rg -n "renda > MCMV_LIMITES" js/utils.js
+rg -n --hidden -g '!.git' -g '!node_modules' "renda\s*>\s*MCMV_LIMITES" .
 ```
 
 Deve retornar **vazio** — renda alta não bloqueia.
