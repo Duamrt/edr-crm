@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1784886733">
-  <link rel="stylesheet" href="css/style.css?cb=1784886733">
+  <link rel="stylesheet" href="css/tokens.css?cb=1784887140">
+  <link rel="stylesheet" href="css/style.css?cb=1784887140">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -261,11 +261,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1784886733"></script>
-  <script src="js/auth.js?cb=1784886733"></script>
-  <script src="js/utils.js?cb=1784886733"></script>
-  <script src="js/data/clientes.js?cb=1784886733"></script>
-  <script src="js/data/documentos.js?cb=1784886733"></script>
+  <script src="js/supabase.js?cb=1784887140"></script>
+  <script src="js/auth.js?cb=1784887140"></script>
+  <script src="js/utils.js?cb=1784887140"></script>
+  <script src="js/data/clientes.js?cb=1784887140"></script>
+  <script src="js/data/documentos.js?cb=1784887140"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -369,13 +369,21 @@
       // Resumo: faixa + subsídio honesto
       // Renda acima do MCMV mostra a ROTA (SBPE), não "Fora do MCMV" em vermelho —
       // o cliente continua atendível, só muda o produto de financiamento.
+      // Rótulo "calculada": este bloco mostra a faixa derivada da renda AGORA, que pode
+      // divergir de `crm_clientes.faixa_mcmv` (gravada no cadastro, possivelmente sob
+      // limites antigos). O card "Resumo da família" mostra a gravada. Ver REGRAS-MCMV.md.
       const resumo = []
       if (t.faixaCalculada) {
-        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong>Faixa ${t.faixaCalculada}</strong></div>`)
+        const gravada = cliente.faixa_mcmv
+        const divergente = gravada && Number(gravada) !== Number(t.faixaCalculada)
+        const aviso = divergente
+          ? ` <span class="text-sm" style="color:var(--amarelo,#B45309)" title="Cadastro tem Faixa ${escapeHtml(String(gravada))}. Salve a ficha para atualizar.">⚠️ cadastro: Faixa ${escapeHtml(String(gravada))}</span>`
+          : (!gravada ? ` <span class="text-sm text-muted" title="A faixa ainda não foi gravada no cadastro. Salve a ficha para registrar.">· não gravada no cadastro</span>` : '')
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa calculada</span><strong>Faixa ${t.faixaCalculada}</strong>${aviso}</div>`)
       } else if (t.rota.rota === 'sbpe') {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Rota</span><strong style="color:var(--azul,#1E40AF)">SBPE / tradicional</strong></div>`)
       } else {
-        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-muted">Renda não informada</strong></div>`)
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa calculada</span><strong class="text-muted">Renda não informada</strong></div>`)
       }
       resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio</span><strong style="font-weight:500;font-size:.88rem;color:var(--text-secondary)">Confirmar com correspondente</strong></div>`)
       document.getElementById('triagem-resumo').innerHTML = resumo.join('')
@@ -636,7 +644,7 @@
         <div><span class="text-sm text-muted">Nascimento</span><br><strong>${c.data_nascimento ? fmtData(c.data_nascimento) + (idadeAnos(c.data_nascimento) !== null ? ' · ' + idadeAnos(c.data_nascimento) + ' anos' : '') : '—'}</strong></div>
         <div><span class="text-sm text-muted">Renda simulada</span><br><strong>${fmtMoeda(c.renda_total_simulada)}</strong></div>
         <div><span class="text-sm text-muted">Renda confirmada</span><br><strong>${fmtMoeda(c.renda_total_confirmada)}</strong></div>
-        <div><span class="text-sm text-muted">Faixa MCMV</span><br><strong>${c.faixa_mcmv ? 'Faixa ' + c.faixa_mcmv : '—'}</strong></div>
+        <div><span class="text-sm text-muted">Faixa salva no cadastro</span><br><strong>${c.faixa_mcmv ? 'Faixa ' + c.faixa_mcmv : '<span class="text-muted" title="Nunca gravada. A triagem acima calcula pela renda atual.">— não gravada</span>'}</strong></div>
         <div><span class="text-sm text-muted">Tipo de renda</span><br><strong>${TIPO_RENDA_LABEL[c.tipo_renda] || '—'}</strong></div>
         <div><span class="text-sm text-muted">FGTS</span><br><strong>${c.fgts ? fmtMoeda(c.fgts_valor) + ' disponível' : 'Não'}</strong></div>
         <div><span class="text-sm text-muted">Lote vinculado</span><br>${loteHtml}</div>
@@ -1021,6 +1029,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1784886733"></script>
+  <script src="js/sw-register.js?cb=1784887140"></script>
 </body>
 </html>
