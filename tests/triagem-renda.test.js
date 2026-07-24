@@ -240,7 +240,7 @@ t('doc recusado NÃO impede Triagem → Documentação (só etapas avançadas)',
 })
 
 console.log('\n=== ternário de triagemBloqueada em ficha.html — prova de que NÃO é bug ===')
-t('padrão `_auditoria ? triagemMCMV(...).status === "bloqueado" : false` é booleano', () => {
+t('padrão `_auditoria ? triagemMCMV(...).elegibilidadeBloqueada : false` é booleano', () => {
   const _auditoria = { qualquer: 'objeto' }   // truthy, como na ficha real
   const _cliente = { renda_total_confirmada: 9738.65 }
   const triagemBloqueada = _auditoria

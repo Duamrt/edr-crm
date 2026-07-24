@@ -116,8 +116,8 @@ tracker_sync_write      | role: public | cmd: INSERT | check: true
 ```
 
 Somado a `GRANT SELECT,INSERT,UPDATE,DELETE ON tracker_sync TO anon`, e com a anon key
-pública em `js/supabase.js:3` (repo público no GitHub Pages): **qualquer pessoa na
-internet pode ler, alterar e apagar a agenda, sem login.**
+pública em `SUPABASE_KEY` (`js/supabase.js`, repo público no GitHub Pages):
+**qualquer pessoa na internet pode ler, alterar e apagar a agenda, sem login.**
 
 Correção é no banco (revogar grant + trocar policy) — escrita em produção, exige
 autorização explícita do Duam. **Não alterado nesta fase.**
@@ -144,7 +144,8 @@ Conteúdo não inspecionado (é dado, fora do escopo).
 
 ### 🟢 Confirmações positivas
 
-- `ficha.html:321` (esconder botão por `role`) não é a única defesa — a RPC valida no banco
+- o gate de `role === 'admin'` em `ficha.html` (que só esconde o botão) não é a única
+  defesa — `crm_apagar_familia_lgpd` valida o papel no próprio banco
 - `crm_profiles`: UPDATE restrito a `id = auth.uid()` + trigger anti-escalação
 - `crm_historico`: INSERT exige `autor_id = auth.uid()`
 - Grants amplos para `anon` em `crm_*` existem, mas **RLS bloqueia** (P2, defesa em profundidade)
@@ -171,7 +172,7 @@ Conteúdo não inspecionado (é dado, fora do escopo).
 
 ### Notas sobre a fila
 
-**XSS:** `escapeHtml()` **já existe** (`js/utils.js:14`) e é usado corretamente em
+**XSS:** `escapeHtml()` **já existe** (`escapeHtml()` em `js/utils.js`) e é usado corretamente em
 `dashboard.js` e `agenda-widget.js`. O problema é adoção parcial, não ausência de
 ferramenta — correção mais barata do que a lista sugere.
 
@@ -184,12 +185,12 @@ Fechar XSS é o que reduz risco. Item arquitetural de longo prazo.
 **antes** do staging — staging cirúrgico é impossível sem repensar o cache busting junto.
 
 **Achados que a auditoria estática não pegou:**
-1. `sbDelete` sem `_retry401` (`js/supabase.js:54`) — dívida de helper, sem uso ativo hoje
-2. `refreshSession()` (`js/auth.js:46`) — `catch` retorna `false` sem limpar sessão
+1. `sbDelete()` sem `_retry401` (`js/supabase.js`) — dívida de helper, sem uso ativo hoje
+2. `refreshSession()` (`js/auth.js`) — `catch` retorna `false` sem limpar sessão
 3. **Sem `supabase/migrations/`** — schema, RLS e RPCs só existem no banco; sem rollback
    nem revisão. Causa-raiz de a auditoria de banco não ser possível pelo checkout.
 
-**Correção de diagnóstico:** `js/auth.js:75-87` (logout) — o mecanismo é mais profundo que
-"envia a chave pública": `sessionClear()` zera `_token` (global de `supabase.js:5`), então
+**Correção de diagnóstico:** `logout()` em `js/auth.js` — o mecanismo é mais profundo que
+"envia a chave pública": `sessionClear()` zera `_token` (global de `js/supabase.js`), então
 `getToken()` retorna `null` e o fallback `|| SUPABASE_KEY` dispara. Supabase responde 401 e
 o `catch {}` engole. **O logout server-side nunca funcionou, e é invisível.**

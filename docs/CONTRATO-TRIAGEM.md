@@ -116,6 +116,15 @@ Deve retornar **vazio** — `triagemBloqueada` só aceita `elegibilidadeBloquead
 Usar `status === 'bloqueado'` aqui reintroduz a contagem dupla de documento recusado.
 
 ```bash
+rg -n "(kanban|ficha|familia|clientes|lotes|dashboard|agenda|index)\.html:[0-9]+|(utils|auth|supabase|clientes|documentos)\.js:[0-9]+" js/ tests/ docs/
+```
+
+Deve retornar **vazio** — documentação e comentários citam **nome de função ou constante**,
+nunca número de linha. Ponteiro de linha envelhece na primeira edição do arquivo e passa a
+descrever um estado que não existe mais; foi a causa de três rodadas seguidas de correção
+em 2026-07-24.
+
+```bash
 rg -n "renda > MCMV_LIMITES" js/utils.js
 ```
 

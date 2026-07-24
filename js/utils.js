@@ -370,7 +370,7 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
 // docs/histórico), por isso o atalho.
 //
 // ESCOPO: esta função NÃO vê documentos. Doc recusado é tratado à parte, pelo
-// `_recusadoSet` do Kanban (kanban.html:145) e por `temDocRecusado` em
+// `_recusadoSet` que o Kanban monta em carregar(), e por `temDocRecusado` em
 // podeAvancarEtapa() — em ambas as telas.
 //
 // Coberto por 2 blocos de teste em tests/triagem-renda.test.js:
