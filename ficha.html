@@ -377,8 +377,8 @@
         const gravada = cliente.faixa_mcmv
         const divergente = gravada && Number(gravada) !== Number(t.faixaCalculada)
         const aviso = divergente
-          ? ` <span class="text-sm" style="color:var(--amarelo,#B45309)" title="Cadastro tem Faixa ${escapeHtml(String(gravada))}. Salve a ficha para atualizar.">⚠️ cadastro: Faixa ${escapeHtml(String(gravada))}</span>`
-          : (!gravada ? ` <span class="text-sm text-muted" title="A faixa ainda não foi gravada no cadastro. Salve a ficha para registrar.">· não gravada no cadastro</span>` : '')
+          ? ` <span class="text-sm" style="color:var(--amarelo,#B45309)" title="Cadastro tem Faixa ${escapeHtml(String(gravada))}. Clique em Editar e salve o cadastro para atualizar a faixa.">⚠️ cadastro: Faixa ${escapeHtml(String(gravada))}</span>`
+          : (!gravada ? ` <span class="text-sm text-muted" title="A faixa ainda não foi gravada no cadastro. Clique em Editar e salve o cadastro para registrar.">· não gravada no cadastro</span>` : '')
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa calculada</span><strong>Faixa ${t.faixaCalculada}</strong>${aviso}</div>`)
       } else if (t.rota.rota === 'sbpe') {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Rota</span><strong style="color:var(--azul,#1E40AF)">SBPE / tradicional</strong></div>`)
