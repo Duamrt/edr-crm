@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1779375681">
-  <link rel="stylesheet" href="css/style.css?cb=1779375681">
+  <link rel="stylesheet" href="css/tokens.css?cb=1784886733">
+  <link rel="stylesheet" href="css/style.css?cb=1784886733">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -261,11 +261,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1779375681"></script>
-  <script src="js/auth.js?cb=1779375681"></script>
-  <script src="js/utils.js?cb=1779375681"></script>
-  <script src="js/data/clientes.js?cb=1779375681"></script>
-  <script src="js/data/documentos.js?cb=1779375681"></script>
+  <script src="js/supabase.js?cb=1784886733"></script>
+  <script src="js/auth.js?cb=1784886733"></script>
+  <script src="js/utils.js?cb=1784886733"></script>
+  <script src="js/data/clientes.js?cb=1784886733"></script>
+  <script src="js/data/documentos.js?cb=1784886733"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -367,11 +367,15 @@
         : t.statusLabel
 
       // Resumo: faixa + subsídio honesto
+      // Renda acima do MCMV mostra a ROTA (SBPE), não "Fora do MCMV" em vermelho —
+      // o cliente continua atendível, só muda o produto de financiamento.
       const resumo = []
       if (t.faixaCalculada) {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong>Faixa ${t.faixaCalculada}</strong></div>`)
+      } else if (t.rota.rota === 'sbpe') {
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Rota</span><strong style="color:var(--azul,#1E40AF)">SBPE / tradicional</strong></div>`)
       } else {
-        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-danger">Fora do MCMV</strong></div>`)
+        resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa MCMV</span><strong class="text-muted">Renda não informada</strong></div>`)
       }
       resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Subsídio</span><strong style="font-weight:500;font-size:.88rem;color:var(--text-secondary)">Confirmar com correspondente</strong></div>`)
       document.getElementById('triagem-resumo').innerHTML = resumo.join('')
@@ -382,6 +386,9 @@
 
       if (t.grupos.bloqueadores.length) {
         blocos.push(renderGrupo('bloqueador', '🛑 Bloqueadores', t.grupos.bloqueadores))
+      }
+      if (t.grupos.desvios?.length) {
+        blocos.push(renderGrupo('desvio', '🧭 Rota alternativa (não bloqueia)', t.grupos.desvios))
       }
       if (t.grupos.riscos.length) {
         blocos.push(renderGrupo('risco', '💳 Riscos de crédito', t.grupos.riscos))
@@ -847,8 +854,11 @@
       // Validação unificada: doc recusado, impedimento ativo, OU triagem bloqueada (pra Documentação)
       const temDocRecusado = _docs.some(d => d.status === 'recusado')
       const temImpedimentoAtivo = _imps.some(i => i.ativo)
+      // Usa elegibilidadeBloqueada (não status==='bloqueado'): doc recusado já é tratado
+      // por temDocRecusado acima, e contá-lo duas vezes travava Triagem→Documentação
+      // aqui enquanto o Kanban permitia. Ver docs/CONTRATO-TRIAGEM.md.
       const triagemBloqueada = _auditoria  // se ficha já rodou, usa o triador
-        ? triagemMCMV(_cliente, _docs, _imps, []).status === 'bloqueado'
+        ? triagemMCMV(_cliente, _docs, _imps, []).elegibilidadeBloqueada
         : false
       const check = podeAvancarEtapa(status, { temDocRecusado, temImpedimentoAtivo, triagemBloqueada })
       if (!check.ok) {
@@ -1011,6 +1021,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1779375681"></script>
+  <script src="js/sw-register.js?cb=1784886733"></script>
 </body>
 </html>
