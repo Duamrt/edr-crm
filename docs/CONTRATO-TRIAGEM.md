@@ -49,18 +49,42 @@ Ordem do status final: `bloqueadores` → `desvios` → `riscos` → `operaciona
 
 ## ⚠️ Contrato de paridade — Kanban × Ficha
 
-Existem **duas** implementações do "isto bloqueia?":
+A decisão "pode avançar?" é montada em **duas partes**, e cada tela obtém cada parte
+de um jeito diferente. O que precisa bater é o **veredito final**, não as funções isoladas.
 
-| Onde | Função | Por quê existe |
+| Critério | Kanban | Ficha |
 |---|---|---|
-| Kanban / listagem | `isTriagemBloqueadaSimples()` (`js/utils.js:~368`) | Kanban carrega só clientes+impedimentos, não pode rodar o triador completo |
-| Ficha | `triagemMCMV().status === 'bloqueado'` (`js/utils.js:~476`) | Análise completa (docs + histórico) |
+| Renda + impedimentos | `isTriagemBloqueadaSimples()` → `_triagemBloqSet` | `triagemMCMV().elegibilidadeBloqueada` |
+| Documento recusado | `_recusadoSet` (query própria, `kanban.html:145`) | `_docs.some(d => d.status === 'recusado')` |
+| Impedimento ativo | `_impSet` | `_imps.some(i => i.ativo)` |
+| **Combinação** | `podeAvancarEtapa()` (`kanban.html:263`) | `podeAvancarEtapa()` (`ficha.html:853`) |
 
-**As duas DEVEM concordar sobre o que bloqueia.** Se divergirem, o card trava no Kanban
-enquanto a ficha diz "apto" — a usuária vê contradição e não sabe qual obedecer.
-Foi exatamente o que aconteceu com `renda_insuficiente` até 2026-07-24.
+### O que a paridade cobre — e o que não cobre
 
-**Nunca editar uma sem a outra.** Coberto por teste de paridade (9 cenários).
+`isTriagemBloqueadaSimples()` cobre **apenas renda e impedimentos ativos**.
+Ela **não** vê documentos — o Kanban não os carrega no atalho; usa `_recusadoSet` separado.
+
+Por isso o contrato é: **paridade dos critérios compartilhados (renda + impedimentos)**,
+mais **paridade do veredito final** de `podeAvancarEtapa()` com a composição completa.
+
+### `elegibilidadeBloqueada` vs `status === 'bloqueado'`
+
+`triagemMCMV()` expõe os dois. **Não são intercambiáveis:**
+
+| Campo | Contém | Usar para |
+|---|---|---|
+| `status === 'bloqueado'` | elegibilidade **+ documento recusado** | exibir o badge na ficha |
+| `elegibilidadeBloqueada` | **só** elegibilidade (CADMUT, sem renda) | alimentar `triagemBloqueada` |
+
+Passar `status === 'bloqueado'` para `triagemBloqueada` conta documento recusado **duas
+vezes** (ele já tem canal próprio em `temDocRecusado`) e trava Triagem → Documentação na
+ficha enquanto o Kanban permite. Foi encontrado assim em 2026-07-24, pelo teste de composição.
+
+Bloqueadores de origem documental são marcados com `origem: 'documento'` em
+`grupos.bloqueadores` — é o que `elegibilidadeBloqueada` filtra.
+
+**Nunca editar uma tela sem a outra.** Coberto por 9 testes de paridade de critérios
++ 9 de composição completa.
 
 ## Verificação obrigatória após editar
 
@@ -68,8 +92,9 @@ Foi exatamente o que aconteceu com `renda_insuficiente` até 2026-07-24.
 node tests/triagem-renda.test.js
 ```
 
-Deve dar **45/45 verde**. Qualquer falha em `paridade:` significa que Kanban e ficha
-divergiram — corrigir antes de commitar.
+Deve dar **54/54 verde**. Falha em `paridade:` = critérios compartilhados divergiram.
+Falha em `composição:` = o veredito final das telas divergiu (inclui documentos).
+Corrigir antes de commitar — nunca ajustar o teste para passar sem entender a causa.
 
 Checagens rápidas:
 
@@ -94,4 +119,7 @@ da Elyda, não conclusão automática de cálculo de renda.
 
 - **2026-07-24 (Fase 0)** — renda acima do teto saiu de `bloqueadores` → `desvios`;
   `renda_insuficiente` saiu do bloqueio do Kanban (alinhado ao triador); Faixa 4 adicionada.
+- **2026-07-24 (Fase 0, revisão)** — `elegibilidadeBloqueada` criado; ficha deixou de usar
+  `status === 'bloqueado'` para `triagemBloqueada`. Corrige divergência em que doc recusado
+  travava Triagem → Documentação na ficha, mas não no Kanban.
   Ver [AUDITORIA-2026-07-24.md](AUDITORIA-2026-07-24.md).

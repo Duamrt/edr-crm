@@ -137,10 +137,12 @@ t('doc recusado AINDA impede avanço para correspondente', () => {
   notOk(check.ok, 'deveria bloquear com doc recusado')
 })
 
-console.log('\n=== PARIDADE Kanban × Ficha (isTriagemBloqueadaSimples vs triagemMCMV) ===')
-// isTriagemBloqueadaSimples() é o atalho do Kanban (não carrega docs/histórico).
-// As duas implementações DEVEM concordar sobre o que bloqueia, senão o card trava
-// no Kanban enquanto a ficha diz "apto" — a Elyda vê contradição.
+console.log('\n=== PARIDADE Kanban × Ficha — critérios compartilhados (renda + impedimentos) ===')
+// ESCOPO DESTE BLOCO: isTriagemBloqueadaSimples() cobre APENAS renda e impedimentos ativos.
+// Documento recusado NÃO passa por aqui — o Kanban carrega `_recusadoSet` numa query
+// separada (kanban.html:145) e entrega direto a podeAvancarEtapa(). Por isso os casos
+// abaixo usam docs=[]: comparam o que as duas funções de fato compartilham.
+// A paridade da composição COMPLETA (incluindo docs) é testada no bloco seguinte.
 const CASOS_PARIDADE = [
   { nome: 'renda zero',            cli: { renda_total_confirmada: 0, renda_total_simulada: 0 }, imps: [] },
   { nome: 'CADMUT',                cli: { renda_total_confirmada: 5000 }, imps: [{ tipo: 'cadmut', ativo: true }] },
@@ -155,7 +157,7 @@ const CASOS_PARIDADE = [
 CASOS_PARIDADE.forEach(({ nome, cli, imps }) => {
   t(`paridade: ${nome}`, () => {
     const kanban = isTriagemBloqueadaSimples(cli, imps)
-    const ficha = triagemMCMV(cli, [], imps, []).status === 'bloqueado'
+    const ficha = triagemMCMV(cli, [], imps, []).elegibilidadeBloqueada
     if (kanban !== ficha) {
       throw new Error(`DIVERGÊNCIA — Kanban bloqueia=${kanban}, Ficha bloqueia=${ficha}`)
     }
@@ -183,12 +185,66 @@ t('cliente com renda_insuficiente avança para Documentação', () => {
   ok(check.ok, `bloqueou: ${check.motivo}`)
 })
 
+console.log('\n=== PARIDADE da COMPOSIÇÃO COMPLETA (inclui documento recusado) ===')
+// Cada tela monta a decisão final de forma diferente — o que precisa bater é o VEREDITO:
+//
+//   Kanban (kanban.html:263-266): _recusadoSet (query própria) + _impSet + _triagemBloqSet
+//   Ficha  (ficha.html:848-853):  tudo derivado de triagemMCMV(cliente, docs, imps)
+//
+// Simula as duas composições e exige o mesmo resultado de podeAvancarEtapa().
+function vereditoKanban(cli, imps, docs, etapa) {
+  return podeAvancarEtapa(etapa, {
+    temDocRecusado: docs.some(d => d.status === 'recusado'),   // _recusadoSet
+    temImpedimentoAtivo: imps.some(i => i.ativo),              // _impSet
+    triagemBloqueada: isTriagemBloqueadaSimples(cli, imps)     // _triagemBloqSet
+  }).ok
+}
+function vereditoFicha(cli, imps, docs, etapa) {
+  const t = triagemMCMV(cli, docs, imps, [])
+  return podeAvancarEtapa(etapa, {
+    temDocRecusado: docs.some(d => d.status === 'recusado'),
+    temImpedimentoAtivo: imps.some(i => i.ativo),
+    triagemBloqueada: t.elegibilidadeBloqueada   // espelha ficha.html:851
+  }).ok
+}
+
+const DOC_OK = [{ tipo: 'rg', status: 'entregue' }]
+const DOC_RECUSADO = [{ tipo: 'rg', status: 'recusado' }]
+const CASOS_COMPOSICAO = [
+  { nome: 'Faixa 4 + docs OK → Documentação',        cli: { renda_total_confirmada: 9738.65 }, imps: [], docs: DOC_OK,       etapa: 'documentacao' },
+  { nome: 'Faixa 4 + doc RECUSADO → Documentação',   cli: { renda_total_confirmada: 9738.65 }, imps: [], docs: DOC_RECUSADO, etapa: 'documentacao' },
+  { nome: 'Faixa 4 + doc RECUSADO → correspondente', cli: { renda_total_confirmada: 9738.65 }, imps: [], docs: DOC_RECUSADO, etapa: 'correspondente' },
+  { nome: 'SBPE + doc RECUSADO → correspondente',    cli: { renda_total_confirmada: 20000 },   imps: [], docs: DOC_RECUSADO, etapa: 'correspondente' },
+  { nome: 'SBPE + docs OK → correspondente',         cli: { renda_total_confirmada: 20000 },   imps: [], docs: DOC_OK,       etapa: 'correspondente' },
+  { nome: 'renda_insuf + doc RECUSADO → correspond.',cli: { renda_total_confirmada: 5000 },    imps: [{ tipo: 'renda_insuficiente', ativo: true }], docs: DOC_RECUSADO, etapa: 'correspondente' },
+  { nome: 'CADMUT + docs OK → Documentação',         cli: { renda_total_confirmada: 5000 },    imps: [{ tipo: 'cadmut', ativo: true }], docs: DOC_OK, etapa: 'documentacao' },
+]
+CASOS_COMPOSICAO.forEach(({ nome, cli, imps, docs, etapa }) => {
+  t(`composição: ${nome}`, () => {
+    const k = vereditoKanban(cli, imps, docs, etapa)
+    const f = vereditoFicha(cli, imps, docs, etapa)
+    if (k !== f) throw new Error(`DIVERGÊNCIA — Kanban permite=${k}, Ficha permite=${f}`)
+  })
+})
+
+t('doc recusado bloqueia correspondente em AMBAS as telas', () => {
+  const cli = { renda_total_confirmada: 9738.65 }
+  notOk(vereditoKanban(cli, [], DOC_RECUSADO, 'correspondente'), 'Kanban deveria bloquear')
+  notOk(vereditoFicha(cli, [], DOC_RECUSADO, 'correspondente'), 'Ficha deveria bloquear')
+})
+
+t('doc recusado NÃO impede Triagem → Documentação (só etapas avançadas)', () => {
+  const cli = { renda_total_confirmada: 9738.65 }
+  ok(vereditoKanban(cli, [], DOC_RECUSADO, 'documentacao'), 'Kanban deveria permitir')
+  ok(vereditoFicha(cli, [], DOC_RECUSADO, 'documentacao'), 'Ficha deveria permitir')
+})
+
 console.log('\n=== ficha.html:850 — prova de que NÃO é bug (ternário devolve booleano) ===')
 t('padrão `_auditoria ? triagemMCMV(...).status === "bloqueado" : false` é booleano', () => {
   const _auditoria = { qualquer: 'objeto' }   // truthy, como na ficha real
   const _cliente = { renda_total_confirmada: 9738.65 }
   const triagemBloqueada = _auditoria
-    ? triagemMCMV(_cliente, [], [], []).status === 'bloqueado'
+    ? triagemMCMV(_cliente, [], [], []).elegibilidadeBloqueada
     : false
   eq(typeof triagemBloqueada, 'boolean', 'tipo:')
   eq(triagemBloqueada, false, 'família apta não pode ser marcada bloqueada:')
@@ -196,7 +252,7 @@ t('padrão `_auditoria ? triagemMCMV(...).status === "bloqueado" : false` é boo
 t('mesmo padrão com CADMUT devolve true corretamente', () => {
   const _auditoria = {}
   const triagemBloqueada = _auditoria
-    ? triagemMCMV({ renda_total_confirmada: 5000 }, [], [{ tipo: 'cadmut', ativo: true }], []).status === 'bloqueado'
+    ? triagemMCMV({ renda_total_confirmada: 5000 }, [], [{ tipo: 'cadmut', ativo: true }], []).elegibilidadeBloqueada
     : false
   eq(triagemBloqueada, true)
 })

@@ -57,6 +57,21 @@ Card travado + ficha dizendo "apto com ressalva". **Regra decidida: é risco de 
 (reversível, quem decide é o banco — mesma natureza de `score_baixo`/`nome_sujo`).
 Kanban alinhado ao triador, com teste de paridade cobrindo 9 cenários.
 
+**Segunda divergência, encontrada pelo teste de composição:** cliente com documento
+recusado podia ir de Triagem → Documentação pelo Kanban, mas era barrado pela ficha.
+Causa: a ficha alimentava `triagemBloqueada` com `status === 'bloqueado'`, que inclui
+documento recusado — informação **operacional**, já tratada pelo canal próprio
+(`temDocRecusado`). Doc recusado era contado duas vezes na ficha e uma no Kanban.
+
+Correção: bloqueadores de origem documental marcados com `origem: 'documento'`; novo campo
+`elegibilidadeBloqueada` (só CADMUT/sem renda) alimenta `triagemBloqueada`. `status`
+permanece intacto para o badge. Ver [CONTRATO-TRIAGEM.md](CONTRATO-TRIAGEM.md).
+
+**Lição de método:** o primeiro teste de paridade comparava as funções isoladas com
+`docs=[]`, o que neutralizava justamente a diferença. Só o teste da **composição completa**
+— simulando como cada tela monta a decisão — expôs o problema. Contrato que promete mais
+do que o teste prova gera confiança falsa.
+
 ### Regressão coberta
 
 `tests/triagem-renda.test.js` — **45/45 verde**:

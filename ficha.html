@@ -854,8 +854,11 @@
       // Validação unificada: doc recusado, impedimento ativo, OU triagem bloqueada (pra Documentação)
       const temDocRecusado = _docs.some(d => d.status === 'recusado')
       const temImpedimentoAtivo = _imps.some(i => i.ativo)
+      // Usa elegibilidadeBloqueada (não status==='bloqueado'): doc recusado já é tratado
+      // por temDocRecusado acima, e contá-lo duas vezes travava Triagem→Documentação
+      // aqui enquanto o Kanban permitia. Ver docs/CONTRATO-TRIAGEM.md.
       const triagemBloqueada = _auditoria  // se ficha já rodou, usa o triador
-        ? triagemMCMV(_cliente, _docs, _imps, []).status === 'bloqueado'
+        ? triagemMCMV(_cliente, _docs, _imps, []).elegibilidadeBloqueada
         : false
       const check = podeAvancarEtapa(status, { temDocRecusado, temImpedimentoAtivo, triagemBloqueada })
       if (!check.ok) {

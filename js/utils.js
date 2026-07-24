@@ -557,7 +557,10 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
   const docsVencidos = docs.filter(d => d.status === 'vencido')
 
   if (docsRecusados.length) {
-    grupos.bloqueadores.push({ icone: '🚫', texto: `${docsRecusados.length} documento(s) recusado(s)` })
+    // origem:'documento' — bloqueio OPERACIONAL, não de elegibilidade. Já tratado pelo
+    // canal próprio (temDocRecusado) em podeAvancarEtapa(); não pode alimentar
+    // `triagemBloqueada`, senão a ficha trava Triagem→Documentação e o Kanban não.
+    grupos.bloqueadores.push({ icone: '🚫', texto: `${docsRecusados.length} documento(s) recusado(s)`, origem: 'documento' })
     acoes.push(`Resolver docs recusados: ${docsRecusados.map(d => DOC_LABEL[d.tipo] || d.tipo).join(', ')}`)
   }
   if (docsVencidos.length) {
@@ -615,6 +618,11 @@ function triagemMCMV(cliente, docs = [], impedimentos = [], historico = []) {
     motivoRessalva,
     faixaCalculada,
     rota: rotaFinanciamento(rendaUsada),
+    // Bloqueio de ELEGIBILIDADE (CADMUT, sem renda) — exclui bloqueios operacionais
+    // como documento recusado, que têm canal próprio em podeAvancarEtapa().
+    // É este valor (não `status === 'bloqueado'`) que deve alimentar `triagemBloqueada`,
+    // para a ficha dar o mesmo veredito que o Kanban. Ver docs/CONTRATO-TRIAGEM.md.
+    elegibilidadeBloqueada: grupos.bloqueadores.some(b => b.origem !== 'documento'),
     grupos,
     positivos,
     acoes
