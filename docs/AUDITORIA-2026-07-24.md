@@ -187,8 +187,12 @@ Fechar XSS é o que reduz risco. Item arquitetural de longo prazo.
 **Achados que a auditoria estática não pegou:**
 1. `sbDelete()` sem `_retry401` (`js/supabase.js`) — dívida de helper, sem uso ativo hoje
 2. `refreshSession()` (`js/auth.js`) — `catch` retorna `false` sem limpar sessão
-3. **Sem `supabase/migrations/`** — schema, RLS e RPCs só existem no banco; sem rollback
-   nem revisão. Causa-raiz de a auditoria de banco não ser possível pelo checkout.
+
+**Reclassificação (não é achado novo):** a ausência de `supabase/migrations/` **já constava
+na auditoria estática original**, como limitação de escopo — "o checkout não contém migrations
+nem definição de RLS" (cenário + achado 16). A contribuição desta revisão foi tratá-la como
+**risco de engenharia por si só**, não apenas como obstáculo à auditoria: sem migrations não
+há rollback, revisão nem histórico do schema. Entrou na fila como item 6.
 
 **Correção de diagnóstico:** `logout()` em `js/auth.js` — o mecanismo é mais profundo que
 "envia a chave pública": `sessionClear()` zera `_token` (global de `js/supabase.js`), então
