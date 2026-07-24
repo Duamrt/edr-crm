@@ -121,8 +121,11 @@ t('renda zero AINDA bloqueia', () =>
   ok(isTriagemBloqueadaSimples({ renda_total_confirmada: 0, renda_total_simulada: 0 }, [])))
 t('CADMUT AINDA bloqueia (não reclassificado na Fase 0)', () =>
   ok(isTriagemBloqueadaSimples({ renda_total_confirmada: 5000 }, [{ tipo: 'cadmut' }])))
-t('renda_insuficiente AINDA bloqueia', () =>
-  ok(isTriagemBloqueadaSimples({ renda_total_confirmada: 5000 }, [{ tipo: 'renda_insuficiente' }])))
+// MUDANÇA DELIBERADA (Fase 0): renda_insuficiente saiu do bloqueio rápido do Kanban
+// para alinhar com o triador completo, que sempre a classificou como risco de crédito.
+// Antes divergia: Kanban travava o card, ficha dizia "apto com ressalva".
+t('renda_insuficiente NÃO bloqueia mais (alinhado ao triador)', () =>
+  notOk(isTriagemBloqueadaSimples({ renda_total_confirmada: 5000 }, [{ tipo: 'renda_insuficiente' }])))
 t('CADMUT + renda válida = status bloqueado', () => {
   const r = triagemMCMV({ renda_total_confirmada: 5000 }, [], [{ tipo: 'cadmut', ativo: true }], [])
   eq(r.status, 'bloqueado')
@@ -132,6 +135,52 @@ t('doc recusado AINDA impede avanço para correspondente', () => {
     temDocRecusado: true, temImpedimentoAtivo: false, triagemBloqueada: false
   })
   notOk(check.ok, 'deveria bloquear com doc recusado')
+})
+
+console.log('\n=== PARIDADE Kanban × Ficha (isTriagemBloqueadaSimples vs triagemMCMV) ===')
+// isTriagemBloqueadaSimples() é o atalho do Kanban (não carrega docs/histórico).
+// As duas implementações DEVEM concordar sobre o que bloqueia, senão o card trava
+// no Kanban enquanto a ficha diz "apto" — a Elyda vê contradição.
+const CASOS_PARIDADE = [
+  { nome: 'renda zero',            cli: { renda_total_confirmada: 0, renda_total_simulada: 0 }, imps: [] },
+  { nome: 'CADMUT',                cli: { renda_total_confirmada: 5000 }, imps: [{ tipo: 'cadmut', ativo: true }] },
+  { nome: 'renda_insuficiente',    cli: { renda_total_confirmada: 5000 }, imps: [{ tipo: 'renda_insuficiente', ativo: true }] },
+  { nome: 'score_baixo',           cli: { renda_total_confirmada: 5000 }, imps: [{ tipo: 'score_baixo', ativo: true }] },
+  { nome: 'nome_sujo',             cli: { renda_total_confirmada: 5000 }, imps: [{ tipo: 'nome_sujo', ativo: true }] },
+  { nome: 'Faixa 4 (EDMARCIO)',    cli: { renda_total_confirmada: 9738.65 }, imps: [] },
+  { nome: 'acima do MCMV (SBPE)',  cli: { renda_total_confirmada: 20000 }, imps: [] },
+  { nome: 'Faixa 1 limpa',         cli: { renda_total_confirmada: 3000 }, imps: [] },
+  { nome: 'CADMUT + renda alta',   cli: { renda_total_confirmada: 20000 }, imps: [{ tipo: 'cadmut', ativo: true }] },
+]
+CASOS_PARIDADE.forEach(({ nome, cli, imps }) => {
+  t(`paridade: ${nome}`, () => {
+    const kanban = isTriagemBloqueadaSimples(cli, imps)
+    const ficha = triagemMCMV(cli, [], imps, []).status === 'bloqueado'
+    if (kanban !== ficha) {
+      throw new Error(`DIVERGÊNCIA — Kanban bloqueia=${kanban}, Ficha bloqueia=${ficha}`)
+    }
+  })
+})
+
+t('renda_insuficiente é RISCO, não bloqueio (regra decidida na Fase 0)', () => {
+  const cli = { renda_total_confirmada: 5000 }
+  const imps = [{ tipo: 'renda_insuficiente', ativo: true }]
+  notOk(isTriagemBloqueadaSimples(cli, imps), 'Kanban não deve bloquear')
+  const r = triagemMCMV(cli, [], imps, [])
+  eq(r.status, 'apto_ressalva', 'ficha deve ser apto com ressalva:')
+  ok(r.grupos.riscos.some(x => /renda insuficiente/i.test(x.texto)), 'deve estar em riscos')
+  eq(r.grupos.bloqueadores.length, 0, 'bloqueadores deve estar vazio:')
+})
+
+t('cliente com renda_insuficiente avança para Documentação', () => {
+  const cli = { renda_total_confirmada: 5000 }
+  const imps = [{ tipo: 'renda_insuficiente', ativo: true }]
+  const r = triagemMCMV(cli, [], imps, [])
+  const check = podeAvancarEtapa('documentacao', {
+    temDocRecusado: false, temImpedimentoAtivo: false,
+    triagemBloqueada: r.status === 'bloqueado'
+  })
+  ok(check.ok, `bloqueou: ${check.motivo}`)
 })
 
 console.log('\n=== ficha.html:850 — prova de que NÃO é bug (ternário devolve booleano) ===')

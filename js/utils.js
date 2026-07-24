@@ -359,16 +359,23 @@ function podeAvancarEtapa(novoStatus, { temDocRecusado, temImpedimentoAtivo, tri
 
 // Derivação compacta usada pelo Kanban/listagem pra decidir se família está bloqueada
 // pelos critérios "rápidos" do Triador (sem rodar triagemMCMV completo, que precisa de docs+histórico).
-// Inclui: renda zero, CADMUT, renda_insuficiente — subset intencional do triagemMCMV.
+// Inclui: renda zero, CADMUT — subset intencional do triagemMCMV.
 // Wrapper isolado pra qualquer mudança aqui ser refletida em todos os consumidores.
 //
-// NÃO bloqueia por renda acima do teto MCMV (Fase 0, 2026-07-24): renda alta é DESVIO DE ROTA
-// (Faixa 4 ou SBPE), não impedimento. Bloquear travava atendimento de cliente documentalmente
-// pronto e sugeria "Perdido" indevidamente. Ver rotaFinanciamento().
+// CONTRATO DE PARIDADE (Fase 0, 2026-07-24): esta função é o atalho do Kanban para
+// triagemMCMV().status === 'bloqueado'. As duas DEVEM concordar sobre o que bloqueia.
+// O Kanban não pode rodar o triador completo (não carrega docs/histórico), por isso o atalho.
+// Coberto por teste de paridade em tests/triagem-renda.test.js — não editar uma sem a outra.
+//
+// O QUE BLOQUEIA: CADMUT (impedimento legal definitivo) e renda zero (sem dado pra avaliar).
+// O QUE NÃO BLOQUEIA:
+//   - renda acima do teto MCMV → desvio de rota (Faixa 4 ou SBPE). Ver rotaFinanciamento().
+//   - renda_insuficiente → é RISCO DE CRÉDITO, igual score_baixo/nome_sujo (linha ~527).
+//     Condição reversível (muda a composição familiar, a renda sobe). Quem decide é o banco.
 function isTriagemBloqueadaSimples(cliente, impedimentosDoCliente = []) {
   const renda = Number(cliente.renda_total_confirmada) || Number(cliente.renda_total_simulada) || 0
   if (renda === 0) return true
-  return impedimentosDoCliente.some(i => i.tipo === 'cadmut' || i.tipo === 'renda_insuficiente')
+  return impedimentosDoCliente.some(i => i.tipo === 'cadmut')
 }
 
 // Badges e classe SLA pra cards do kanban e linhas da lista
