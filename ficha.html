@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Ficha da Família</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1784887140">
-  <link rel="stylesheet" href="css/style.css?cb=1784887140">
+  <link rel="stylesheet" href="css/tokens.css?cb=1784891091">
+  <link rel="stylesheet" href="css/style.css?cb=1784891091">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -261,11 +261,11 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1784887140"></script>
-  <script src="js/auth.js?cb=1784887140"></script>
-  <script src="js/utils.js?cb=1784887140"></script>
-  <script src="js/data/clientes.js?cb=1784887140"></script>
-  <script src="js/data/documentos.js?cb=1784887140"></script>
+  <script src="js/supabase.js?cb=1784891091"></script>
+  <script src="js/auth.js?cb=1784891091"></script>
+  <script src="js/utils.js?cb=1784891091"></script>
+  <script src="js/data/clientes.js?cb=1784891091"></script>
+  <script src="js/data/documentos.js?cb=1784891091"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -377,8 +377,8 @@
         const gravada = cliente.faixa_mcmv
         const divergente = gravada && Number(gravada) !== Number(t.faixaCalculada)
         const aviso = divergente
-          ? ` <span class="text-sm" style="color:var(--amarelo,#B45309)" title="Cadastro tem Faixa ${escapeHtml(String(gravada))}. Salve a ficha para atualizar.">⚠️ cadastro: Faixa ${escapeHtml(String(gravada))}</span>`
-          : (!gravada ? ` <span class="text-sm text-muted" title="A faixa ainda não foi gravada no cadastro. Salve a ficha para registrar.">· não gravada no cadastro</span>` : '')
+          ? ` <span class="text-sm" style="color:var(--amarelo,#B45309)" title="Cadastro tem Faixa ${escapeHtml(String(gravada))}. Clique em Editar e salve o cadastro para atualizar a faixa.">⚠️ cadastro: Faixa ${escapeHtml(String(gravada))}</span>`
+          : (!gravada ? ` <span class="text-sm text-muted" title="A faixa ainda não foi gravada no cadastro. Clique em Editar e salve o cadastro para registrar.">· não gravada no cadastro</span>` : '')
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Faixa calculada</span><strong>Faixa ${t.faixaCalculada}</strong>${aviso}</div>`)
       } else if (t.rota.rota === 'sbpe') {
         resumo.push(`<div class="triagem-bloco"><span class="triagem-label">Rota</span><strong style="color:var(--azul,#1E40AF)">SBPE / tradicional</strong></div>`)
@@ -1029,6 +1029,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1784887140"></script>
+  <script src="js/sw-register.js?cb=1784891091"></script>
 </body>
 </html>
