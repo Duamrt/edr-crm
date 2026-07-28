@@ -35,7 +35,13 @@ manter tudo em uma linha. Duam: *"Não criaria mais mudanças nessa tela agora."
 - `css/ficha.css` — **NOVO**, isolado, 114 classes com a paleta nova.
 - `ficha.html` — head trocado + emojis do menu removidos. **Corpo e scripts intocados.**
   Backup: `ficha-ANTES.html` no scratchpad.
-- **NÃO alterados:** todo o `js/`, banco, RLS, e nenhuma outra tela.
+- `css/dashboard.css`, `css/agenda.css`, `css/clientes.css` — **1 linha cada** (ajuste técnico
+  pequeno, feito neste mesmo commit): acrescentado `html{background:var(--ink)}` como proteção
+  para a faixa da sidebar. **Nenhuma dessas telas apresentava o defeito** — é prevenção, aplicada
+  por consistência já que nenhuma tinha a regra. Não altera nada do que Duam já aprovou.
+- **NÃO alterados:** todo o `js/`, `css/style.css`, `css/tokens.css`, banco, RLS, e o **HTML**
+  de qualquer outra tela (`index.html`, `dashboard.html`, `agenda.html`, `clientes.html`,
+  `kanban.html`, `lotes.html`, `familia.html`).
 
 ### 🔒 Prova central: a tela mais arriscada do projeto não foi tocada na lógica
 `ficha.html` tem **762 linhas de JavaScript embutido** no próprio arquivo editado.
@@ -46,7 +52,12 @@ Comparação por **hash SHA-256** dos blocos `<script>`: **IDÊNTICOS** antes e 
 - **Classes: 112/112** com estilo. ✓
 - **`git status js/` vazio.** ✓
 - Isolamento: `tokens.css` = 0, `style.css` = 0, `ficha.css` = 1. ✓
-- Telas já publicadas (`index.html`, `dashboard.html`, `css/style.css`, `css/tokens.css`): **0 modificações**. ✓
+- **HTML** das telas já publicadas (`index.html`, `dashboard.html`) + `css/style.css` +
+  `css/tokens.css`: **0 modificações**. ✓
+  > Ressalva honesta: `css/dashboard.css` **teve 1 linha adicionada** neste commit
+  > (`html{background:var(--ink)}`), assim como `agenda.css` e `clientes.css`.
+  > É a proteção de fundo descrita em "Arquivos" — ajuste técnico, sem efeito visual
+  > nas telas que Duam já aprovou. O Dashboard em produção **não** foi republicado.
 
 ### As 5 armadilhas mapeadas — todas cobertas
 | # | Risco | Status |
