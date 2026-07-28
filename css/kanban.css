@@ -1,0 +1,288 @@
+/* ============================================================
+   EDR CRM — Kanban / Esteira MCMV
+   ISOLADO: esta tela NÃO carrega css/style.css nem css/tokens.css.
+
+   ⚠️ ESCOPO (decisão de Duam): "visual aprovado, sem perder arrastar,
+   seleção e etapas". Colunas continuam colunas, cards continuam compactos.
+
+   🚨 ARMADILHA PRINCIPAL — 5 classes de ESTADO adicionadas por classList,
+   que NÃO aparecem escritas no HTML. Sem estilo, a interação some sem erro:
+     .dragging       card sendo arrastado
+     .drag-over      coluna sob o cursor
+     .bulk-mode      modo de seleção ativo
+     .bulk-selected  card marcado
+     .show           barra de ações em lote visível
+   Ver docs/redesign/05-KANBAN.md
+   ============================================================ */
+
+:root{
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176; --azul:#3178ad;
+  --vermelho:#d9473d; --amarelo:#d97706;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+
+  /* ⚠️ CONTRATO: variáveis consumidas pelo CSS embutido do kanban.html
+     e pelo JS. A barra de lote se posiciona com --sidebar-width; se faltar,
+     ela cobre a barra lateral. Verificar com:
+     grep -oh "var(--[a-z-]*" kanban.html js/utils.js | sort -u */
+  --sidebar-width:252px;
+  --sidebar-bg:#fffefa;
+  --sidebar-border:#dce2d8;
+  --border:#dce2d8;
+  --text-primary:#17352a;
+  --text-secondary:#718176;
+  --verde:#164b37;
+  --verde-surface:#eef5ef;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+/* Fundo escuro no html: a faixa da sidebar (fixa, 100vh) nunca mostra papel. */
+html{background:var(--ink)}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+.flex{display:flex}
+.gap-8{gap:8px}
+.grow{flex:1}
+.text-sm{font-size:12.5px}
+.text-muted{color:var(--muted)}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.topbar label{color:var(--muted)}
+.topbar input[type="checkbox"]{width:16px;height:16px;accent-color:var(--green)}
+.page-content{padding:22px 26px;flex:1;width:100%;min-width:0}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-danger{background:var(--card);color:var(--vermelho);border-color:#f0c9c6}
+.btn-danger:hover{background:#fdeceb;border-color:var(--vermelho)}
+.btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+
+/* ===================== LEGENDA ===================== */
+.kanban-legenda{
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  margin-bottom:16px;font-size:12px;color:var(--muted);
+}
+.legenda-item{display:flex;align-items:center;gap:6px}
+.legenda-cor{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legenda-impedimento{background:var(--vermelho)}
+.legenda-recusado{background:#8a4a10}
+.legenda-sla{background:var(--amarelo)}
+
+/* ===================== COLUNAS ===================== */
+.kanban-wrap{
+  display:flex;gap:14px;align-items:flex-start;
+  overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;
+}
+.kanban-col{
+  flex:0 0 268px;background:#eef0e9;border:1px solid var(--line);
+  border-radius:var(--radius);padding:12px;
+  display:flex;flex-direction:column;gap:9px;min-height:150px;
+  transition:background .15s,border-color .15s;
+}
+.kanban-col-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 3px 6px}
+.kanban-col-title{
+  font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink);
+}
+.kanban-count{
+  font:10px 'DM Mono',monospace;font-weight:500;color:var(--muted);
+  background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:2px 8px;min-width:24px;text-align:center;
+}
+.kanban-col-empty{
+  font-size:11.5px;color:var(--muted);text-align:center;
+  padding:18px 8px;border:1px dashed var(--line);border-radius:var(--radius-sm);
+}
+
+/* 🚨 ESTADO: coluna sob o cursor durante o arrastar.
+   Sem isto não se vê ONDE o card vai cair. */
+.kanban-col.drag-over{
+  background:var(--lime-soft);border-color:var(--green);
+  box-shadow:inset 0 0 0 2px var(--green);
+}
+
+/* ===================== CARDS ===================== */
+.kanban-card{
+  background:var(--card);border:1px solid var(--line);
+  border-left:3px solid var(--line);border-radius:var(--radius-sm);
+  padding:11px 12px;cursor:grab;
+  box-shadow:0 1px 2px rgba(23,53,42,.05);
+  transition:box-shadow .15s,transform .1s,border-color .15s,opacity .15s;
+}
+.kanban-card:hover{box-shadow:0 6px 16px -8px rgba(23,53,42,.3);border-color:#b9c8b6}
+.kanban-card:active{cursor:grabbing}
+.kanban-card-nome{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.01em;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.kanban-card-lote{font:11px 'DM Mono',monospace;color:var(--muted)}
+.kanban-card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.kanban-card-acao{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Gravidade do card (classes vindas do JS) */
+.kanban-card.has-impedimento{border-left-color:var(--vermelho)}
+.kanban-card.has-recusado{border-left-color:#8a4a10}
+.kanban-card.sla-red{border-left-color:var(--vermelho);background:#fdf8f7}
+.kanban-card.sla-yellow{border-left-color:var(--amarelo)}
+
+/* 🚨 ESTADO: card sendo arrastado. Sem isto, arrastar não dá retorno visual. */
+.kanban-card.dragging{
+  opacity:.55;transform:rotate(1.5deg) scale(.98);
+  box-shadow:0 14px 30px -12px rgba(23,53,42,.45);
+  border-color:var(--green);cursor:grabbing;
+}
+
+/* 🚨 ESTADO: modo de seleção em lote */
+.kanban-card.bulk-mode{cursor:pointer}
+body.bulk-mode .kanban-card{user-select:none}
+body.bulk-mode .kanban-wrap{padding-bottom:80px}
+/* 🚨 ESTADO: card marcado — sem isto não se vê o que está selecionado */
+.kanban-card.bulk-selected{
+  outline:3px solid var(--green);outline-offset:1px;
+  background:var(--verde-surface)!important;
+  border-color:var(--green);
+}
+
+/* ===================== BARRA DE AÇÕES EM LOTE ===================== */
+.kanban-bulk-bar{
+  position:fixed;bottom:0;left:var(--sidebar-width);right:0;
+  background:var(--card);border-top:1px solid var(--line);
+  box-shadow:0 -6px 22px -12px rgba(23,53,42,.35);
+  padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  z-index:150;transform:translateY(110%);transition:transform .18s ease;
+}
+/* 🚨 ESTADO: sem isto a barra pode nunca aparecer */
+.kanban-bulk-bar.show{transform:translateY(0)}
+.kanban-bulk-count{font:13px 'Plus Jakarta Sans',sans-serif;font-weight:600;color:var(--ink)}
+.kanban-bulk-count b{color:var(--green);font-size:16px;font-weight:800}
+.kanban-bulk-bar select{
+  padding:9px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;font-family:inherit;background:var(--card);cursor:pointer;
+  color:var(--ink);min-width:190px;min-height:44px;outline:none;
+}
+.kanban-bulk-bar select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(22,75,55,.08)}
+.kanban-bulk-bar .grow{flex:1}
+
+/* ===================== BADGES =====================
+   ⚠️ CONTRATO: `badge badge-${b.tipo}` — 4 tipos em js/utils.js.
+   ctps e fgts são EXCLUSIVOS do Kanban; faltar um = badge sem cor. */
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap;
+  background:var(--paper);color:var(--muted);border:1px solid var(--line);
+}
+.badge-red{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.badge-yellow{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.badge-gray{background:#f1f0ec;color:var(--muted);border-color:#e0dfd8}
+.badge-ctps{background:#eaf1f7;color:#2b5b80;border-color:#c7dbe9}
+.badge-fgts{background:#ece7f7;color:#4c3579;border-color:#ddd4ef}
+
+/* Pílulas de faixa (js/utils.js → pillFaixa) — o Kanban usa size:'sm' */
+.pill-faixa{
+  display:inline-block;padding:2px 7px;border-radius:999px;
+  font:9px 'DM Mono',monospace;font-weight:500;letter-spacing:.06em;
+  border:1px solid var(--line);background:var(--paper);color:var(--muted);
+}
+.pill-faixa-1{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.pill-faixa-2{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.pill-faixa-3{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.pill-faixa-4{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.pill-faixa-sm{font-size:8.5px;padding:1px 6px}
+
+/* ===================== UNDO TOAST (js/utils.js → toastUndo) =====================
+   ⚠️ Chamado por esta tela (kanban.html:351) após mover em lote. */
+.undo-toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;border-radius:14px;z-index:400;
+  box-shadow:0 16px 40px -12px rgba(23,53,42,.5);
+  min-width:300px;max-width:min(94vw,480px);overflow:hidden;
+}
+.undo-toast-content{display:flex;align-items:center;gap:11px;padding:13px 15px}
+.undo-toast-icon{color:var(--lime);font-size:15px;flex-shrink:0}
+.undo-toast-msg{flex:1;min-width:0;font-size:13px;line-height:1.4}
+.undo-toast-btn{
+  background:var(--lime);color:var(--ink);border:none;border-radius:9px;
+  padding:7px 13px;font-size:12px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;flex-shrink:0;
+}
+.undo-toast-btn:hover{filter:brightness(1.06)}
+.undo-toast-close{background:none;border:none;color:#9fb6a6;font-size:15px;padding:2px 5px;flex-shrink:0;border-radius:6px}
+.undo-toast-close:hover{color:#fff}
+.undo-toast-bar{height:3px;background:rgba(255,255,255,.15)}
+.undo-toast-bar-fill{height:100%;background:var(--lime);width:100%}
+
+/* ===================== SPINNER ===================== */
+#loading{position:fixed;inset:0;background:rgba(247,246,239,.75);display:grid;place-items:center;z-index:500}
+.spinner{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:girar .7s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:860px){
+  :root{--sidebar-width:96px}
+  .sidebar{width:96px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  /* Sem emoji nos links, o rótulo em texto É a navegação — nunca zerar a fonte */
+  .sidebar-nav a{justify-content:center;padding:12px 4px;font-size:11px;gap:0;text-align:center}
+  .sidebar-footer{display:none}
+  .main{margin-left:96px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+}
+@media(max-width:780px){
+  .kanban-bulk-bar{left:0}
+}
+@media(max-width:560px){
+  .kanban-col{flex:0 0 82vw}
+  .kanban-bulk-bar{padding:12px 16px;gap:9px}
+  .kanban-bulk-bar select{min-width:100%}
+  .kanban-bulk-bar .btn{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
