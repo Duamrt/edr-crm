@@ -25,6 +25,9 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
+/* Fundo escuro no html: garante que a faixa da sidebar (fixa, 100vh) nunca
+   mostre a cor do papel se a pagina for menor que a janela. */
+html{background:var(--ink)}
 body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 button{font:inherit;cursor:pointer}
