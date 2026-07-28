@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Clientes</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1785259395">
-  <link rel="stylesheet" href="css/style.css?cb=1785259395">
+  <link rel="stylesheet" href="css/clientes.css?cb=1">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -25,11 +25,11 @@
     <nav class="sidebar">
       <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
-        <a href="dashboard.html">📊 Dashboard</a>
-        <a href="clientes.html" class="active">👥 Clientes</a>
-        <a href="kanban.html">📋 Kanban</a>
-        <a href="lotes.html">🏘️ Lotes</a>
-        <a href="agenda.html">📅 Agenda</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="clientes.html" class="active">Clientes</a>
+        <a href="kanban.html">Kanban</a>
+        <a href="lotes.html">Lotes</a>
+        <a href="agenda.html">Agenda</a>
       </div>
       <div class="sidebar-footer"><div id="sidebar-usuario"></div><div id="crm-versao-footer" class="crm-versao"></div></div>
     </nav>
@@ -46,7 +46,7 @@
       <div class="page-content">
         <!-- Filtros -->
         <div class="filtros-bar">
-          <input type="search" id="busca" placeholder="🔍 Buscar por nome ou CPF..." oninput="filtrar()">
+          <input type="search" id="busca" placeholder="Buscar por nome ou CPF..." oninput="filtrar()">
           <select id="filtro-status" onchange="filtrar()">
             <option value="">Todos os status</option>
             <option value="triagem">Triagem</option>

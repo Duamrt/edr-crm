@@ -72,14 +72,40 @@ O JS concatena dado do banco no nome da classe:
 - **`badge status-${status_kanban}`** (clientes e ficha) →
   `status-triagem`, `status-documentacao`, `status-correspondente`, `status-aprovado`,
   `status-prefeitura`, `status-assinatura`, `status-concluido`, `status-perdido`
-- **`doc-item status-${d.status}`** (ficha) → status de documento
-  (conferir valores reais no banco antes de implementar: `entregue`, `recusado`, `vencido`, pendente…)
+- **`doc-item status-${d.status}`** (ficha) → **6 valores confirmados** no código:
+  `pendente`, `entregue`, `recusado`, `vencido`, `bloqueado`, `nao_aplicavel`
+
+  > 🐛 **DEFEITO PRÉ-EXISTENTE (não introduzido por este módulo):**
+  > o `css/style.css` atual define estilo para apenas 3 dos 6 —
+  > **faltam `.status-pendente`, `.status-bloqueado` e `.status-nao_aplicavel`**.
+  > Hoje esses documentos aparecem sem a cor que os demais têm.
+  > Como o CSS será reescrito de qualquer forma, **os 6 serão contemplados** — corrigir sai de graça.
+  > Verificado por comando em 2026-07-28.
 - **`imp-item ${ativo ? '' : 'resolvido'}`** (ficha)
 - **`${vencida ? 'text-danger' : ''}`** (clientes e ficha) → **`.text-danger` é obrigatória**
 
 > `css/style.css` hoje define: `.status-{triagem,documentacao,correspondente,aprovado,prefeitura,
 > assinatura,concluido,perdido,entregue,recusado,vencido}` + `.status-{verde,amarelo,vermelho,azul}`.
 > **Reconferir a lista completa antes de implementar** — faltar um valor = elemento sem cor.
+
+### 4b. ⚠️ Classes vindas de `js/utils.js` (compartilhado) — fáceis de esquecer
+`js/utils.js` é carregado por TODAS as telas e gera marcação própria. Uma varredura só nos
+arquivos `.html` **não encontra estas classes** e o CSS isolado sai incompleto:
+
+| Classe | Origem | Onde importa |
+|---|---|---|
+| `badge-red`, `badge-yellow` | `slaBadge()` | Alerta de dias parado na lista de Clientes |
+| `pill-faixa`, `pill-faixa-{1,2,3,4}`, `pill-faixa-sm` | `pillFaixa()` | Coluna Faixa (4 valores) |
+| `undo-toast`, `undo-toast-{content,icon,msg,btn,close,bar,bar-fill}` | `toastUndo()` | **Botão "Desfazer" após exclusão** |
+
+> 🔍 **Rastreado por comando (2026-07-28):** `toastUndo()` é chamado por **`ficha.html` (linha 519)**
+> e **`kanban.html` (linha 351)** — **não** por `clientes.html`.
+> Portanto `css/ficha.css` **precisa** das classes `undo-toast-*`; `css/clientes.css` não.
+> Sem elas, o aviso de desfazer aparece sem estilo — e é justamente o que reverte uma
+> exclusão acidental. Falha silenciosa e de consequência séria.
+>
+> ✅ **Verificado que Dashboard e Agenda (já isolados) NÃO usam `toastUndo`** — nenhuma
+> chamada nos dois. Não há regressão nas telas publicadas.
 
 ### 5. Total de classes usadas pelas duas telas: **113**
 Inclui layout comum (`app-shell`, `sidebar`, `topbar`, `btn*`, `modal*`, `card*`, `table-wrap`),
