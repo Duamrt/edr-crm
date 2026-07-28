@@ -1,0 +1,266 @@
+/* ============================================================
+   EDR CRM — Dashboard (redesenho "operação / construção civil")
+   ISOLADO: esta tela NÃO carrega css/style.css.
+   REGRA: os NOMES das classes são contrato com js/data/dashboard.js
+   e js/data/agenda-widget.js — não renomear. Só muda a aparência.
+   ============================================================ */
+:root{
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176; --azul:#3178ad;
+  /* --vermelho é usado INLINE pelo JS (style="color:var(--vermelho)") — obrigatório */
+  --vermelho:#d9473d; --amarelo:#d97706; --success:#2d6a4f;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.page-content{padding:26px;flex:1;max-width:1580px;width:100%}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-sm{padding:8px 13px;font-size:12px}
+.flex{display:flex}.gap-8{gap:8px}
+
+/* ===================== HERO ===================== */
+.dash-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px;flex-wrap:wrap}
+.dash-hero h1{font-family:'Fraunces',serif;font-size:clamp(26px,3vw,34px);font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.dash-hero p{color:var(--muted);font-size:13.5px}
+.dash-hero p b{color:var(--green);font-weight:700}
+
+.refresh-info{display:flex;align-items:center;gap:8px;font:11px 'DM Mono',monospace;color:var(--muted)}
+.refresh-info .dot{width:8px;height:8px;border-radius:50%;background:var(--lime);position:relative}
+
+/* ===================== KPIs ===================== */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow);
+}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--green-2)}
+.kpi.urgent::before{background:var(--vermelho)}
+.kpi.attn::before{background:var(--orange)}
+.kpi-label{font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.kpi-value{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.kpi-value .frac{font-size:16px;color:var(--muted);font-weight:600}
+.kpi-sub{font:11px 'DM Mono',monospace;margin-top:9px;color:var(--muted)}
+/* KPI da agenda (agenda-widget) */
+.kpi.kpi-agenda::before{background:var(--orange)}
+.kpi.kpi-agenda .kpi-value{color:var(--green)}
+
+/* ===================== CARDS / PAINÉIS ===================== */
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:22px;align-items:start}
+.col-direita{display:flex;flex-direction:column;gap:18px}
+.dash-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.dash-card-head{padding:17px 20px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dash-card-title{font-family:'Fraunces',serif;font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;margin:0}
+.dash-card-sub{margin-top:3px;font-size:12px;color:var(--muted)}
+.dash-card-body{padding:4px 0}
+.dash-card-foot{padding:12px 20px;font-size:12px;color:var(--muted);background:#f4f6f0;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line)}
+.link-toggle{color:var(--green);font-weight:700;text-decoration:none;cursor:pointer;font-size:12.5px;border:none;background:none;padding:0}
+.link-toggle:hover{text-decoration:underline}
+
+.badge-fire{background:#fbe4e1;color:#a3342b;font:10px 'DM Mono',monospace;font-weight:500;padding:4px 9px;border-radius:7px;text-transform:uppercase;letter-spacing:.06em}
+.badge-attn{background:#fdeede;color:#a8530f;font:10px 'DM Mono',monospace;font-weight:500;padding:4px 9px;border-radius:7px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ===================== "COBRAR HOJE" (fam-card) ===================== */
+.fam-card{padding:17px 20px;border-bottom:1px solid var(--line);transition:background .12s}
+.fam-card:last-child{border-bottom:none}
+.fam-card:hover{background:#f6f8f2}
+.fam-head{display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center}
+.fam-avatar{width:38px;height:38px;border-radius:50%;background:var(--lime-soft);color:var(--green);display:grid;place-items:center;font-weight:800;font-size:13px}
+.fam-name-link{font-weight:700;font-size:14.5px;color:var(--ink);text-decoration:none;letter-spacing:-.01em}
+.fam-name-link:hover{color:var(--green);text-decoration:underline}
+.fam-meta{font-size:12px;color:var(--muted);margin-top:3px}
+/* fam-tag recebe a classe do status_kanban dinamicamente */
+.fam-tag{font:10px 'DM Mono',monospace;font-weight:500;padding:5px 10px;border-radius:999px;background:#eef0ec;color:#5c6b60;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.fam-tag.triagem{background:#e4eef7;color:#25628f}
+.fam-tag.documentacao{background:#fdeede;color:#a8530f}
+.fam-tag.correspondente{background:#e4eef7;color:#1e5185}
+.fam-tag.aprovado{background:#e3f0e4;color:var(--green)}
+.fam-tag.prefeitura{background:#ece7f7;color:#5b3d94}
+.fam-tag.assinatura{background:#fbe0ea;color:#96225a}
+.fam-tag.concluido{background:#e3f0e4;color:var(--green)}
+.fam-tag.perdido{background:#eceee8;color:var(--muted)}
+.fam-days{font:12px 'DM Mono',monospace;font-weight:500;color:var(--vermelho);min-width:76px;text-align:right;white-space:nowrap}
+.fam-days.warn{color:var(--orange)}
+
+.fam-pendencias{margin-top:11px;padding:11px 13px;background:#f4f6f0;border:1px solid var(--line);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.pend-row{display:flex;gap:8px;align-items:flex-start}
+.pend-label{font:10px 'DM Mono',monospace;font-weight:500;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:6px;flex-shrink:0;line-height:1.5}
+.pend-label.r{background:#fbe4e1;color:#a3342b}
+.pend-label.y{background:#fdeede;color:#a8530f}
+.pend-label.b{background:#fbe4e1;color:#8a2b23}
+.pend-items{color:var(--ink);line-height:1.55}
+.pend-items b{font-weight:700}
+.fam-tudo-ok{margin-top:11px;padding:11px 13px;background:#eef5e9;border:1px solid #dbe8cf;border-radius:var(--radius-sm);font-size:12.5px;color:var(--green);display:flex;align-items:center;gap:8px}
+
+.fam-actions{margin-top:13px;display:flex;gap:8px;flex-wrap:wrap}
+.fam-act{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:9px;
+  font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;transition:.15s;
+}
+.fam-act:hover{border-color:var(--green);background:#f0f5ec}
+.fam-act.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fam-act.primary:hover{background:var(--green)}
+.fam-act.success{background:var(--card);color:var(--success);border-color:#a9c9b1}
+.fam-act.success:hover{background:#eef5e9}
+.fam-act.whats{background:#1f7a4d;color:#fff;border-color:#1f7a4d}
+.fam-act.whats:hover{background:#186139}
+.fam-act:disabled{opacity:.6;cursor:wait}
+
+/* ===================== "O QUE TÁ QUEBRADO" ===================== */
+.broken-list{padding:5px 0}
+.broken-row{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;font-size:13px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.broken-row:last-child{border-bottom:none}
+.broken-row:hover{background:#f6f8f2}
+.broken-label{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:500}
+.broken-icon{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;font-size:13px;flex-shrink:0}
+.bi-r{background:#fbe4e1;color:var(--vermelho)}
+.bi-y{background:#fdeede;color:var(--orange)}
+.bi-g{background:#e3f0e4;color:var(--green)}
+.broken-count{font-weight:800;font-size:15px;color:var(--ink)}
+.broken-count.zero{color:var(--muted);font-weight:500}
+
+/* ===================== FUNIL ===================== */
+.funnel-wrap h3{font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:11px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+.fn{text-align:center;padding:14px 6px;border-radius:var(--radius-sm);background:var(--paper);cursor:pointer;transition:.15s;border:1px solid transparent;text-decoration:none;color:inherit;display:block}
+.fn:hover{background:#eef5e9;border-color:#cfe0c6}
+.fn-label{font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.fn-value{font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+
+/* ===================== AGENDA (agenda-widget.js) ===================== */
+.ag-banner{display:none;align-items:center;gap:14px;background:#fdf4e6;border:1px solid #f0d9b3;border-radius:var(--radius);padding:14px 18px;margin-bottom:18px}
+.ag-banner-ico{font-size:22px;flex-shrink:0}
+.ag-banner-txt{flex:1;font-size:13.5px;color:#7a4a12;line-height:1.5}
+.ag-banner-txt strong{display:block;font-weight:700;font-size:14.5px;margin-bottom:2px;color:var(--ink)}
+.ag-banner-txt b,.ag-banner-txt i{font-style:normal;font-weight:700;color:var(--ink)}
+
+.ag-tabs{display:flex;gap:6px;padding:0 20px 14px;border-bottom:1px solid var(--line);margin-bottom:5px;flex-wrap:wrap}
+.ag-tab{padding:7px 13px;border-radius:999px;font:10px 'DM Mono',monospace;font-weight:500;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px;transition:.15s}
+.ag-tab:hover{border-color:#b9c8b6}
+.ag-tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ag-tab[data-tab="atrasado"].ag-has:not(.active){background:#fbe4e1;color:#a3342b;border-color:#f0c5c0}
+.ag-tab[data-tab="atrasado"].ag-has.active{background:var(--vermelho);color:#fff;border-color:var(--vermelho)}
+.ag-count{background:rgba(0,0,0,.07);padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;min-width:18px;text-align:center}
+.ag-tab.active .ag-count{background:rgba(255,255,255,.22)}
+
+.ag-list{padding:3px 0}
+.ag-event{display:flex;gap:11px;padding:12px 20px;border-bottom:1px solid var(--line);align-items:stretch;transition:.12s}
+.ag-event:last-child{border-bottom:none}
+.ag-event:hover{background:#f6f8f2}
+.ag-prio{width:3px;border-radius:2px;flex-shrink:0}
+.ag-prio-alta{background:var(--vermelho)}
+.ag-prio-media{background:var(--orange)}
+.ag-prio-baixa{background:var(--line)}
+.ag-time{min-width:52px;font:12px 'DM Mono',monospace;font-weight:500;color:var(--green);align-self:center}
+.ag-body{flex:1;min-width:0}
+.ag-title{font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:3px;line-height:1.35}
+.ag-title-late{color:var(--vermelho)}
+.ag-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.ag-tag{font:9px 'DM Mono',monospace;font-weight:500;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+.ag-tag-trabalho{background:#e3f0e4;color:var(--green)}
+.ag-tag-compra{background:#fdeede;color:#a8530f}
+.ag-tag-pessoal{background:#ece7f7;color:#5b3d94}
+.ag-tag-lembrete{background:#fbe4e1;color:#a3342b}
+.ag-obs{font-size:11.5px;color:var(--muted)}
+.ag-check{width:22px;height:22px;border:1.5px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer;align-self:center;flex-shrink:0;transition:.15s;padding:0}
+.ag-check:hover{border-color:var(--green);background:#eef5e9}
+.ag-check:disabled{opacity:.5;cursor:wait}
+.ag-empty{padding:30px 20px;text-align:center;color:var(--muted);font-size:13px}
+.ag-add{display:flex;gap:8px;padding:14px 20px;border-top:1px dashed var(--line);background:#f4f6f0}
+.ag-add input{flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);outline:none;transition:.15s}
+.ag-add input:focus{border-color:var(--green)}
+.ag-add button{padding:10px 16px;background:var(--lime);color:#16311f;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.03em;transition:.15s}
+.ag-add button:hover{filter:brightness(1.05)}
+
+/* ===================== ESTADOS ===================== */
+.empty-state{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px}
+.empty-state .icon{font-size:30px;margin-bottom:8px;display:block;opacity:.4}
+.skel{background:linear-gradient(90deg,#eef0ea 0%,#f6f7f2 50%,#eef0ea 100%);background-size:200% 100%;animation:skel 1.2s infinite;border-radius:6px;color:transparent;user-select:none}
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.toast-flash{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(23,53,42,.3);z-index:1000}
+#loading{position:fixed;inset:0;background:rgba(247,246,239,.7);z-index:300;display:flex;align-items:center;justify-content:center}
+#loading.hidden{display:none}
+.spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:1100px){
+  .dash-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .funnel{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:860px){
+  .sidebar{width:76px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  .sidebar-nav a{justify-content:center;padding:12px 0;font-size:0;gap:0}
+  .sidebar-footer{display:none}
+  .main{margin-left:76px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+  .fam-head{grid-template-columns:auto 1fr;gap:10px}
+  .fam-head .fam-tag,.fam-head .fam-days{grid-column:2}
+}
+@media(max-width:560px){
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{padding:14px}
+  .kpi-value{font-size:26px}
+  .funnel{grid-template-columns:repeat(2,1fr)}
+  .dash-hero h1{font-size:24px}
+  .fam-actions .fam-act{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

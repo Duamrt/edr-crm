@@ -28,6 +28,14 @@ Se o CSS novo renomear uma classe, o JS continua injetando o nome antigo e o ele
 `kpi`, `kpi-label`, `kpi-value`(+`frac`), `kpi-sub`, `fam-card`, `fam-head`, `fam-avatar`, `fam-name-link`, `fam-meta`, `fam-tag`, `fam-days`, `fam-pendencias`, `fam-tudo-ok`, `fam-actions`, `fam-act` (+ variantes `primary`/`success`/`whats`), `broken-row`, `broken-label`, `broken-count`, `broken-icon`, `fn`, `fn-label`, `fn-value`, `badge-fire`, `badge-attn`, `empty-state`, `icon`, `skel`
 > Fonte: `grep 'class="' js/data/dashboard.js`. Reconferir antes de implementar (a lista pode crescer).
 
+### 3b. ACHADOS CRÍTICOS (levantados na leitura do JS — 2026-07-28)
+- **`var(--vermelho)` é usado INLINE pelo JS** (`js/data/dashboard.js`, bloco de docs vencendo: `style="color:var(--vermelho)"`). O `css/dashboard.css` **precisa definir `--vermelho`**, senão o texto fica sem cor. Conferir outras vars antes de codar.
+- **`fam-tag ${f.status_kanban}`** — a classe de status é gerada dinamicamente. Precisa estilizar TODOS os status: `triagem`, `documentacao`, `correspondente`, `aprovado`, `prefeitura`, `assinatura`, `concluido`, `perdido`.
+- **Classes do bloco de pendências:** `pend-row`, `pend-label` (+ variantes de cor), `pend-items`.
+- **Classes do agenda-widget:** `ag-banner-ico`, `ag-banner-txt`, `ag-body`, `ag-check`, `ag-empty`, `ag-event`, `ag-meta`, `ag-obs`, `ag-time`, `ag-tag`, `ag-title`, `ag-prio`.
+- **`broken-icon`** tem variantes `bi-r` / `bi-y` / `bi-g` (cores de gravidade).
+- **`.skel`** (skeleton de carregamento) aparece no HTML inicial — manter, senão o "carregando" fica sem estilo.
+
 ### 4. Funções e scripts
 - `onclick="dashboardCarregar()"` e `onclick="logout()"` — manter os nomes.
 - Scripts na ordem: `js/supabase.js`, `js/auth.js`, `js/utils.js`, `js/data/dashboard.js`, `js/data/agenda-widget.js`, `js/sw-register.js`.
