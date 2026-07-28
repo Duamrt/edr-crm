@@ -135,7 +135,6 @@
   function renderKpis(k) {
     const el = document.getElementById('kpis')
     const urgentClass = k.cobrar_hoje > 0 ? 'urgent' : ''
-    const lotesAttn = (k.josue_reservados / k.josue_total) >= 0.75 ? 'attn' : ''
     el.innerHTML = `
       <div class="kpi ${urgentClass}">
         <div class="kpi-label">Cobrar hoje</div>
@@ -147,11 +146,13 @@
         <div class="kpi-value">${k.em_movimento}</div>
         <div class="kpi-sub">clientes ativos</div>
       </div>
-      <div class="kpi ${lotesAttn}">
-        <div class="kpi-label">Lotes</div>
-        <div class="kpi-value">${k.josue_reservados}<span class="frac">/${k.josue_total}</span></div>
-        <div class="kpi-sub">${k.josue_total - k.josue_reservados} livres</div>
-      </div>
+      <!-- Card "Lotes" (josue_reservados/josue_total) REMOVIDO em 2026-07-28:
+           os números eram do loteamento antigo do Josué e deixaram de refletir
+           a realidade. Autorizado por Duam. NÃO substituído por "Tarefas hoje"
+           nem "Tarefas vencidas" — essas métricas já aparecem em "O que tá quebrado".
+           O 4º card só volta quando o módulo Lotes existir, como
+           "Famílias procurando lote", com número real do banco.
+           Ver docs/redesign/02-DASHBOARD.md -->
       <div class="kpi">
         <div class="kpi-label">Concluídos no mês</div>
         <div class="kpi-value">${k.concluidos_mes}</div>

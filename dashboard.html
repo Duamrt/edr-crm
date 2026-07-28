@@ -29,11 +29,11 @@
         </div>
       </div>
       <div class="sidebar-nav">
-        <a href="dashboard.html" class="active">📊 Dashboard</a>
-        <a href="clientes.html">👥 Clientes</a>
-        <a href="kanban.html">📋 Kanban</a>
-        <a href="lotes.html">🏘️ Lotes</a>
-        <a href="agenda.html">📅 Agenda</a>
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="clientes.html">Clientes</a>
+        <a href="kanban.html">Kanban</a>
+        <a href="lotes.html">Lotes</a>
+        <a href="agenda.html">Agenda</a>
       </div>
       <div class="sidebar-footer">
         <div id="sidebar-usuario"></div>
@@ -43,10 +43,10 @@
 
     <div class="main">
       <div class="topbar">
-        <span class="topbar-title">📊 Dashboard</span>
+        <span class="topbar-title">Dashboard</span>
         <div class="flex gap-8" style="align-items:center">
           <span class="refresh-info"><span class="dot"></span><span id="last-refresh">Carregando...</span></span>
-          <button onclick="dashboardCarregar()" class="btn btn-secondary btn-sm">🔄 Atualizar</button>
+          <button onclick="dashboardCarregar()" class="btn btn-secondary btn-sm">Atualizar</button>
           <a href="familia.html" class="btn btn-primary btn-sm">+ Novo cliente</a>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
@@ -64,37 +64,78 @@
         <!-- Banner agenda do dia -->
         <div class="ag-banner" id="ag-banner"></div>
 
-        <!-- KPIs topo -->
-        <div class="kpi-grid" id="kpis">
-          <div class="kpi"><div class="kpi-label">Cobrar hoje</div><div class="kpi-value skel">···</div></div>
-          <div class="kpi"><div class="kpi-label">Em movimento</div><div class="kpi-value skel">···</div></div>
-          <div class="kpi"><div class="kpi-label">Lotes</div><div class="kpi-value skel">···</div></div>
-          <div class="kpi kpi-agenda">
-            <div class="kpi-label">📅 Agenda hoje</div>
-            <div class="kpi-value skel" id="kpi-agenda-val">·</div>
-            <div class="kpi-sub" id="kpi-agenda-sub">carregando</div>
-          </div>
-        </div>
-
-        <!-- Documentos vencendo (próximos 15 dias) -->
-        <section class="dash-card hidden" id="vencendo-card" style="margin-bottom:16px;border-left:3px solid #f59e0b;">
+        <!-- ⚠️ ORDEM IMPORTA: #vencendo-card precisa vir ANTES de .foco.
+             O CSS usa o seletor irmão (#vencendo-card.hidden ~ .foco) para
+             alternar o painel entre "há documentos" e "tudo em dia".
+             O irmão (~) só enxerga para FRENTE — inverter a ordem quebra
+             o estado vazio silenciosamente. Ver docs/redesign/02-DASHBOARD.md
+             Visualmente o card fica abaixo do painel via `order` no CSS. -->
+        <section class="dash-card dash-card-warn hidden" id="vencendo-card">
           <header class="dash-card-head">
             <div>
-              <h2 class="dash-card-title">⏰ Documentos vencendo <span id="vencendo-badge" style="background:#f59e0b;color:#fff;border-radius:10px;padding:1px 8px;font-size:.75rem;font-weight:700;"></span></h2>
+              <h2 class="dash-card-title">Documentos vencendo</h2>
               <p class="dash-card-sub">Renove antes de vencer — próximos 15 dias</p>
             </div>
           </header>
           <div class="broken-list" id="vencendo-lista"></div>
         </section>
 
+        <!-- ══ PAINEL DE FOCO (hero verde) ══
+             O número grande é o MESMO #vencendo-badge que o JS já preenche
+             com a contagem REAL da RPC get_crm_docs_vencendo (15 dias).
+             Nunca chumbar número aqui. Ver docs/redesign/02-DASHBOARD.md -->
+        <section class="foco">
+          <div class="foco-copy">
+            <span class="foco-eyebrow">Foco do dia</span>
+            <h2 class="foco-title">
+              <span class="foco-t-alerta">Documentos vencendo<br>não podem esperar.</span>
+              <span class="foco-t-ok">Nenhum documento<br>vencendo agora.</span>
+            </h2>
+            <p class="foco-desc">
+              <span class="foco-d-alerta">Há documentos que vencem nos próximos 15 dias. Resolver agora evita que clientes prontos fiquem parados.</span>
+              <span class="foco-d-ok">Nada vence nos próximos 15 dias. Bom momento para destravar quem está parado no funil.</span>
+            </p>
+            <div class="foco-actions">
+              <a class="foco-btn light" href="#vencendo-card">Ver pendências</a>
+              <a class="foco-btn ghost" href="kanban.html">Abrir Kanban →</a>
+            </div>
+          </div>
+          <div class="foco-num">
+            <div>
+              <span class="foco-num-cap">Vencem em 15 dias</span>
+              <!-- ID do contrato: preenchido por renderVencendo() -->
+              <strong id="vencendo-badge">·</strong>
+              <p class="foco-num-sub">
+                <span class="foco-d-alerta">documentos aguardando renovação</span>
+                <span class="foco-d-ok">tudo em dia por aqui</span>
+              </p>
+            </div>
+            <span class="foco-num-tag">EDR / HOJE</span>
+          </div>
+        </section>
+
+        <!-- KPIs topo -->
+        <div class="kpi-grid" id="kpis">
+          <div class="kpi"><div class="kpi-label">Cobrar hoje</div><div class="kpi-value skel">···</div></div>
+          <div class="kpi"><div class="kpi-label">Em movimento</div><div class="kpi-value skel">···</div></div>
+          <!-- Skeleton do card "Lotes" removido junto com o card (2026-07-28).
+               Este bloco é substituído por renderKpis() assim que os dados chegam. -->
+          <div class="kpi kpi-agenda">
+            <div class="kpi-label">Agenda hoje</div>
+            <div class="kpi-value skel" id="kpi-agenda-val">·</div>
+            <div class="kpi-sub" id="kpi-agenda-sub">carregando</div>
+          </div>
+        </div>
+
         <!-- Cobrar Hoje + O que tá quebrado -->
         <div class="dash-grid">
           <section class="dash-card">
             <header class="dash-card-head">
               <div>
-                <h2 class="dash-card-title">🔥 Cobrar hoje <span id="cobrar-badge"></span></h2>
+                <h2 class="dash-card-title">Quem precisa de você agora <span id="cobrar-badge"></span></h2>
                 <p class="dash-card-sub" id="cobrar-sub">Carregando clientes críticos...</p>
               </div>
+              <a href="clientes.html" class="link-toggle">Ver fila completa →</a>
             </header>
             <div class="dash-card-body" id="cobrar-lista">
               <div class="fam-card"><div class="fam-head"><div class="fam-avatar skel">··</div><div><div class="fam-name-link skel">Carregando família...</div><div class="fam-meta skel">linha 2</div></div><span class="fam-tag skel">···</span><span class="fam-days skel">··</span></div></div>
@@ -113,7 +154,7 @@
           <section class="dash-card">
             <header class="dash-card-head">
               <div>
-                <h2 class="dash-card-title">📅 Minha agenda</h2>
+                <h2 class="dash-card-title">Sua agenda</h2>
                 <p class="dash-card-sub" id="ag-sub">Compromissos sincronizados</p>
               </div>
               <a href="agenda.html" id="ag-link-full" class="link-toggle" style="font-size:12px">Abrir completa →</a>
@@ -137,7 +178,7 @@
           <section class="dash-card">
             <header class="dash-card-head">
               <div>
-                <h2 class="dash-card-title">⚠️ O que tá quebrado</h2>
+                <h2 class="dash-card-title">O que tá quebrado</h2>
                 <p class="dash-card-sub">Pontos de atenção</p>
               </div>
             </header>
@@ -156,7 +197,7 @@
 
         <!-- Funil -->
         <div class="funnel-wrap">
-          <h3>📈 Funil de clientes</h3>
+          <h3>Funil de clientes</h3>
           <div class="funnel" id="funil">
             <a class="fn"><div class="fn-label">Triagem</div><div class="fn-value skel">·</div></a>
             <a class="fn"><div class="fn-label">Doc</div><div class="fn-value skel">·</div></a>
@@ -171,11 +212,11 @@
     </div>
   </div>
 
-  <script src="js/supabase.js?cb=1785254937"></script>
-  <script src="js/auth.js?cb=1785254937"></script>
-  <script src="js/utils.js?cb=1785254937"></script>
-  <script src="js/data/dashboard.js?cb=1785254937"></script>
-  <script src="js/data/agenda-widget.js?cb=1785254937"></script>
-  <script src="js/sw-register.js?cb=1785254937"></script>
+  <script src="js/supabase.js?cb=1785333000"></script>
+  <script src="js/auth.js?cb=1785333000"></script>
+  <script src="js/utils.js?cb=1785333000"></script>
+  <script src="js/data/dashboard.js?cb=1785333000"></script>
+  <script src="js/data/agenda-widget.js?cb=1785333000"></script>
+  <script src="js/sw-register.js?cb=1785333000"></script>
 </body>
 </html>
