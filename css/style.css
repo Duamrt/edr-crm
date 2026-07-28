@@ -1,7 +1,7 @@
 /* EDR CRM — Paleta idêntica ao EDR System */
 /* Tablet-first, responsivo */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* ── Mist Valley palette ── */
@@ -867,6 +867,7 @@ tbody tr:hover { background: #f4f7ee; }
     border-top: 1px solid var(--border-light, #f3f4f6);
   }
   #tabela-clientes td:last-child a { flex: 1; text-align: center; }
+}
   .modal { max-height: 95vh; }
   .lotes-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 }
@@ -1429,16 +1430,4 @@ tbody tr:hover { background: #f4f7ee; }
   margin-top: 6px;
   letter-spacing: .02em;
   opacity: 1 !important;
-}
-
-/* ── Acessibilidade: respeitar "reduzir movimento" ──
-   Desliga animações/transições pra quem ativou prefers-reduced-motion
-   (toasts, spinner, skeletons, drag do kanban, bounce do undo-toast). */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-    scroll-behavior: auto !important;
-  }
 }
