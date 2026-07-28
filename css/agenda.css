@@ -1,0 +1,256 @@
+/* ============================================================
+   EDR CRM — Agenda (paleta nova aplicada sobre o layout EXISTENTE)
+   ISOLADO: esta tela NÃO carrega css/style.css nem css/tokens.css.
+
+   ⚠️ ESCOPO DESTE ARQUIVO (decisão de Duam):
+   SÓ paleta, tipografia e acabamento. O layout do calendário, a navegação
+   de mês, o painel lateral e o formulário permanecem EXATAMENTE como estavam.
+
+   REGRA: os NOMES das classes e das variáveis são contrato com
+   js/data/agenda-page.js — não renomear. Só mudam os VALORES.
+   Ver docs/redesign/03-AGENDA.md
+   ============================================================ */
+
+:root{
+  /* --- Paleta nova (identidade EDR) --- */
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+
+  /* --- CONTRATO: as 15 variáveis que agenda.html e agenda-page.js consomem.
+         Os NOMES ficam (o JS usa alguns em style= inline); só os VALORES
+         passam a ser os da paleta nova. Remover qualquer uma quebra a tela. --- */
+  --verde:#164b37;
+  --verde-hover:#0f3a2a;
+  --verde-pale:#e2f0e6;
+  --verde-surface:#eef5ef;
+  --amarelo:#d97706;
+  --amarelo-pale:#fdf0dc;
+  --vermelho:#d9473d;
+  --vermelho-pale:#fdeceb;
+  --surface:#fffefa;
+  --bg:#f7f6ef;
+  --border:#dce2d8;
+  --text-primary:#17352a;
+  --text-secondary:#718176;
+  --text-tertiary:#9aa89d;
+  --sombra:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.page-content{padding:26px;flex:1;max-width:1580px;width:100%}
+.flex{display:flex}
+.gap-8{gap:8px}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-sm{padding:8px 13px;font-size:12.5px}
+
+/* ============================================================
+   AGENDA — mesma ESTRUTURA de antes, aparência nova.
+   Grade, proporções e pontos de quebra preservados.
+   ============================================================ */
+.ap-grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+@media (max-width:1100px){.ap-grid{grid-template-columns:1fr}}
+
+.ap-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.ap-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+/* O JS gera "outubro de 2026" (minúsculas). `capitalize` capitalizaria CADA
+   palavra — "Outubro De 2026" —, e em português preposição no meio não leva
+   maiúscula. `::first-letter` capitaliza só a inicial, que é o correto. */
+.ap-card-head h2{font-family:'Fraunces',serif;margin:0;font-size:19px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+.ap-card-head h2::first-letter{text-transform:uppercase}
+.ap-card-head h3{font-family:'Fraunces',serif;margin:0;font-size:15px;font-weight:600;letter-spacing:-.015em;color:var(--ink);display:flex;align-items:center;gap:6px}
+/* O JS escreve "terça-feira, 28 de julho" em minúsculas no #ap-dia-titulo.
+   ::first-letter não se aplica a container flex (o h3), por isso a regra vai
+   no span interno, que é quem de fato recebe o texto. */
+#ap-dia-titulo{display:inline-block}
+#ap-dia-titulo::first-letter{text-transform:uppercase}
+.ap-card-sub{font:10px 'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:500;margin-bottom:10px}
+
+/* --- Navegação de mês (comportamento intocado) --- */
+.ap-cal-nav{display:flex;gap:6px;align-items:center}
+.ap-cal-nav button{
+  width:36px;height:36px;border:1px solid var(--line);background:var(--card);
+  border-radius:50%;cursor:pointer;font-size:13px;color:var(--ink);
+  display:grid;place-items:center;transition:.15s;padding:0;
+}
+.ap-cal-nav button:hover{background:var(--lime-soft);border-color:var(--green)}
+.ap-cal-nav button.today{
+  width:auto;padding:0 15px;border-radius:999px;font-size:11px;font-weight:800;
+  font-family:'Plus Jakarta Sans';letter-spacing:.08em;text-transform:uppercase;
+}
+
+/* --- Pílulas de contagem --- */
+.ap-cont-pills{display:flex;gap:8px;flex-wrap:wrap}
+.ap-pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;display:flex;align-items:center;gap:7px;font-size:12px}
+.ap-pill b{font-family:'Plus Jakarta Sans';font-weight:800;color:var(--green);font-feature-settings:"tnum"}
+.ap-pill span{font:10px 'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+.ap-pill-atrasado{border-color:var(--vermelho)!important;background:var(--vermelho-pale)!important}
+.ap-pill-atrasado b{color:var(--vermelho)!important}
+.ap-pill-atrasado span{color:#a5352d!important}
+.ap-card-atrasados{border-color:var(--vermelho)!important}
+.ap-event-late{background:var(--vermelho-pale)}
+
+/* --- Calendário --- */
+.ap-dias-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px}
+.ap-dias-sem span{text-align:center;font:10px 'DM Mono',monospace;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:6px 0}
+
+.ap-grid-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.ap-dia{
+  aspect-ratio:1/1;background:var(--paper);border-radius:var(--radius-sm);padding:8px;
+  display:flex;flex-direction:column;cursor:pointer;border:1.5px solid transparent;
+  transition:.15s;min-height:80px;position:relative;
+}
+.ap-dia:hover{border-color:var(--green);background:var(--card)}
+.ap-dia.outro{opacity:.32}
+.ap-dia.hoje{background:var(--green);color:#fff}
+.ap-dia.hoje:hover{background:var(--verde-hover)}
+.ap-dia.selected{border-color:var(--orange);background:#fdf3e9}
+.ap-dia.selected.hoje{background:var(--green);border-color:var(--lime)}
+.ap-dia .num{font-family:'Plus Jakarta Sans';font-size:13px;font-weight:800;font-feature-settings:"tnum"}
+.ap-dia .dots{display:flex;gap:3px;margin-top:auto;flex-wrap:wrap;max-width:100%}
+/* ⚠️ CONTRATO: o JS gera `dot ${e.categoria}` — categoria CRUA, sem prefixo. */
+.ap-dia .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.ap-dia .dot.trabalho{background:var(--green)}
+.ap-dia .dot.compra{background:var(--orange)}
+.ap-dia .dot.pessoal{background:#6b4fa8}
+.ap-dia .dot.lembrete{background:var(--vermelho)}
+.ap-dia.hoje .dot{background:var(--lime)}
+
+.ap-painel{display:flex;flex-direction:column;gap:14px}
+
+/* --- Eventos --- */
+.ap-event{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.ap-event:last-child{border-bottom:none}
+/* ⚠️ CONTRATO: ap-prio-${prioridade || 'baixa'} — os 3 valores precisam existir */
+.ap-prio{width:3px;align-self:stretch;border-radius:2px;margin-top:3px;min-height:28px;background:var(--line)}
+.ap-prio-alta{background:var(--vermelho)}
+.ap-prio-media{background:var(--orange)}
+.ap-prio-baixa{background:var(--line)}
+.ap-time{min-width:48px;font:12.5px 'DM Mono',monospace;font-weight:500;color:var(--green);padding-top:2px;letter-spacing:-.01em}
+.ap-body{flex:1;min-width:0}
+.ap-title{font-family:'Plus Jakarta Sans';font-size:13.5px;font-weight:600;letter-spacing:-.015em;color:var(--ink);margin-bottom:3px;line-height:1.35}
+.ap-event.done .ap-title{text-decoration:line-through;color:var(--text-tertiary)}
+.ap-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.ap-obs{font-size:11.5px;color:var(--text-tertiary);margin-top:4px;line-height:1.4}
+/* ⚠️ CONTRATO: ap-tag-${categoria || 'trabalho'} — os 4 valores precisam existir */
+.ap-tag{font:9.5px 'DM Mono',monospace;font-weight:500;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.08em;background:var(--paper);color:var(--muted)}
+.ap-tag-trabalho{background:var(--verde-pale);color:var(--verde-hover)}
+.ap-tag-compra{background:#fdf0dc;color:#8a4a10}
+.ap-tag-pessoal{background:#ece7f7;color:#4c3579}
+.ap-tag-lembrete{background:var(--vermelho-pale);color:#a5352d}
+
+.ap-actions{display:flex;gap:4px}
+.ap-btn-ico{
+  width:30px;height:30px;border:1px solid var(--line);background:var(--card);
+  border-radius:9px;cursor:pointer;display:grid;place-items:center;
+  font-size:12px;color:var(--muted);transition:.15s;padding:0;
+}
+.ap-btn-ico:hover{border-color:var(--green);color:var(--green);background:var(--verde-surface)}
+.ap-btn-ico.del:hover{border-color:var(--vermelho);color:var(--vermelho);background:var(--vermelho-pale)}
+.ap-btn-ico:disabled{opacity:.5;cursor:wait}
+.ap-event.done .ap-btn-ico.check{background:var(--green);border-color:var(--green);color:#fff}
+
+.ap-empty{padding:30px 14px;text-align:center;color:var(--text-tertiary);font-size:13px}
+
+/* --- Formulário de novo compromisso --- */
+.ap-form{display:flex;flex-direction:column;gap:9px}
+.ap-form input,.ap-form select,.ap-form textarea{
+  padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);
+  outline:none;transition:.15s;min-height:44px;
+}
+.ap-form input:focus,.ap-form select:focus,.ap-form textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(22,75,55,.08)}
+.ap-form textarea{min-height:55px;resize:vertical}
+.ap-form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ap-btn-add{
+  background:var(--lime);color:var(--ink);border:none;padding:12px;border-radius:999px;
+  font-family:'Plus Jakarta Sans';font-size:12px;font-weight:800;cursor:pointer;
+  letter-spacing:.08em;text-transform:uppercase;transition:.15s;min-height:44px;
+}
+.ap-btn-add:hover{filter:brightness(1.06)}
+
+/* --- Toast de sincronização --- */
+.ap-saving{
+  position:fixed;bottom:18px;right:18px;background:var(--ink);color:#fff;
+  padding:9px 15px;border-radius:999px;font-size:12px;font-weight:600;
+  font-family:'Plus Jakarta Sans';box-shadow:0 8px 24px rgba(23,53,42,.3);
+  display:none;align-items:center;gap:8px;z-index:200;
+}
+.ap-saving.show{display:flex}
+.ap-saving .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:860px){
+  .sidebar{width:96px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  /* Sem emoji nos links, o rótulo em texto É a navegação — nunca zerar a fonte */
+  .sidebar-nav a{justify-content:center;padding:12px 4px;font-size:11px;gap:0;text-align:center}
+  .sidebar-footer{display:none}
+  .main{margin-left:96px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+}
+@media(max-width:560px){
+  .ap-dia{min-height:56px;padding:5px;border-radius:9px}
+  .ap-dia .num{font-size:11.5px}
+  .ap-grid-dias,.ap-dias-sem{gap:4px}
+  .ap-form-row{grid-template-columns:1fr}
+  .ap-cont-pills{gap:5px}
+  .ap-pill{padding:5px 10px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
