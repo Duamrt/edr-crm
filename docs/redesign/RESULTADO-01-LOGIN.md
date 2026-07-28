@@ -49,5 +49,23 @@ O commit `1b46fe6` (fundação CSS, mexe em `css/style.css` = telas internas) es
   (o `-m 1` mantém a linha do `main` anterior ao merge). Em seguida `git checkout dev`.
 - Também é possível reverter apenas o commit do Login: `git revert 2abb620` e republicar.
 
-## Evidência de PRODUÇÃO
-(preencher após ./deploy.sh — confirmar HTML e css/login.css novos sendo servidos em crm.edreng.com.br)
+## Evidência de PRODUÇÃO (deploy 2026-07-28)
+**Deploy:** `./deploy.sh` — merge `main`: `02d292d..beb1e02`. Cache buster: `1785254937`.
+
+Verificado por `curl` em `https://crm.edreng.com.br`:
+- `/` → **HTTP 200**, servindo o login NOVO: "Acessar operação", "Toda família tem", "Entrar no CRM", "Acesso restrito à equipe EDR", `css/login.css`. ✓
+- Vestígio do login antigo (`login-box`) = **0**. ✓
+- `/css/login.css` → **HTTP 200**, com as classes novas (`lg-wrap`, `lg-brand`, `lg-form-side`, `lg-btn`). ✓
+- `/img/edr-logo.svg` → **HTTP 200** (logo oficial servida). ✓
+- Cache buster aplicado: `css/login.css?cb=1785254937` (não ficou `cb=1`). ✓
+- IDs da auth no HTML publicado: `#form-login #email #senha #btn-entrar #login-erro #loading` — **todos presentes**. ✓
+- `/css/style.css` em produção **NÃO contém** `Plus+Jakarta+Sans` (= 0 ocorrências) → **fundação CSS não foi publicada**, como planejado. ✓
+
+**Telas internas não afetadas:** no diff do deploy, dashboard/clientes/kanban/lotes/agenda/ficha/familia tiveram **0 linhas** de mudança não-cache-buster. `css/style.css`, `js/auth.js`, `js/supabase.js` **não** entraram no deploy. ✓
+
+## Aceite funcional — PENDENTE (Duam/Elyda)
+Claude NÃO testou login real (não usa credencial). Falta o aceite humano:
+- [ ] Login com usuário correto → entra no Dashboard.
+- [ ] Senha errada → mensagem "E-mail ou senha não conferem".
+- [ ] Sessão existente → pula o login e vai direto ao Dashboard.
+- [ ] Visual em celular (o `@media` existe, mas não foi validado em aparelho real).
