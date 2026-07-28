@@ -232,38 +232,86 @@ button{font:inherit;cursor:pointer}
   padding:3px 9px;border-radius:999px;background:var(--paper);
   color:var(--muted);border:1px solid var(--line);
 }
-.triagem-resumo{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5}
-.triagem-body{display:flex;flex-direction:column;gap:11px}
-/* ⚠️ .triagem-bloco é uma LINHA rótulo/valor, não um separador de seção:
-   o JS gera <div class="triagem-bloco"><span class="triagem-label">Rótulo</span>
-   <strong>Valor</strong>...</div> — os filhos são IRMÃOS.
-   Sem display:flex o texto sai corrido ("Faixa calculadaFaixa 1"). */
+/* ── A Triagem é um RESUMO PARA DECIDIR O PRÓXIMO PASSO, não uma listagem.
+      Quatro partes com hierarquia clara (definido por Duam):
+      1. diagnóstico compacto (Faixa + Subsídio)
+      2. alerta de divergência, em faixa própria
+      3. pendências, em bloco com fundo suave
+      4. próximas ações, em bloco destacado
+      Tudo por CSS — o JS não é tocado. ─────────────────────────── */
+
+/* 1. DIAGNÓSTICO — linhas compactas, sem respiro sobrando */
+.triagem-resumo{margin-bottom:12px}
+.triagem-body{display:flex;flex-direction:column;gap:0}
+/* ⚠️ .triagem-bloco é uma LINHA rótulo/valor: o JS gera
+   <div class="triagem-bloco"><span class="triagem-label">Rótulo</span><strong>Valor</strong>…</div>
+   — os filhos são IRMÃOS. Sem display:flex o texto sai corrido. */
 .triagem-bloco{
   display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-  padding:8px 0;border-bottom:1px solid var(--line);
+  padding:5px 0;
 }
-.triagem-bloco:last-child{border-bottom:none}
-/* Rótulo à esquerda, largura fixa; valor e alertas à direita. */
 .triagem-bloco .triagem-label{
-  flex:0 0 148px;font:10px 'DM Mono',monospace;font-weight:500;
+  flex:0 0 132px;font:10px 'DM Mono',monospace;font-weight:500;
   letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
 }
-.triagem-bloco strong{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--ink)}
-/* Alerta que vem depois do valor (ex.: "cadastro: Faixa 2") não cola no texto. */
-.triagem-bloco > *:not(.triagem-label):not(strong){font-size:12.5px;color:var(--muted)}
-.triagem-checks{display:flex;flex-direction:column;gap:7px}
-.triagem-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
-.triagem-check-icone{flex-shrink:0;line-height:1.3}
-.triagem-label{flex:1;min-width:0}
-.triagem-grupo{margin-top:10px}
+.triagem-bloco strong{font-size:14px;font-weight:700;color:var(--ink)}
+
+/* 2. ALERTA DE DIVERGÊNCIA — o JS o gera como irmão do valor, na mesma linha.
+   `width:100%` faz o flex-wrap quebrá-lo para a linha de baixo, virando uma
+   faixa curta própria em vez de texto solto na ponta direita. */
+.triagem-bloco > span.text-sm{
+  width:100%;margin-top:5px;font-size:12px;
+  padding:6px 10px;border-radius:8px;
+  background:#fdf0dc;border:1px solid #f2ddbd;color:#8a4a10;
+}
+.triagem-bloco > span.text-sm.text-muted{background:var(--paper);border-color:var(--line);color:var(--muted)}
+
+/* 3. PENDÊNCIAS — cada grupo é um bloco com fundo suave e cor por gravidade */
+.triagem-checks{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.triagem-grupo{
+  padding:11px 13px;border-radius:var(--radius-sm);
+  background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--muted);
+}
 .triagem-grupo-titulo{
   font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:7px;
+  color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:7px;
 }
-.triagem-grupo-contagem{font-weight:500;color:var(--green)}
-.triagem-grupo-itens{display:flex;flex-direction:column;gap:5px;padding-left:3px}
-.triagem-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-.triagem-acoes-titulo{font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.triagem-grupo-contagem{
+  font-weight:500;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:1px 7px;font-size:9.5px;
+}
+.triagem-grupo-itens{display:flex;flex-direction:column;gap:5px}
+.triagem-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
+.triagem-check-icone{flex-shrink:0;line-height:1.35}
+/* Cor por gravidade — o JS marca cada grupo com data-tipo */
+.triagem-grupo[data-tipo="bloqueador"]{border-left-color:var(--vermelho);background:#fdf6f5;border-color:#f0c9c6}
+.triagem-grupo[data-tipo="risco"]{border-left-color:var(--vermelho);background:#fdf6f5;border-color:#f0c9c6}
+.triagem-grupo[data-tipo="operacional"]{border-left-color:var(--amarelo);background:#fdf9f2;border-color:#f2ddbd}
+.triagem-grupo[data-tipo="desvio"]{border-left-color:var(--azul);background:#f2f6fa;border-color:#d6e2ec}
+.triagem-grupo[data-tipo="positivo"]{border-left-color:var(--green);background:#f4faf5;border-color:#c6e0ce}
+
+/* 4. PRÓXIMAS AÇÕES — bloco próprio, mais destacado: é a saída do resumo.
+   ⚠️ O JS gera <li> dentro de <ul id="triagem-acoes">. */
+.triagem-acoes{
+  display:block;margin-top:12px;padding:13px 15px;
+  border-radius:var(--radius-sm);background:var(--lime-soft);
+  border:1px solid #cfe6a8;border-left:3px solid var(--green);
+}
+.triagem-acoes-titulo{
+  font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:#3f6b13;margin-bottom:8px;font-weight:500;
+}
+.triagem-acoes ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.triagem-acoes li{
+  position:relative;padding-left:17px;font-size:13.5px;
+  line-height:1.45;color:var(--ink);font-weight:600;
+}
+.triagem-acoes li::before{
+  content:'→';position:absolute;left:0;top:0;color:var(--green);font-weight:800;
+}
+/* Fora dos blocos de grupo, .triagem-label volta a ser texto simples
+   (o JS reusa a classe dentro de .triagem-check). */
+.triagem-check .triagem-label{flex:1;min-width:0;font:inherit;letter-spacing:normal;text-transform:none;color:inherit}
 
 /* ===================== DOCUMENTOS =====================
    ⚠️ CONTRATO: `doc-item status-${d.status}` — 6 valores.
