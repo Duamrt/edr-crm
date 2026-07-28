@@ -63,9 +63,14 @@ Verificado por `curl` em `https://crm.edreng.com.br`:
 
 **Telas internas não afetadas:** no diff do deploy, dashboard/clientes/kanban/lotes/agenda/ficha/familia tiveram **0 linhas** de mudança não-cache-buster. `css/style.css`, `js/auth.js`, `js/supabase.js` **não** entraram no deploy. ✓
 
-## Aceite funcional — PENDENTE (Duam/Elyda)
-Claude NÃO testou login real (não usa credencial). Falta o aceite humano:
-- [ ] Login com usuário correto → entra no Dashboard.
-- [ ] Senha errada → mensagem "E-mail ou senha não conferem".
-- [ ] Sessão existente → pula o login e vai direto ao Dashboard.
-- [ ] Visual em celular (o `@media` existe, mas não foi validado em aparelho real).
+## Aceite funcional — ACEITO por Duam (2026-07-28)
+Claude NÃO testou login real (não usa credencial). Aceite feito pelo Duam em produção:
+- [x] **Login com usuário correto → entrou no Dashboard.** Confirmado por Duam com acesso real em `crm.edreng.com.br` (print da tela publicada + relato de que o acesso funcionou).
+- [x] Visual em produção aprovado por Duam (desktop).
+- [ ] Senha errada → mensagem "E-mail ou senha não conferem". (não testado explicitamente; código preservado verbatim)
+- [ ] Sessão existente → pula o login. (não testado explicitamente; código preservado verbatim)
+- [ ] Visual em celular — `@media` existe no CSS, mas NÃO validado em aparelho real. Pendência aberta.
+
+**STATUS DO MÓDULO 1 (LOGIN): FECHADO.** Publicado, acesso real confirmado.
+
+**Comportamento esperado e correto:** apenas o Login mudou. Dashboard, Clientes, Kanban, Lotes, Agenda e Ficha continuam no visual antigo — é o desenho do processo (um módulo por vez), não um defeito.
