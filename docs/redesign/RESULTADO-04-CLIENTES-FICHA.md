@@ -84,6 +84,34 @@ os 6 status agora têm cor e borda próprias. Não era regressão — era lacuna
    como proteção, e a mesma regra foi aplicada a `dashboard.css`, `agenda.css` e `clientes.css`
    por consistência (nenhuma delas tinha o defeito, mas nenhuma tinha a proteção).
 
+### 🐛 Correção após validação de Duam com dados reais (2026-07-28)
+Duam abriu a Ficha real e **não aprovou o bloco de Triagem**: "Faixa calculada", "Faixa 1",
+o alerta de cadastro, "Subsídio" e a resposta apareciam **colados**, sem separação.
+
+**Causa (investigada, não suposta):** o JS gera cada linha como
+`<div class="triagem-bloco"><span class="triagem-label">Rótulo</span><strong>Valor</strong>…</div>`
+— rótulo e valor são **irmãos dentro do bloco**. Meu CSS tratou `.triagem-bloco` como
+*separador de seção* (só `padding-top` + borda) e `.triagem-label` como `flex:1`.
+Sem `display:flex` no bloco, tudo virou texto corrido.
+
+**Corrigido** conforme a sugestão de Duam — duas colunas, rótulo à esquerda e valor/alerta
+à direita —, **sem tocar no JavaScript**: a correção ficou inteira em `css/ficha.css`
+(`git status ficha.html` = 0 linhas).
+
+**Segundo defeito encontrado na mesma investigação:** o JS usa `var(--text-secondary)` em
+`style=` **inline**, e essa variável **não existia** no `css/ficha.css` — o texto "Confirmar
+com correspondente" ficava sem cor definida. Adicionada, junto com as demais variáveis do
+CSS antigo, por segurança.
+
+**Verificação estendida às 4 telas isoladas:** conferido que toda variável usada inline
+(por HTML ou JS) está definida no CSS correspondente. A Ficha era a única com lacuna.
+Comando: `grep -o "var(--[a-z-]*" <html> <js> | sort -u` × definições no CSS.
+
+## ⚠️ Console: 31 Issues (pendência aberta, NÃO investigada)
+No print de Duam o DevTools mostra **31 Issues** na Ficha. **Não é "console limpo".**
+Não foram investigados — podem ser avisos de terceiros, do navegador ou pré-existentes.
+**Não registrar esta tela como console limpo.** Avaliar em trilha própria.
+
 ## O que NÃO foi testado
 - **Ficha com dados reais:** a prévia usou dados falsos; falta o aceite de Duam logado.
 - **Ações:** salvar status, adicionar documento/impedimento/tarefa, abrir os modais,

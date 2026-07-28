@@ -26,6 +26,20 @@
   --vermelho:#d9473d; --amarelo:#d97706;
   --radius:16px; --radius-sm:12px;
   --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+
+  /* ⚠️ CONTRATO: o JS da Ficha usa estas variáveis em style= INLINE
+     (--azul, --amarelo, --text-secondary). Faltar uma = texto sem cor.
+     Verificar com: grep -o "var(--[a-z-]*" ficha.html | sort -u
+     As demais (--text-*, --surface, --border…) entram por segurança, caso
+     algum trecho do JS passe a usá-las. */
+  --text-primary:#17352a;
+  --text-secondary:#718176;
+  --text-tertiary:#9aa89d;
+  --surface:#fffefa;
+  --border:#dce2d8;
+  --bg:#f7f6ef;
+  --verde:#164b37;
+  --sombra:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -220,7 +234,23 @@ button{font:inherit;cursor:pointer}
 }
 .triagem-resumo{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5}
 .triagem-body{display:flex;flex-direction:column;gap:11px}
-.triagem-bloco{padding-top:11px;border-top:1px solid var(--line)}
+/* ⚠️ .triagem-bloco é uma LINHA rótulo/valor, não um separador de seção:
+   o JS gera <div class="triagem-bloco"><span class="triagem-label">Rótulo</span>
+   <strong>Valor</strong>...</div> — os filhos são IRMÃOS.
+   Sem display:flex o texto sai corrido ("Faixa calculadaFaixa 1"). */
+.triagem-bloco{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:8px 0;border-bottom:1px solid var(--line);
+}
+.triagem-bloco:last-child{border-bottom:none}
+/* Rótulo à esquerda, largura fixa; valor e alertas à direita. */
+.triagem-bloco .triagem-label{
+  flex:0 0 148px;font:10px 'DM Mono',monospace;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+.triagem-bloco strong{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--ink)}
+/* Alerta que vem depois do valor (ex.: "cadastro: Faixa 2") não cola no texto. */
+.triagem-bloco > *:not(.triagem-label):not(strong){font-size:12.5px;color:var(--muted)}
 .triagem-checks{display:flex;flex-direction:column;gap:7px}
 .triagem-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
 .triagem-check-icone{flex-shrink:0;line-height:1.3}
