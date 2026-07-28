@@ -227,11 +227,31 @@ button{font:inherit;cursor:pointer}
 .triagem-header{display:flex;align-items:center;gap:11px;margin-bottom:12px;flex-wrap:wrap}
 .triagem-icone{font-size:17px;line-height:1}
 .triagem-titulo{font-family:'Fraunces',serif;font-size:15.5px;font-weight:600;color:var(--ink);flex:1}
+/* ── VEREDITO DA TRIAGEM — é a primeira coisa que deve ser entendida ao abrir
+      a ficha. Antes era um selo pequeno e cinza, lido por último.
+      O JS aplica `triagem-status status-${statusCor}` (js/utils.js:599-624):
+        vermelho → BLOQUEADO           (não pode seguir)
+        amarelo  → APTO COM RESSALVA   (segue, mas tem o que resolver)
+        azul     → FORA DO MCMV        (rota SBPE — atendível, outro produto)
+        verde    → APTO                (segue limpo)
+      O texto vem como UMA string ("APTO COM RESSALVA · pendência operacional")
+      via textContent, então a hierarquia é feita por tamanho/cor, não por
+      quebra de linha — quebrar exigiria mexer na lógica. ── */
 .triagem-status{
-  font:9.5px 'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;
-  padding:3px 9px;border-radius:999px;background:var(--paper);
-  color:var(--muted);border:1px solid var(--line);
+  font:12.5px 'Plus Jakarta Sans',sans-serif;font-weight:800;
+  letter-spacing:.04em;text-transform:uppercase;
+  padding:8px 15px;border-radius:11px;
+  background:var(--paper);color:var(--ink);border:1px solid var(--line);
+  line-height:1.35;max-width:340px;text-align:right;
 }
+/* Âmbar sólido: pode seguir, mas tem pendência. É o caso mais comum. */
+.triagem-status.status-amarelo{background:#fdf0dc;border-color:#e8c88f;color:#8a4a10}
+/* Vermelho SÓ para bloqueado. */
+.triagem-status.status-vermelho{background:#fdeceb;border-color:#e8a9a3;color:#a5352d}
+/* Verde SÓ para apto sem ressalva. */
+.triagem-status.status-verde{background:var(--lime-soft);border-color:#bcd992;color:#3f6b13}
+/* Azul: fora do MCMV (rota SBPE) — informativo, não é erro. */
+.triagem-status.status-azul{background:#eaf1f7;border-color:#b8cee0;color:#2b5b80}
 /* ── A Triagem é um RESUMO PARA DECIDIR O PRÓXIMO PASSO, não uma listagem.
       Quatro partes com hierarquia clara (definido por Duam):
       1. diagnóstico compacto (Faixa + Subsídio)
