@@ -43,7 +43,8 @@ Memória do agente NÃO é registro oficial. O registro oficial é esta pasta `d
 
 ## Referências
 - Protótipo navegável das 5 telas: `C:\Users\Duam Rodrigues\Downloads\prototipo-crm-navegavel.html`
-- Referência visual do Login: `C:\Users\Duam Rodrigues\.codex\generated_images\019f8a8f-08be-79a3-ad7b-e65e9f97cd0b\exec-d0dcc4a4-75c0-4d4a-aef0-5ba41d87d39d.png`
-- Logo oficial (SVG, usar original): `C:\Users\Duam Rodrigues\Downloads\EDR LOGO preto.svg`
+- **Referência visual do Login (versionada no repo):** `docs/redesign/assets/login-referencia.png`
+- **Logo oficial (versionada no repo):** `img/edr-logo.svg`
+- Fonte externa da referência (máquina do Duam, pode sumir): `C:\Users\Duam Rodrigues\.codex\generated_images\019f8a8f-08be-79a3-ad7b-e65e9f97cd0b\exec-d0dcc4a4-75c0-4d4a-aef0-5ba41d87d39d.png`
 
 **Nota de portabilidade:** esses caminhos são da máquina pessoal do Duam. Antes de implementar cada módulo, os assets necessários (logo, imagens de referência) devem ser COPIADOS para dentro do repo (ex.: `img/`, `docs/redesign/assets/`) para que fiquem versionados e o CRM publicado consiga encontrá-los. Não referenciar pasta pessoal em código de produção.

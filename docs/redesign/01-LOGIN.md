@@ -4,6 +4,8 @@
 **Status:** documentação + protótipo. NÃO implementado no CRM real. NÃO deployado.
 **Arquivo real alvo:** `index.html` (raiz do repo edr-crm)
 **Protótipo:** `C:\Users\Duam Rodrigues\Downloads\prototipo-login.html`
+**Referência visual (versionada):** `docs/redesign/assets/login-referencia.png`
+**Logo oficial (versionada):** `img/edr-logo.svg`
 
 ## Objetivo
 Substituir a aparência genérica do login atual (card branco central "EDR CRM / Gestão MCMV") pela nova identidade "operação / construção civil", conforme referência aprovada por Duam. Split-screen: lado claro (marca) + lado verde escuro (formulário).
