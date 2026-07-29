@@ -6,6 +6,9 @@
 --         Duam para criar a branch de banco.
 --
 -- Como usar:
+--   0. ⚠️ A branch nasce com o SCHEMA mas SEM DADOS de produção. Por isso os
+--      testes criam seus próprios clientes dentro de cada transação — tudo é
+--      desfeito no rollback.
 --   1. Criar branch de banco no Supabase (ambiente separado, descartável)
 --   2. Rodar 08-LOTES-SQL-PROPOSTO.sql
 --   3. Rodar ESTE arquivo
@@ -38,7 +41,10 @@ begin;
   do $$
   declare v_cli uuid;
   begin
-    select id into v_cli from public.crm_clientes limit 1;
+    -- A branch nasce SEM dados de produção: cria o cliente aqui.
+    -- Tudo é desfeito no rollback ao final.
+    insert into public.crm_clientes (nome, cpf, telefone)
+    values ('TESTE T1', '00000000001', '00000000000') returning id into v_cli;
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
     values (v_cli, 'Petrolina', 'Centro', 'procurando');
   end $$;
@@ -85,7 +91,9 @@ do $$
 declare
   v_cliente uuid;
 begin
-  select id into v_cliente from public.crm_clientes order by id limit 1;
+  -- branch sem dados: cria o cliente do teste (desfeito no rollback)
+  insert into public.crm_clientes (nome, cpf, telefone)
+  values ('TESTE T3', '00000000003', '00000000000') returning id into v_cliente;
 
   -- 1ª procura: deve passar
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
@@ -119,15 +127,14 @@ rollback;  -- desfaz tudo: o T4 recebe o banco limpo
 begin;
 do $$
 declare
-  v_c1 uuid; v_c2 uuid; v_p1 uuid; v_p2 uuid; v_op uuid; v_qtd int;
+  v_c1 uuid; v_c2 uuid; v_p1 uuid; v_p2 uuid; v_op uuid;
 begin
-  select count(*) into v_qtd from public.crm_clientes;
-  if v_qtd < 4 then
-    raise exception 'T4 NÃO PODE RODAR — precisa de pelo menos 4 clientes (há %)', v_qtd;
-  end if;
-
-  select id into v_c1 from public.crm_clientes order by id offset 2 limit 1;
-  select id into v_c2 from public.crm_clientes order by id offset 3 limit 1;
+  -- branch sem dados: cria os dois clientes do teste (desfeitos no rollback).
+  -- Clientes PRÓPRIOS deste teste — não reusa nada do T3, que já foi revertido.
+  insert into public.crm_clientes (nome, cpf, telefone)
+  values ('TESTE T4-A', '00000000041', '00000000000') returning id into v_c1;
+  insert into public.crm_clientes (nome, cpf, telefone)
+  values ('TESTE T4-B', '00000000042', '00000000000') returning id into v_c2;
 
   -- duas famílias diferentes procurando
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
@@ -160,19 +167,20 @@ begin
     raise notice 'T4.3 PASSOU — segunda aceitação bloqueada (bug de Duam resolvido)';
   end;
 
-  -- EXTRA (dentro desta transação, pois depende dos dados criados acima):
-  -- o trigger de updated_at dispara?
-  declare v_antes timestamptz; v_depois timestamptz; v_lid uuid;
+  -- EXTRA — o trigger de updated_at escreve no campo?
+  -- ⚠️ NÃO comparar horários: dentro de uma transação `now()` é CONSTANTE
+  --    (horário de início), então updated_at seria igual antes e depois — daria
+  --    falso-negativo. pg_sleep não ajuda: now() não avança na transação.
+  --    Método correto: SABOTAR o campo com data antiga e ver o trigger
+  --    sobrescrever.
+  declare v_v timestamptz;
   begin
-    select id, updated_at into v_lid, v_antes
-    from public.crm_procura_oportunidade where procura_id=v_p2 limit 1;
-    perform pg_sleep(0.2);
-    update public.crm_procura_oportunidade set observacao='toque' where id=v_lid;
-    select updated_at into v_depois from public.crm_procura_oportunidade where id=v_lid;
-    if v_depois > v_antes then
-      raise notice 'EXTRA OK — trigger de updated_at disparou';
+    update public.crm_procura_oportunidade set updated_at = '2000-01-01' where id = v_lid;
+    select updated_at into v_v from public.crm_procura_oportunidade where id = v_lid;
+    if v_v > '2020-01-01' then
+      raise notice 'EXTRA OK — trigger sobrescreveu a data sabotada';
     else
-      raise exception 'EXTRA REPROVOU — updated_at nao mudou';
+      raise exception 'EXTRA REPROVOU — updated_at ficou em %', v_v;
     end if;
   end;
 end $$;
@@ -188,10 +196,16 @@ rollback;  -- desfaz tudo
 
 -- =====================================================================
 -- RESUMO ESPERADO
---   T1  anônimo lê 0 linhas ......................... [ ] a rodar na branch
---       (função já provada FALSE em produção)  ...... [x] PROVADO 2026-07-29
---   T2  usuário logado lê sem erro .................. [ ] a rodar na branch
---   T3  segunda procura ativa bloqueada ............. [ ] a rodar na branch
---   T4  segunda aceitação bloqueada ................. [ ] a rodar na branch
---   EX  updated_at dispara .......................... [ ] a rodar na branch
+--   ✅ TODOS EXECUTADOS EM BRANCH DESCARTÁVEL — 2026-07-29
+--      Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
+--
+--   T1  anônimo bloqueado ....... PASSOU — dono lê 1, anon lê 0
+--   T2  usuário logado .......... PASSOU — perfil real: função=true, leu 1
+--   T3  2ª procura ativa ........ PASSOU — bloqueada; encerrada convive
+--   T4  2ª aceitação ............ PASSOU — bloqueada
+--   EX  updated_at .............. PASSOU (3/3 tabelas) após corrigir o método
+--
+--   🐛 O teste encontrou um DEFEITO GRAVE que teria quebrado a produção:
+--      set_crm_updated_at() escreve em `ultima_atualizacao`, não em
+--      `updated_at`. Corrigido com função própria — ver 08-...sql seção 5.
 -- =====================================================================

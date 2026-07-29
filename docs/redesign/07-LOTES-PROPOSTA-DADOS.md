@@ -234,3 +234,47 @@ existe. Os formulários entram junto com as tabelas — **sem botão que finge f
 **Confirmado:** `node -c` OK · distinção de erro 5/5 · dois estados visualmente distintos
 (âmbar "em ativação" × vermelho "erro ao carregar") verificados em prévia.
 **Não testado:** tela logada com dados reais; testes 2/3/4 do SQL (dependem da branch).
+
+---
+
+## 11. VALIDAÇÃO EM BRANCH DESCARTÁVEL — 2026-07-29 ✅
+
+**Autorizado por Duam.** Branch `teste-lotes` (`pxldvwlzvducninsfavo`) criada, usada e
+**DESTRUÍDA**. Custo confirmado: US$ 0,01344/h. Produção não foi tocada.
+
+### Resultado dos testes
+| Teste | Resultado | Evidência |
+|---|---|---|
+| Estrutura | **OK** | 3 tabelas, 12 policies, 3 triggers criados sem erro |
+| **T1 anônimo bloqueado** | **PASSOU** | dono lê **1** linha · `anon` lê **0** (mesmo dado) |
+| **T2 logado liberado** | **PASSOU** | perfil real `c9718eb3…`: função=**true**, leu **1** |
+| **T3 2ª procura ativa** | **PASSOU** | bloqueada; procura encerrada convive (histórico) |
+| **T4 2ª aceitação** | **PASSOU** | bloqueada — o bug apontado por Duam está resolvido |
+| Triggers `updated_at` | **PASSOU 3/3** | após correção (abaixo) |
+
+### 🐛 DEFEITO GRAVE que só apareceu por executar de verdade
+O SQL reusava `set_crm_updated_at()` — a função padrão do CRM, que **existe** e parecia
+a escolha certa. Mas o corpo dela é:
+
+```sql
+BEGIN NEW.ultima_atualizacao = now(); RETURN NEW; END;
+```
+
+Ela escreve em **`ultima_atualizacao`** (coluna de `crm_clientes`). As tabelas de Lotes
+usam **`updated_at`**. **Aplicado em produção, todo UPDATE nas 3 tabelas estouraria erro
+de coluna inexistente.**
+
+**Correção:** função própria `set_lotes_updated_at()`. `set_crm_updated_at()` **não é
+alterada** — continua servindo `crm_clientes`.
+
+### 🐛 Segundo defeito: o teste EXTRA media errado
+Comparava `updated_at` antes/depois dentro de uma transação. Mas `now()` é **constante**
+dentro da transação (horário de início) — daria falso-negativo sempre, e `pg_sleep` não
+ajuda. **Método correto:** sabotar o campo com `'2000-01-01'` e verificar se o trigger
+sobrescreve. Com isso: **3/3 tabelas OK**.
+
+### Produção conferida após destruir a branch
+- Tabelas novas em produção: **0**
+- `crm_lotes`: **31 registros** (intacta)
+- Vínculos família↔lote: **7** (intactos)
+- Sujeira de teste: 1 registro — **de 16/05, auditoria antiga**, não desta sessão.

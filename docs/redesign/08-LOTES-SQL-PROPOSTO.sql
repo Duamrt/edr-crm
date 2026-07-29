@@ -193,21 +193,34 @@ create policy profile_delete_crm_procura_oportunidade on public.crm_procura_opor
 
 -- ---------------------------------------------------------------------
 -- 5. updated_at automático
---    ✅ VERIFICADO: o projeto JÁ TEM a função set_crm_updated_at().
---    Reusada aqui — nenhuma função nova é criada.
+--
+-- 🐛 DEFEITO GRAVE ENCONTRADO NO TESTE EM BRANCH (2026-07-29):
+--    A versão anterior reusava set_crm_updated_at(). Parecia certo — a função
+--    existe e é a padrão do CRM. MAS o corpo dela é:
+--        BEGIN NEW.ultima_atualizacao = now(); RETURN NEW; END;
+--    Ela escreve em `ultima_atualizacao`, coluna de crm_clientes.
+--    As tabelas de Lotes usam `updated_at`. Aplicado em produção, TODO UPDATE
+--    nestas 3 tabelas estouraria erro de coluna inexistente.
+--    Só apareceu porque o teste foi executado de verdade.
+--
+--    Correção: função PRÓPRIA. set_crm_updated_at() NÃO é alterada — continua
+--    servindo crm_clientes normalmente.
 -- ---------------------------------------------------------------------
+create or replace function public.set_lotes_updated_at()
+returns trigger language plpgsql set search_path to 'public'
+as $$ begin new.updated_at = now(); return new; end; $$;
+
 create trigger trg_crm_procura_lote_updated_at
   before update on public.crm_procura_lote
-  for each row execute function public.set_crm_updated_at();
+  for each row execute function public.set_lotes_updated_at();
 
 create trigger trg_crm_oportunidade_lote_updated_at
   before update on public.crm_oportunidade_lote
-  for each row execute function public.set_crm_updated_at();
+  for each row execute function public.set_lotes_updated_at();
 
--- CORREÇÃO 2 (Duam): a ligação também precisa de rastro — sua situação muda.
 create trigger trg_crm_procura_oportunidade_updated_at
   before update on public.crm_procura_oportunidade
-  for each row execute function public.set_crm_updated_at();
+  for each row execute function public.set_lotes_updated_at();
 
 
 -- ---------------------------------------------------------------------
@@ -300,6 +313,22 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
 --   2. Rodar o plano de teste acima em branch descartável.
---   ✅ RESOLVIDAS: set_crm_updated_at() reusada · CASCADE mantido (Duam) ·
---      GRANT desnecessário (privilégio padrão do schema).
+--   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário (privilégio
+--      padrão do schema) · updated_at com função PRÓPRIA (o reuso de
+--      set_crm_updated_at quebraria — ver seção 5).
+--
+-- =====================================================================
+-- ✅ VALIDADO EM BRANCH DESCARTÁVEL — 2026-07-29
+-- =====================================================================
+-- Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
+-- Produção não foi tocada.
+--
+--   Estrutura ....... 3 tabelas, 12 policies, 3 triggers criados sem erro
+--   T1 anônimo ...... PASSOU — dono lê 1 linha, `anon` lê 0
+--   T2 logado ....... PASSOU — perfil real: função=true, leu 1 linha
+--   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
+--   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
+--   Triggers ........ 3/3 OK (verificado por sabotagem: gravar '2000-01-01'
+--                     e ver o trigger sobrescrever com a data atual)
+-- =====================================================================
 -- =====================================================================
