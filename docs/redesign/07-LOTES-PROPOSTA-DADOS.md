@@ -369,7 +369,7 @@ migrations de CRM. Elas são autossuficientes (só dependem de `auth.users`, `au
 | Estrutura | **OK** | 3 tabelas · dono `postgres` · RLS ativa · 4 policies e 1 trigger por tabela |
 | **GRANT** | **PROVADO** | `has_table_privilege` = true para `anon` **e** `authenticated` (SELECT/INSERT/UPDATE/DELETE), **sem GRANT escrito** — o default ACL aplicou |
 | **T1 anônimo** | **PASSOU** | dono lê **1** · `anon` lê **0**, mesmo dado |
-| **T2 logado** | **PASSOU só na LEITURA** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0**. ⚠️ INSERT/UPDATE/DELETE **não testados** — ver achado 7 |
+| **T2 logado** | **PASSOU só no SELECT de `crm_procura_lote`** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0**. ⚠️ **1 de 12 policies** — ver achados 7 e 8 |
 | **T3 2ª procura ativa** | **PASSOU** | bloqueada; encerrada convive |
 | **T4 2ª aceitação** | **PASSOU** | bloqueada |
 | **Triggers `updated_at`** | **PASSOU 3/3** | `EXTRA 1/3`, `2/3`, `3/3` — agora de verdade nas 3 tabelas |
@@ -413,16 +413,45 @@ a linha continua lá: sem ela, "removeu 0" poderia significar "não havia nada".
 
 **Esta ampliação AINDA NÃO FOI EXECUTADA.**
 
+### 🐛 Oitavo achado: a ampliação ainda não cobria as 3 tabelas (Codex, 2026-07-29)
+
+A primeira ampliação media **leitura** em `crm_procura_lote` e **escrita** em
+`crm_oportunidade_lote`, e nunca tocava `crm_procura_oportunidade`. Testar coisas
+diferentes em tabelas diferentes dá **aparência** de cobertura sem cobertura: eram 4
+policies de 12, não as 12.
+
+**Correção:** o T2 virou uma **matriz** — um loop percorre as 3 tabelas aplicando as
+mesmas 4 operações, com as 2 identidades, e confere no fim que o dado do setup
+sobreviveu. São 29 vereditos. O loop é proposital: foi escrevendo blocos à mão que a
+divergência apareceu; percorrer as três com o mesmo código torna o descuido impossível.
+
+Dois cuidados que o teste precisou ter:
+- **`crm_procura_oportunidade` não existe sozinha** — são 2 FKs obrigatórias. O setup
+  monta a cadeia inteira: cliente → procura → oportunidade → ligação.
+- **O insert de teste da procura usa `situacao='atendida'`** de propósito. O índice único
+  parcial do T3 só cobre situações *ativas*; com `'procurando'` o teste bateria na regra
+  de negócio e eu leria "REPROVOU" achando que era a policy.
+
+### Cobertura real de policies hoje
+
+| Tabela | SELECT | INSERT | UPDATE | DELETE |
+|---|:--:|:--:|:--:|:--:|
+| `crm_procura_lote` | ✅ | ❌ | ❌ | ❌ |
+| `crm_oportunidade_lote` | ❌ | ❌ | ❌ | ❌ |
+| `crm_procura_oportunidade` | ❌ | ❌ | ❌ | ❌ |
+
+**1 de 12 provada.** O que a execução em `lotes-v2` confirmou é que as 12 policies
+**existem** e estão ativas — não que cada uma se comporta como deve.
+
 ### O que continua NÃO testado
-- **CRUD autenticado** — `INSERT`/`UPDATE`/`DELETE` como usuário com perfil. **Pendente de
-  nova branch descartável**
+- **CRUD autenticado nas 3 tabelas** — 11 das 12 policies. **Pendente de nova branch**
 - A tela `lotes.html` contra estas tabelas com dado real
 - Os formulários de cadastro de procura/oportunidade — **não existem ainda**
 - Qualquer coisa em celular
 
 ### Pendências para produção
 1. **Definir a lista de cidades/regiões** — decisão de negócio de Duam
-2. **Provar o CRUD autenticado** em nova branch, com o T2 ampliado
+2. **Provar as 12 policies** em nova branch, com o T2 em matriz
 
 O banco está provado na estrutura, no bloqueio de anônimo, nas regras de negócio (índices
-únicos parciais) e nos triggers. **Falta provar a escrita autenticada.**
+únicos parciais) e nos triggers. **Falta provar o comportamento das policies de escrita.**
