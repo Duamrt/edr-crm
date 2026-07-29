@@ -625,3 +625,91 @@ futura, se você preferir.
   garantido; agora diz que combina por cidade e valor, e considera a região quando ela
   existe.
 - A listagem de oportunidades já tratava região ausente corretamente — não precisou mudar.
+
+---
+
+## 15. FORMULÁRIOS DE CADASTRO — interface local — 2026-07-29
+
+Dois modais em `lotes.html`. **Só interface: não gravam nada.**
+
+**Decisão de ordem (Duam):** construir e validar a experiência de cadastro **antes** de
+aplicar o SQL em produção. O contrário — criar estrutura real só para "ter onde testar" —
+levaria a ajustar schema por causa de detalhe visual.
+
+### Modal 1 — Registrar procura
+
+| Campo | Tipo | Obrigatório | Observação |
+|---|---|:--:|---|
+| Família | `select` | **sim** | famílias ativas de `crm_clientes` |
+| Cidade | `select` | **sim** | **lista fixa** — Jupi · Garanhuns · Lajedo · Jucati |
+| Região / bairro | texto | não | livre, `maxlength=60`. Dica: *"Deixe vazio se não souber."* |
+| Valor máximo | número | não | passo de 100 |
+| Metragem desejada | número | não | m² |
+| Preferências | texto | não | esquina, perto de escola… |
+| Próxima ação | texto | não | |
+| Prazo da ação | data | não | |
+| Observação | textarea | não | `maxlength=500` |
+
+### Modal 2 — Captar oportunidade
+
+| Campo | Tipo | Obrigatório | Observação |
+|---|---|:--:|---|
+| Descrição | texto | **sim** | "Lote na Rua X, ao lado do nº 40" |
+| Cidade | `select` | **sim** | **mesma lista fixa** |
+| Região / bairro | texto | não | livre |
+| Valor pedido | número | não | |
+| Metragem | número | não | |
+| Origem | texto | não | quem ofereceu / onde foi encontrado |
+| Observação | textarea | não | |
+
+### Regra das cidades no código
+
+```js
+const CIDADES = ['Jupi', 'Garanhuns', 'Lajedo', 'Jucati']
+```
+
+Controlada na **aplicação**: cidade nova entra editando essa linha, sem migration.
+É o que torna a cidade *controlada* — o usuário **escolhe**, não digita. Região continua
+texto livre, sem lista.
+
+### Por que os botões Salvar estão travados
+
+Ficam `disabled` com o aviso **"Disponível após ativação da estrutura"**, e **não têm
+handler de gravação nenhum**. Isso é proposital: sem as tabelas, não há o que gravar, e um
+handler que apenas mostrasse "em breve" seria um botão fingindo funcionar. O código de
+escrita entra junto com a autorização do SQL em produção.
+
+Os modais **abrem e podem ser preenchidos** — dá para conferir o desenho, a ordem dos
+campos e o comportamento dos selects. O que está travado é só a gravação.
+
+`desabilitarCadastro()` controla os dois botões do topo **e** os dois Salvar pelo mesmo
+estado, então quando as tabelas existirem tudo destrava junto.
+
+### CSS
+
+Escrito em `css/lotes.css` (`.lt-modal-*`, `.lt-campo`, `.lt-grid2`), **não importado de
+`css/style.css`** — esta tela é isolada por decisão do redesenho, e importar o CSS global
+traria a identidade antiga junto.
+
+### O que foi verificado
+
+| Verificação | Resultado |
+|---|---|
+| Sintaxe JS (parser) | 2 scripts inline, **OK** |
+| IDs duplicados | **nenhum** (41 ids) |
+| `getElementById` sem elemento | **nenhum** — 17/17 têm alvo |
+| Lista de cidades | confere com a decisão |
+| Handler de gravação nos Salvar | **não existe** (correto) |
+| `disabled` no HTML | presente nos dois |
+
+### ⚠️ O que NÃO foi verificado
+
+**A renderização.** Tentei abrir a tela no navegador e não consegui: `localhost` está
+bloqueado por política no painel, e o acesso por `file://` deu timeout duas vezes seguidas
+(300s cada), deixando a aba vazia. **Ninguém viu os modais abertos.**
+
+Portanto seguem sem prova visual: o layout dos campos, a grade de duas colunas, o
+espaçamento, o comportamento em tela pequena, e se o modal abre de fato ao clicar —
+embora os botões do topo só destravem quando as tabelas existirem, o que hoje **não**
+acontece. Na prática, **hoje não há como abrir os modais pela interface**: eles só
+destravam com a estrutura no banco.

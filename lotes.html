@@ -98,6 +98,136 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL 1 — REGISTRAR PROCURA
+       Interface local (2026-07-29). NÃO grava: o botão Salvar fica
+       desabilitado até as tabelas existirem no banco. Ver docs/redesign/07.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div id="modal-procura" class="lt-modal-overlay hidden" onclick="if(event.target===this)fecharModal('modal-procura')">
+    <div class="lt-modal" role="dialog" aria-modal="true" aria-labelledby="mp-titulo">
+      <div class="lt-modal-head">
+        <div>
+          <span class="lt-modal-titulo" id="mp-titulo">Registrar procura</span>
+          <span class="lt-modal-sub">Família que está atrás de um lote</span>
+        </div>
+        <button class="lt-modal-close" type="button" onclick="fecharModal('modal-procura')" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="lt-modal-body">
+        <div class="lt-campo">
+          <label for="mp-cliente">Família <span class="lt-obrig">*</span></label>
+          <select id="mp-cliente"><option value="">Selecione…</option></select>
+          <span class="lt-campo-dica">Só entra na fila quem manifestou interesse real.</span>
+        </div>
+
+        <div class="lt-grid2">
+          <div class="lt-campo">
+            <label for="mp-cidade">Cidade <span class="lt-obrig">*</span></label>
+            <select id="mp-cidade"><option value="">Selecione…</option></select>
+          </div>
+          <div class="lt-campo">
+            <label for="mp-regiao">Região / bairro</label>
+            <input type="text" id="mp-regiao" placeholder="opcional" maxlength="60">
+            <span class="lt-campo-dica">Deixe vazio se não souber.</span>
+          </div>
+
+          <div class="lt-campo">
+            <label for="mp-valor">Valor máximo</label>
+            <input type="number" id="mp-valor" min="0" step="100" placeholder="R$">
+          </div>
+          <div class="lt-campo">
+            <label for="mp-metragem">Metragem desejada</label>
+            <input type="number" id="mp-metragem" min="0" step="1" placeholder="m²">
+          </div>
+
+          <div class="lt-campo lt-full">
+            <label for="mp-preferencias">Preferências</label>
+            <input type="text" id="mp-preferencias" placeholder="esquina, perto de escola, sem aclive…" maxlength="200">
+          </div>
+
+          <div class="lt-campo">
+            <label for="mp-acao">Próxima ação</label>
+            <input type="text" id="mp-acao" placeholder="ligar para confirmar…" maxlength="120">
+          </div>
+          <div class="lt-campo">
+            <label for="mp-prazo">Prazo da ação</label>
+            <input type="date" id="mp-prazo">
+          </div>
+
+          <div class="lt-campo lt-full">
+            <label for="mp-obs">Observação</label>
+            <textarea id="mp-obs" maxlength="500" placeholder="contexto que ajude depois"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="lt-modal-foot">
+        <span class="lt-foot-aviso" id="mp-aviso">Disponível após ativação da estrutura</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal('modal-procura')">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="mp-salvar" disabled>Salvar procura</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL 2 — CAPTAR OPORTUNIDADE
+       ═══════════════════════════════════════════════════════════════ -->
+  <div id="modal-oport" class="lt-modal-overlay hidden" onclick="if(event.target===this)fecharModal('modal-oport')">
+    <div class="lt-modal" role="dialog" aria-modal="true" aria-labelledby="mo-titulo">
+      <div class="lt-modal-head">
+        <div>
+          <span class="lt-modal-titulo" id="mo-titulo">Captar oportunidade</span>
+          <span class="lt-modal-sub">Lote real que apareceu no mercado</span>
+        </div>
+        <button class="lt-modal-close" type="button" onclick="fecharModal('modal-oport')" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="lt-modal-body">
+        <div class="lt-campo">
+          <label for="mo-descricao">Descrição <span class="lt-obrig">*</span></label>
+          <input type="text" id="mo-descricao" placeholder="Lote na Rua X, ao lado do nº 40" maxlength="200">
+          <span class="lt-campo-dica">Como reconhecer esse lote depois.</span>
+        </div>
+
+        <div class="lt-grid2">
+          <div class="lt-campo">
+            <label for="mo-cidade">Cidade <span class="lt-obrig">*</span></label>
+            <select id="mo-cidade"><option value="">Selecione…</option></select>
+          </div>
+          <div class="lt-campo">
+            <label for="mo-regiao">Região / bairro</label>
+            <input type="text" id="mo-regiao" placeholder="opcional" maxlength="60">
+          </div>
+
+          <div class="lt-campo">
+            <label for="mo-valor">Valor pedido</label>
+            <input type="number" id="mo-valor" min="0" step="100" placeholder="R$">
+          </div>
+          <div class="lt-campo">
+            <label for="mo-metragem">Metragem</label>
+            <input type="number" id="mo-metragem" min="0" step="1" placeholder="m²">
+          </div>
+
+          <div class="lt-campo lt-full">
+            <label for="mo-origem">Origem</label>
+            <input type="text" id="mo-origem" placeholder="quem ofereceu / onde foi encontrado" maxlength="120">
+          </div>
+
+          <div class="lt-campo lt-full">
+            <label for="mo-obs">Observação</label>
+            <textarea id="mo-obs" maxlength="500" placeholder="contexto que ajude depois"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="lt-modal-foot">
+        <span class="lt-foot-aviso" id="mo-aviso">Disponível após ativação da estrutura</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal('modal-oport')">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="mo-salvar" disabled>Salvar oportunidade</button>
+      </div>
+    </div>
+  </div>
+
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
   <script src="js/supabase.js?cb=1"></script>
@@ -122,6 +252,14 @@
     let _procuras = []
     let _oportunidades = []
     let _estruturaPronta = false
+    let _clientes = []
+
+    // ── LISTA FIXA DE CIDADES (decisão de Duam, 2026-07-29) ─────────
+    // Controlada na APLICAÇÃO, não no banco: entra cidade nova editando
+    // esta linha, sem migration. Região/bairro NÃO tem lista — é texto
+    // livre e opcional, porque não existe lista real de bairros e campo
+    // obrigatório faria o usuário inventar valor só para salvar.
+    const CIDADES = ['Jupi', 'Garanhuns', 'Lajedo', 'Jucati']
 
     // ── Data legível: "em 4 dias" ou "02 ago" ───────────────────────
     // Exigência de Duam: nunca "02/08" solto — vira ambíguo na virada do ano.
@@ -196,13 +334,78 @@
       console.error('Lotes — falha ao carregar:', err)
     }
 
+    const MSG_BLOQUEIO = 'Disponível após ativação da estrutura'
+
     function desabilitarCadastro(desabilitar) {
       ;['btn-nova-procura','btn-nova-oportunidade'].forEach(id => {
         const b = document.getElementById(id)
         b.disabled = desabilitar
-        b.title = desabilitar ? 'Disponível após ativação da estrutura' : ''
+        b.title = desabilitar ? MSG_BLOQUEIO : ''
       })
       document.getElementById('aviso-cadastro').classList.toggle('hidden', !desabilitar)
+
+      // Os botões de SALVAR dos modais seguem o mesmo estado. O modal pode
+      // ser aberto e preenchido para conferir o desenho; o que fica travado
+      // é a gravação — não existe tabela para receber.
+      ;[['mp-salvar','mp-aviso'], ['mo-salvar','mo-aviso']].forEach(([bId, aId]) => {
+        const b = document.getElementById(bId)
+        b.disabled = desabilitar
+        b.title = desabilitar ? MSG_BLOQUEIO : ''
+        document.getElementById(aId).classList.toggle('hidden', !desabilitar)
+      })
+    }
+
+    // ── MODAIS ──────────────────────────────────────────────────────
+    // Padrão V2: remover 'hidden' para abrir. Só isso — o CSS desta tela
+    // usa .lt-modal-overlay{display:flex} e .hidden{display:none}.
+    function abrirModal(id) {
+      document.getElementById(id).classList.remove('hidden')
+      document.body.style.overflow = 'hidden'
+    }
+    function fecharModal(id) {
+      document.getElementById(id).classList.add('hidden')
+      document.body.style.overflow = ''
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return
+      ;['modal-procura','modal-oport'].forEach(id => {
+        const el = document.getElementById(id)
+        if (!el.classList.contains('hidden')) fecharModal(id)
+      })
+    })
+
+    // Preenche os selects de cidade a partir da lista fixa. É o que torna
+    // a cidade "controlada": o usuário escolhe, não digita.
+    function montarSelectsCidade() {
+      ;['mp-cidade','mo-cidade'].forEach(id => {
+        const sel = document.getElementById(id)
+        CIDADES.forEach(c => {
+          const o = document.createElement('option')
+          o.value = c; o.textContent = c
+          sel.appendChild(o)
+        })
+      })
+    }
+
+    // Famílias para o select do modal de procura. Falha aqui NÃO é erro de
+    // tela: sem estrutura, o cadastro está travado de qualquer forma.
+    async function carregarClientes() {
+      try {
+        _clientes = await sbGet('crm_clientes',
+          '?select=id,nome&deleted_at=is.null&order=nome.asc') || []
+      } catch (err) {
+        _clientes = []
+        console.warn('Lotes — não foi possível listar famílias:', err)
+      }
+      const sel = document.getElementById('mp-cliente')
+      _clientes.forEach(c => {
+        const o = document.createElement('option')
+        o.value = c.id; o.textContent = c.nome
+        sel.appendChild(o)
+      })
+      if (!_clientes.length) {
+        sel.options[0].textContent = '(nenhuma família encontrada)'
+      }
     }
 
     async function carregar() {
@@ -375,7 +578,18 @@
     // Os botões nascem desabilitados e só são liberados quando as tabelas
     // respondem (ver desabilitarCadastro). Sem alert, sem botão que finge
     // funcionar — o próprio estado do botão comunica.
+    document.getElementById('btn-nova-procura')
+      .addEventListener('click', () => abrirModal('modal-procura'))
+    document.getElementById('btn-nova-oportunidade')
+      .addEventListener('click', () => abrirModal('modal-oport'))
 
+    // ⚠️ Os botões Salvar NÃO têm listener de gravação. Isso é proposital:
+    // enquanto as tabelas não existirem, não há o que gravar, e um handler
+    // que só mostra "em breve" seria um botão fingindo funcionar. O código
+    // de escrita entra junto com a autorização do SQL em produção.
+
+    montarSelectsCidade()
+    carregarClientes()
     carregar()
   </script>
   <script src="js/sw-register.js?cb=1"></script>
