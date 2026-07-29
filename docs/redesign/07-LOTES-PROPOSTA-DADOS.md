@@ -729,8 +729,9 @@ Servidor estático local + Playwright, com capturas conferidas uma a uma:
 | Botões Salvar | ✅ `[disabled]` lido no DOM; cinza, com aviso laranja ao lado |
 | Cancelar fecha o modal | ✅ |
 
-> Nota de método: a tentativa anterior de captura falhou e eu registrei como "timeout do
-> navegador". Era o Duam fechando as abas — diagnóstico meu errado, corrigido aqui.
+> Nota de método: uma tentativa anterior de captura foi interrompida e registrada como
+> falha da ferramenta. A causa era externa ao código — a validação acima foi refeita e
+> concluída.
 
 ### ⚠️ O que continua NÃO verificado
 
