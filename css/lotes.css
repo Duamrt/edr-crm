@@ -281,3 +281,23 @@ thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-
   .lt-modal-foot{flex-direction:column-reverse;align-items:stretch}
   .lt-modal-foot .lt-foot-aviso{margin-right:0;max-width:none;text-align:center}
 }
+
+/* ── Toast ────────────────────────────────────────────────────────
+   `toast()` vive em js/utils.js (já carregado por esta tela), mas o
+   CSS estava só em css/style.css, que esta tela NÃO importa — o aviso
+   apareceria sem estilo nenhum. Escrito aqui na paleta do módulo.   */
+.toast{
+  position:fixed;bottom:24px;right:24px;padding:12px 20px;
+  border-radius:999px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:.88rem;font-weight:600;z-index:999;max-width:min(420px,calc(100vw - 48px));
+  box-shadow:0 12px 32px -12px rgba(23,53,42,.5);
+  animation:toastEntra .22s ease
+}
+.toast-info{background:var(--ink);color:var(--paper)}
+.toast-success{background:var(--green);color:#fff}
+.toast-error{background:var(--vermelho);color:#fff}
+@keyframes toastEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:560px){
+  .toast{left:16px;right:16px;bottom:16px;max-width:none;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}

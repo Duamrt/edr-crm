@@ -901,3 +901,100 @@ com Salvar que não salva.
 4. Só então pedir deploy
 
 São passos separados: implementar não é publicar.
+
+---
+
+## 18. GRAVAÇÃO IMPLEMENTADA (desligada) — 2026-07-29
+
+Escopo autorizado: implementar as duas gravações **localmente**, com teste por stub.
+Sem `sbPost` real, sem registro no banco, sem deploy. `GRAVACAO_IMPLEMENTADA` continua
+`false` — os botões Salvar seguem desabilitados e **sem listener**.
+
+### O que foi implementado
+
+**Validação legível** (`validarProcura` / `validarOportunidade`)
+Procura exige família e cidade; oportunidade exige descrição e cidade. Devolve lista de
+campos faltando, que vira frase natural: *"Preencha a família e a cidade."* Sem isso o
+banco recusaria e a pessoa veria erro técnico.
+
+Espaço em branco **não** conta como preenchido — `.trim()` antes de checar.
+
+**Payload** (`payloadProcura` / `payloadOportunidade`)
+- Campo vazio vira `null`, nunca `''`. String vazia em coluna numérica quebra, e em texto
+  opcional gera "preenchido com nada", que atrapalha busca depois.
+- `situacao` **não** é enviada: deixa o `DEFAULT` do banco valer.
+- `id` e `created_at` não são enviados.
+
+**Tradução de erro** (`erroLegivel`)
+
+| Código | Mensagem |
+|---|---|
+| `23505` em procura | *"Esta família já está na fila."* |
+| `23505` em oportunidade | *"Este registro já existe."* |
+| `23514` (check) | *"Algum valor não é aceito (verifique valor e metragem)."* |
+| `23502` (not null) | *"Faltou preencher um campo obrigatório."* |
+| `23503` (FK) | *"A família selecionada não foi encontrada. Recarregue a página."* |
+| `401`/`403` | *"Sua sessão expirou ou você não tem permissão. Entre novamente."* |
+| qualquer outro | *"Não foi possível salvar. Tente de novo; se continuar, avise o suporte."* |
+
+O erro técnico completo vai para o `console.error` — a pessoa vê a frase, quem for
+depurar vê o código.
+
+⚠️ **Casa por CÓDIGO, não por texto.** A mensagem do Postgres muda com a versão e com o
+idioma do servidor; o código não.
+
+**Fluxo de sucesso:** confirma com toast, limpa os campos, fecha o modal e chama
+`carregar()`. Recarregar tudo é mais simples e sempre coerente do que inserir a linha na
+tabela local.
+
+**Botão volta a ficar clicável** no `finally` — se travasse no erro, a pessoa perderia o
+que digitou sem poder tentar de novo.
+
+### CSS do toast
+
+`toast()` vive em `js/utils.js` (já carregado), mas o CSS estava só em `css/style.css`,
+que esta tela **não importa**. O aviso apareceria sem estilo nenhum. Escrito em
+`css/lotes.css` na paleta do módulo.
+
+### Testes locais — `docs/redesign/testes-lotes-gravacao.js`
+
+```
+node docs/redesign/testes-lotes-gravacao.js
+→ 42 passaram, 0 falharam
+```
+
+O teste **lê o código do próprio `lotes.html`** e o executa em contexto isolado (`vm`), em
+vez de copiar as funções. Assim ele acompanha a implementação: mudou a tela e quebrou
+algo, o teste quebra junto.
+
+Cobertura: validação (9), payload (8), tradução de erro (8), fluxo com stub (14) —
+sucesso, campo faltando, duplicidade, erro genérico e botão reabilitado — e trava (3).
+
+### 🐛 Um defeito encontrado no próprio teste
+
+A asserção da trava lia `GRAVACAO_IMPLEMENTADA` do sandbox. Mas `const` declarado via
+`vm.runInContext` **não vira propriedade do contexto** — o valor vinha `undefined`.
+
+Como a asserção era `=== false`, ela falhou e me alertou. **Se eu tivesse escrito
+`!GRAVACAO_IMPLEMENTADA`, `undefined` seria falsy e o teste passaria mesmo com a trava
+LIGADA** — daria verde justamente quando não devia.
+
+Corrigido para verificar no **arquivo-fonte**, com duas asserções: a constante está
+`false`, e não existe `= true` em lugar nenhum.
+
+### O que continua NÃO testado
+
+**O `sbPost` real contra o Supabase.** Todo o teste roda com stub. Só um cadastro de
+verdade prova que a gravação funciona ponta a ponta — RLS, sessão, tipos, constraints.
+
+Também não testado: a tela renderizada após um salvamento real, e celular.
+
+### Passo pendente
+
+**Um teste com sessão real, gravando de verdade.** Isso é escrita em produção e, pelo
+`docs/AUTORIZACAO-DEPLOY.md`, exige escopo próprio — inclusive para um registro "só de
+teste". Decisão de Duam: usar um cadastro descartável e apagar depois, ou uma família
+real.
+
+Depois disso: virar `GRAVACAO_IMPLEMENTADA` para `true`, ligar os listeners nos Salvar e
+só então pedir deploy. São passos separados.
