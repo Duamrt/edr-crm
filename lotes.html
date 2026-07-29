@@ -90,8 +90,8 @@
           <div id="oport-vazia" class="lt-vazio hidden">
             <strong>Nenhuma oportunidade captada ainda.</strong>
             <span>Quando aparecer um lote real, cadastre aqui — e o sistema mostra
-            quais famílias da fila combinam pela cidade e pelo valor. Se a
-            família tiver informado uma região, ela também é considerada.</span>
+            quais famílias da fila combinam pela cidade e pelo valor. A região
+            fica registrada como contexto, mas não entra nessa comparação.</span>
           </div>
         </section>
       </div>
@@ -577,13 +577,18 @@
     //    quem não preencheu, sumindo com a família sem explicação. Marcado
     //    com title para a pessoa saber que o valor não foi conferido.
     //  • Oportunidade sem valor → todas da cidade entram (nada a comparar).
-    //  • Região é só contexto por enquanto, não filtra.
-    //  • Só famílias ativas: quem desistiu ou já foi atendida não é sugerida.
+    //  • Região é só contexto, NÃO filtra: é texto livre digitado à mão, e
+    //    comparar "Centro" com "centro " sumiria com a família sem erro.
+    //  • Só situações SUGERÍVEIS — ver constante abaixo.
     function familiasCompativeis(oport) {
       if (!oport || !oport.cidade) return []
-      const ATIVAS = ['procurando', 'em_analise']
+      // SUGERIVEIS ≠ "ativas no banco". `pausada` continua uma procura válida
+      // e aparece na fila normalmente — mas quem pausou pediu para não ser
+      // procurado agora, então não recebe oportunidade enquanto estiver assim.
+      // `atendida` e `desistiu` saem porque a procura acabou.
+      const SUGERIVEIS = ['procurando', 'em_analise']
       return _procuras.filter(p => {
-        if (!ATIVAS.includes(p.situacao)) return false
+        if (!SUGERIVEIS.includes(p.situacao)) return false
         if (p.cidade !== oport.cidade) return false
         if (oport.valor == null || p.valor_maximo == null) return true
         return Number(oport.valor) <= Number(p.valor_maximo)
@@ -645,9 +650,17 @@
             : compat.length + ' famílias compatíveis:'
           sug.appendChild(titulo)
 
+          // Numa cidade com fila grande, listar todos viraria um parágrafo de
+          // nomes. Mostra os primeiros e diz quantos sobraram — a CONTAGEM
+          // TOTAL fica no título acima, então nada é escondido: a pessoa sabe
+          // que são 12 mesmo vendo 5.
+          const MAX_NOMES = 5
+          const mostrados = compat.slice(0, MAX_NOMES)
+          const restantes = compat.length - mostrados.length
+
           const lista = document.createElement('span')
           lista.className = 'lt-compat-lista'
-          compat.forEach((p, i) => {
+          mostrados.forEach((p, i) => {
             if (i) lista.appendChild(document.createTextNode(' · '))
             const a = document.createElement('a')
             a.className = 'lt-compat-nome'
@@ -657,6 +670,13 @@
             if (p.valor_maximo == null) a.title = 'Não informou valor máximo'
             lista.appendChild(a)
           })
+          if (restantes > 0) {
+            const mais = document.createElement('span')
+            mais.className = 'lt-compat-mais'
+            mais.textContent = ' + ' + restantes +
+              (restantes === 1 ? ' outra família compatível' : ' outras famílias compatíveis')
+            lista.appendChild(mais)
+          }
           sug.appendChild(lista)
         }
         card.appendChild(sug)

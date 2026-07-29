@@ -589,8 +589,9 @@ Não existe lista real de bairros para essas quatro cidades. Um campo obrigatór
 forçaria o usuário a escrever qualquer coisa para conseguir salvar — e aí a busca por
 região passaria a mentir, o que é pior que não ter o dado.
 
-**Quando a região não é informada, a sugestão de compatibilidade considera apenas a
-cidade.** Se a família informou uma região, ela também entra na comparação.
+**A sugestão de compatibilidade considera cidade e valor. Região é só contexto — não
+filtra** (implementado assim na seção 21; região é texto livre e comparar texto digitado
+à mão produziria falso negativo silencioso).
 
 Quando houver lista real de bairros, o campo pode virar obrigatório por migration.
 
@@ -607,19 +608,22 @@ controlada. Com região virando **texto livre opcional**, o campo passaria a ser
 dois poderiam divergir. Não existe mais regra `'Outra'` — se a região é conhecida,
 escreve-se direto em `regiao`.
 
-⚠️ **Nenhuma das duas mudanças foi executada em banco.** São alterações no arquivo
-`08`, que ainda não foi aplicado em lugar nenhum desde então. Em particular, **inserir
-com `regiao` nula nunca foi testado** — nas três branches a coluna era obrigatória.
+⚠️ **Estado quando esta seção foi escrita:** nenhuma das duas mudanças tinha sido
+executada em banco, e inserir com `regiao` nula nunca havia sido testado — nas três
+branches a coluna era obrigatória.
+
+✅ **SUPERADO.** O arquivo `08` foi aplicado em produção (seção 17) com `regiao text`
+nulável, e o nulo foi exercitado **duas vezes**: nas provas em `ROLLBACK` (seção 17) e
+no teste real de gravação (seção 20), que gravou `"regiao":null` nas duas tabelas.
 
 **O que isso faz com a validação da seção 13:** quase nada. As 12 policies chamam
 `crm_user_has_profile()`, que não olha coluna nenhuma; os índices únicos parciais
 filtram por `situacao`; os triggers escrevem em `updated_at`. Nenhum deles toca
 `regiao`.
 
-**O que deixou de estar coberto:** inserir com `regiao` **nula** — caminho que nenhum
-teste percorreu, porque na branch a coluna era obrigatória. É pequeno e não exige uma
-branch só para isso: dá para verificar junto da aplicação em produção, ou numa branch
-futura, se você preferir.
+**O que deixou de estar coberto (na época):** inserir com `regiao` **nula** — caminho que
+nenhum teste da branch percorreu, porque lá a coluna era obrigatória.
+✅ **Coberto depois**, em produção: seções 17 e 20.
 
 ### Ajustes no protótipo `lotes.html`
 
@@ -1264,3 +1268,65 @@ gravação 46/0.
 - **Celular** — o CSS tem regra de toque em `≤640px`, mas não foi visto.
 - A sugestão com **fila grande** (dezenas de famílias numa cidade): o card
   listaria todos os nomes em sequência, sem corte. Pode ficar longo.
+
+---
+
+## 22. CONSISTÊNCIA — 2026-07-29
+
+Quatro achados do Codex, todos de coerência entre o que está escrito e o que o
+código faz.
+
+**1. Doc dizia que região entra na comparação.** Não entra — a regra da seção 21
+usa cidade e valor. Alinhado ao código: região é contexto, não filtro. (Manter
+assim porque região é texto livre; comparar "Centro" com "centro " sumiria com a
+família sem erro nenhum.)
+
+**2. Doc dizia que `regiao` nula "nunca foi testado".** Obsoleto, e o próprio
+documento se contradizia. Confirmado por leitura antes de reescrever: `08:68` e
+`08:125` declaram `regiao text` sem `not null`, e o nulo foi exercitado duas
+vezes — provas em `ROLLBACK` (seção 17) e teste real (seção 20, que gravou
+`"regiao":null` nas duas tabelas). Marcado como superado nos 3 pontos.
+
+**3. `ATIVAS` renomeado para `SUGERIVEIS`.** O nome mentia: `pausada` é uma
+procura ativa no banco e aparece na fila normalmente, mas não é sugerida — quem
+pausou pediu para não ser procurado agora. Nome e comentário agora dizem isso.
+
+**4. Lista visual cortada em 5 nomes.** Com fila grande o card viraria um
+parágrafo. Mostra 5 + `"+ N outras famílias compatíveis"`. **A contagem total
+continua no título** — vendo 5 nomes, a pessoa lê "12 famílias compatíveis".
+
+### 🔴 Achado extra (não estava na lista)
+
+A frase antiga de região estava **viva na tela**, não só no documento:
+`lotes.html:93` prometia *"Se a família tiver informado uma região, ela também é
+considerada"*. Corrigir só o documento deixaria a interface mentindo para quem
+usa. Reescrito para *"A região fica registrada como contexto, mas não entra
+nessa comparação."*
+
+### Evidência
+
+```
+node docs/redesign/testes-lotes-compat.js    → 21 passaram, 0 falharam
+node docs/redesign/testes-lotes-gravacao.js  → 46 passaram, 0 falharam
+```
+
+Cinco testes novos: nome da constante (guarda contra renomear de volta), a regra
+devolvendo todas as 12 (o corte é só visual), o `MAX_NOMES = 5`, o sufixo
+`+ N`, e a contagem total permanecendo no título.
+
+Na tela, com 12 famílias em Jupi e uma oportunidade de R$ 40.000:
+
+| | |
+|---|---|
+| Título | `12 famílias compatíveis:` |
+| Nomes visíveis | 5 |
+| Sufixo | `+ 7 outras famílias compatíveis` |
+
+### Estado
+
+`GRAVACAO_IMPLEMENTADA` segue `false`, Salvar sem listener, banco intocado.
+
+### Continua NÃO testado
+
+- **Gravação com perfil não-admin** — único aceite funcional pendente.
+- **Celular.**

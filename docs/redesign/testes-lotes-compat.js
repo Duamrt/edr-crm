@@ -11,6 +11,10 @@ const path = require('path')
 
 const html = fs.readFileSync(path.join(__dirname, '..', '..', 'lotes.html'), 'utf8')
 
+// Guarda de nome: se alguem renomear SUGERIVEIS de volta para ATIVAS, o
+// comentario que explica por que `pausada` fica de fora se perde junto.
+const usaSugeriveis = /const SUGERIVEIS = \['procurando', 'em_analise'\]/.test(html)
+
 const m = /function familiasCompativeis\(oport\) \{[\s\S]*?\n    \}/.exec(html)
 if (!m) {
   console.error('FALHOU: nao achei familiasCompativeis() em lotes.html')
@@ -95,7 +99,24 @@ familiasCompativeis({ cidade: 'Jupi', valor: 40000 })
 checa('nao altera _procuras (sem efeito colateral)',
   JSON.stringify(sandbox._procuras) === antes)
 
-console.log('\n5. CENARIO REAL DO TESTE DE 29/07')
+console.log('\n5. NOME DA REGRA')
+checa('constante chama SUGERIVEIS (nao ATIVAS)', usaSugeriveis,
+  'pausada e ativa no banco mas nao sugerivel — o nome precisa dizer isso')
+
+console.log('\n6. CORTE DA LISTA VISUAL (MAX 5 NOMES)')
+// A regra devolve TODAS; quem corta e o desenho. Aqui garanto as duas
+// coisas: a contagem completa continua disponivel, e o corte existe no
+// codigo da tela com o "+ N" — sem isso o card viraria um paragrafo.
+fila(...Array.from({ length: 12 }, (_, i) =>
+  p({ cliente_id: 'c' + i, crm_clientes: { nome: 'FAMILIA ' + (i + 1) } })))
+r = familiasCompativeis({ cidade: 'Jupi', valor: 40000 })
+checa('a regra devolve TODAS as compativeis (corte e so visual)', r.length === 12)
+checa('tela corta em 5 nomes', /const MAX_NOMES = 5\b/.test(html))
+checa('tela mostra "+ N outras" quando sobra', /outras famílias compatíveis/.test(html))
+checa('contagem TOTAL continua no titulo (nada escondido)',
+  /compat\.length \+ ' famílias compatíveis:'/.test(html))
+
+console.log('\n7. CENARIO REAL DO TESTE DE 29/07')
 fila(p({ cidade: 'Jupi', valor_maximo: 45000, crm_clientes: { nome: 'RAYLANE NATHIELE DE SOUZA ARAUJO' } }))
 r = familiasCompativeis({ cidade: 'Jupi', valor: 40000 })
 checa('Raylane aparece para a oportunidade de Jupi',

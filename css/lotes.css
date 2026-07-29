@@ -322,3 +322,4 @@ thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-
   .lt-oport-compat{gap:6px 10px}
   .lt-compat-nome{display:inline-block;padding:3px 0}
 }
+.lt-compat-mais{color:#7b8a7f;font-style:italic}
