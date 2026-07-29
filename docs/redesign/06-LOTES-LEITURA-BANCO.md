@@ -49,15 +49,19 @@ Duas leituras possíveis:
 
 Enquanto não houver confirmação, **preservar integralmente**.
 
-## 🔒 REGRA DE TRABALHO (definida por Duam)
-1. **Nada é apagado agora.**
+## 🔒 REGRA DE TRABALHO (definida por Duam, corrigida em 2026-07-29)
+
+1. **Nenhum vínculo de família será apagado ou alterado sem confirmação.**
+   > ⚠️ **Correção de Duam:** a formulação anterior — "nada é escondido" — estava errada
+   > e amarraria o trabalho. **A planta e a falsa disponibilidade PODEM e DEVEM sair da
+   > nova tela**, sem apagar registro nenhum. O que é intocável é o *vínculo família↔lote*,
+   > não a exibição do estoque fictício.
 2. Publicar as 4 telas aprovadas (Agenda, Clientes, Ficha, Kanban) — não dependem de Lotes.
 3. Lotes entra como **próximo módulo, imediatamente** — a reforma NÃO está encerrada.
-4. **Não esconder a tela do menu:** o vínculo de lote ainda é usado em Clientes, Ficha e
-   cadastro de família; esconder tiraria acesso da equipe.
-5. Substituir **apenas a parte falsa**: planta, quadras como estoque, "disponíveis" e
-   contagem inventada. **Não apagar tabela, não esconder função, não inventar
-   disponibilidade nova.**
+4. **Não remover a tela do menu:** o vínculo de lote é usado em Clientes, Ficha e cadastro
+   de família; tirar o acesso prejudicaria a equipe. (Diferente de deixar de *exibir*
+   planta e disponibilidade dentro da tela — isso é o objetivo.)
+5. **Não apagar tabela e não inventar disponibilidade nova.**
 
 ## Onde `crm_lotes` é usada (13 referências em 5 telas)
 | Tela | Uso |
@@ -78,10 +82,23 @@ Enquanto não houver confirmação, **preservar integralmente**.
 3. Ao surgir um lote real, cadastrar a oportunidade e relacionar com famílias compatíveis.
 4. **Só então** o Dashboard ganha o card real "Famílias procurando lote" — com número real.
 
-## Pendências com Duam (bloqueiam o desenho)
+## Pendências com Duam — e o que elas REALMENTE bloqueiam
+
+> ⚠️ **Correção de Duam (2026-07-29):** eu havia escrito que estas respostas "bloqueiam o
+> desenho". **Errado.** Elas bloqueiam apenas a **decisão de migração/limpeza dos dados
+> antigos**. A proposta da fila de "famílias procurando oportunidade" **pode ser desenhada
+> em paralelo**, porque é estrutura nova e não depende de como os 7 vínculos serão tratados.
+
+**Bloqueiam a migração/limpeza dos dados antigos:**
 - [ ] Os **4 vínculos em Quadra A/B** são reserva antiga ou lote real reaproveitado?
 - [ ] Os **3 "Avulso" vinculados** correspondem a imóveis reais? (validação de negócio)
-- [ ] Autorização para criar tabela nova no Supabase (fronteira — não cruzada).
+
+**Fronteira separada (não cruzar sem autorização explícita):**
+- [ ] Criar tabela nova no Supabase.
+
+**NÃO bloqueado — pode andar já:**
+- Desenho da fila de famílias procurando oportunidade (campos, relações, telas).
+- Definição do que sai da tela atual (planta, quadras como estoque, "disponíveis").
 
 ## O que NÃO foi feito nesta leitura
 - Nenhum dado pessoal consultado.
