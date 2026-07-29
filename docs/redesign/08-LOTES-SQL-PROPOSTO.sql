@@ -344,10 +344,12 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   4. Segunda aceitação BLOQUEADA → 2ª ligação 'aceita' na mesma oportunidade
 --                                deve VIOLAR crm_po_uma_aceita_por_oportunidade
 --
--- ✅ Os 4 casos foram provados em `lotes-v2` (2026-07-29) — ver fim do arquivo.
---    (O caso 2 foi provado só na leitura — ver a ressalva do T2 lá embaixo.)
+-- ✅ Os 4 casos foram provados: T1/T3/T4 em `lotes-v2`, e o T2 (caso 2) por
+--    completo em `lotes-v3` — as 12 policies, 29/29 vereditos.
 --
--- ✅ TODAS AS PENDÊNCIAS RESOLVIDAS:
+-- ✅ DECISÕES DE NEGÓCIO RESOLVIDAS · ⚠️ RESTA UMA PENDÊNCIA TÉCNICA:
+--
+--   Resolvido:
 --   · CRUD autenticado — as 12 policies provadas em `lotes-v3`.
 --   · Lista de cidades/regiões — DECIDIDA POR DUAM em 2026-07-29:
 --
@@ -361,21 +363,30 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --       Quando não informada, a sugestão de compatibilidade considera
 --       apenas a CIDADE.
 --
--- ⚠️ MUDANÇA DE SCHEMA que esta decisão exigiu (2026-07-29):
---    `regiao` era `text not null` nas DUAS tabelas (procura e oportunidade).
---    Passou a ser `text` (nulo permitido). Sem isso, o campo obrigatório
---    forçaria exatamente o dado inventado que a decisão evita.
+--   · CASCADE mantido (decisão de Duam).
+--   · GRANT desnecessário — agora PROVADO por has_table_privilege, não só
+--     inferido do pg_default_acl.
+--   · updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
+--     quebraria — ver seção 5).
 --
---    ⚠️ CONSEQUÊNCIA PARA A VALIDAÇÃO: o SQL provado em `lotes-v3` tinha
---       `regiao not null`. A alteração é posterior e **não foi executada**.
---       O que continua válido daquela execução: as 12 policies, os índices
---       únicos parciais, os triggers e a estrutura geral — nada disso
---       depende da obrigatoriedade da coluna. O que NÃO foi exercitado é
---       inserir com `regiao` NULA. Ver "NÃO PROVADO" no fim.
---   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário — agora
---      PROVADO por has_table_privilege, não só inferido do pg_default_acl ·
---      updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
---      quebraria — ver seção 5) · execução completa em branch.
+-- ⚠️ MUDANÇAS DE SCHEMA que a decisão de cidades exigiu (2026-07-29):
+--    1. `regiao` era `text not null` nas DUAS tabelas (procura e
+--       oportunidade). Passou a ser `text` (nulo permitido).
+--    2. `regiao_outra` foi REMOVIDO — com região virando texto livre, ele
+--       seria uma segunda fonte para o mesmo dado.
+--
+-- ⚠️⚠️ PENDÊNCIA TÉCNICA — NÃO RESOLVIDA:
+--    As duas mudanças acima são POSTERIORES à execução em `lotes-v3`, que
+--    rodou com `regiao not null`. Elas **nunca foram executadas em banco
+--    nenhum**, e **inserir com `regiao` NULA nunca foi testado**.
+--
+--    O que continua válido de `lotes-v3`: as 12 policies, os índices únicos
+--    parciais, os triggers e a estrutura geral — nada disso olha a coluna
+--    `regiao`, então a mudança não os afeta.
+--
+--    ⇒ Esta pendência é pequena, mas é real: NÃO declarar o SQL como
+--      "totalmente provado" enquanto ela existir. Cobrir junto da aplicação
+--      em produção, ou em branch futura, conforme Duam decidir.
 --
 -- =====================================================================
 -- ✅ PROVADO — execução completa na branch `lotes-v2`, 2026-07-29

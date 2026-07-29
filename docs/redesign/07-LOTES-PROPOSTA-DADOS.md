@@ -141,14 +141,32 @@ com a contagem real de `crm_procura_lote` onde `situacao='procurando'`.
 
 ## 7. DECISÕES DE DUAM (2026-07-29) — conceito aprovado
 
-### 1. Cidade e região: lista controlada
-**Lista de cidades/bairros aceitos**, com opção **"Outra região"** + observação livre.
-Evita bagunça sem limitar a operação.
+### 1. Cidade controlada · região livre e opcional
 
-> ⚠️ **Ajuste exigido por Duam antes do banco:** o campo passa a ser **"Cidade / região"**,
-> exibido como **`Petrolina — Centro`**, **`Juazeiro — Zona Norte`**.
-> **"Centro" sozinho pode significar cidades diferentes** — separar evita dado confuso
-> desde o primeiro cadastro. Por isso a tabela tem `cidade` E `regiao`, não um campo só.
+**Cidade é obrigatória** e vem de **lista controlada**: **Jupi · Garanhuns · Lajedo ·
+Jucati**. A validação da lista fica na **aplicação**, não no banco — assim entra cidade
+nova sem precisar de migration.
+
+**Região/bairro é texto livre e opcional.** Não existe lista de bairros, e não existe
+opção "Outra": se a região é conhecida, escreve-se direto no campo; se não é, deixa
+vazio. Campo obrigatório forçaria o usuário a inventar valor só para salvar, e a busca
+por região passaria a mentir.
+
+> ⚠️ **Por que `cidade` e `regiao` são dois campos, e não um só:** **"Centro" sozinho
+> pode significar cidades diferentes.** Separar evita dado confuso desde o primeiro
+> cadastro. Exibido como **`Garanhuns — Centro`** quando há região, ou só
+> **`Garanhuns`** quando não há — nunca `Garanhuns — ?`.
+
+> 📌 Esta seção foi **reescrita em 2026-07-29**. A versão original previa lista de
+> bairros e opção "Outra região" — ambas descartadas pela decisão da seção 14, que é a
+> que vale. Detalhes e consequências de schema: **seção 14**.
+
+> ⚠️ **Arquivo desatualizado, ainda não corrigido:** `docs/redesign/prototipo-lotes.html`
+> é a **maquete estática** feita antes da tela real (dados fictícios, não roda nada).
+> Ela ainda traz `Petrolina`/`Juazeiro` e a opção **"Outra região"** num `<select>`.
+> Não afeta o sistema — mas, se alguém a abrir, vai ver o desenho antigo.
+> **Não foi alterada** porque o escopo autorizado era só os dois documentos.
+> Fica registrado para decisão de Duam: corrigir ou apagar.
 
 ### 2. Uma procura ativa por família
 Se a família aceita dois bairros ou duas faixas de valor, isso vira **preferência dentro
