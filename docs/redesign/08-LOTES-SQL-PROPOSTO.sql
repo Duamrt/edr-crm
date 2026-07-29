@@ -29,9 +29,9 @@ create table public.crm_procura_lote (
   -- ✅ VERIFICADO: é o padrão de TODO o CRM. As 6 tabelas filhas de
   -- crm_clientes usam CASCADE — inclusive crm_documentos e crm_historico.
   -- Manter CASCADE = coerente com LGPD (apagar a pessoa apaga os rastros dela).
-  -- Se Duam quiser preservar o histórico de procura mesmo após excluir a
-  -- família, trocar por:  on delete set null  (e tirar o `not null`).
-  -- ⚠️ DECISÃO DE NEGÓCIO PENDENTE — mantido CASCADE por ser o padrão vigente.
+  -- ✅ DECIDIDO POR DUAM (2026-07-29): MANTER CASCADE.
+  -- "Segue o padrão atual do CRM e faz sentido se exclusão de família também
+  --  precisa apagar seu histórico por LGPD."
   cliente_id          uuid not null references public.crm_clientes(id) on delete cascade,
 
   -- Cidade separada da região: "Centro" sozinho pode ser cidades diferentes.
@@ -221,12 +221,23 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   anon, authenticated e service_role. É assim que crm_lotes e crm_clientes
 --   têm suas permissões — ninguém as escreveu.
 --
--- ⚠️ CONSEQUÊNCIA QUE PRECISA ESTAR DITA:
---   As 3 tabelas novas nascerão com acesso também para `anon` (usuário NÃO
---   logado). A proteção real fica INTEIRAMENTE por conta do RLS. Se uma
---   política falhar ou for removida, anon passa direto.
---   Isso é o padrão já vigente em todo o CRM — não é defeito introduzido aqui.
---   Mas se Duam quiser endurecer, o caminho é revogar de anon:
+-- ⚠️ COMO A PROTEÇÃO REALMENTE FUNCIONA (correção de Duam, 2026-07-29):
+--
+--   Minha nota anterior dizia que "se uma política falhar, anon passa direto".
+--   ISSO ESTAVA TECNICAMENTE ERRADO e foi corrigido.
+--
+--   Com RLS ativo, o padrão do Postgres é NEGAR. Sem política que autorize,
+--   ninguém lê nada — nem `anon`, nem `authenticated`. O GRANT do schema dá
+--   apenas a permissão de *tabela*; quem decide linha a linha é o RLS.
+--   Ou seja: remover uma política FECHA o acesso, não abre.
+--
+--   O ponto de atenção correto é outro: as políticas aqui usam
+--   crm_user_has_profile() para as 4 operações, sem distinguir role. A
+--   segurança depende inteiramente de essa função retornar FALSE para quem
+--   não está logado. É exatamente isso que precisa ser TESTADO — não assumido.
+--
+--   Se Duam quiser uma camada extra (defesa em profundidade), o caminho é
+--   revogar de anon no nível de tabela:
 --
 --     -- revoke all on public.crm_procura_lote         from anon;
 --     -- revoke all on public.crm_oportunidade_lote    from anon;
@@ -260,18 +271,35 @@ create trigger trg_crm_procura_oportunidade_updated_at
 -- ✅ 1. BUG: mesma oportunidade podia ficar 'aceita' por várias famílias.
 --       Corrigido com índice único parcial (crm_po_uma_aceita_por_oportunidade).
 -- ✅ 2. MELHORIA: ligação sem updated_at. Coluna + trigger adicionados.
--- ⚠️ 3. RISCO (cascade): verificado que CASCADE é o padrão de todo o CRM —
---       6 tabelas filhas de crm_clientes usam. Mantido, mas é DECISÃO DE
---       NEGÓCIO de Duam: manter (LGPD) ou trocar por set null.
+-- ✅ 3. RISCO (cascade): DECIDIDO POR DUAM — manter CASCADE. Segue o padrão
+--       do CRM (6/6 tabelas filhas) e é coerente com LGPD.
 -- ✅ 4. RISCO (grants): verificado — não é preciso GRANT. O schema tem
---       privilégio padrão (pg_default_acl). Documentado que as tabelas
---       nascerão acessíveis a `anon`, com a proteção toda no RLS.
---       DECISÃO DE DUAM: endurecer revogando de anon, ou seguir o padrão?
+--       privilégio padrão (pg_default_acl).
+--       ⚠️ Minha nota original sobre `anon` estava TECNICAMENTE ERRADA e foi
+--       corrigida por Duam: com RLS ativo o padrão é NEGAR; remover política
+--       fecha, não abre. Texto reescrito na seção 6.
 --
--- PENDÊNCIAS ANTES DE APLICAR:
+-- =====================================================================
+-- PLANO DE TESTE EM AMBIENTE DESCARTÁVEL (exigido por Duam antes de produção)
+-- =====================================================================
+-- Rodar este SQL numa BRANCH de banco do Supabase (ambiente separado,
+-- destruído depois) e provar 4 casos — não assumir nenhum:
+--
+--   1. Anônimo BLOQUEADO      → select como `anon` deve retornar 0 linhas
+--                                (confirma que crm_user_has_profile() fecha
+--                                 para quem não está logado)
+--   2. Usuário logado LIBERADO → select como `authenticated` com perfil deve ler
+--   3. Segunda procura ativa BLOQUEADA → 2º insert para o mesmo cliente_id com
+--                                situação ativa deve VIOLAR o índice único parcial
+--   4. Segunda aceitação BLOQUEADA → 2ª ligação 'aceita' na mesma oportunidade
+--                                deve VIOLAR crm_po_uma_aceita_por_oportunidade
+--
+-- Só depois desses 4 verdes, Duam decide sobre aplicar no banco real.
+--
+-- PENDÊNCIAS ANTES DE APLICAR EM PRODUÇÃO:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---   2. Cascade: manter ou preservar histórico? (achado 3)
---   3. Revogar acesso de `anon`? (achado 4)
---   ✅ RESOLVIDA: set_crm_updated_at() já existe e foi reusada.
+--   2. Rodar o plano de teste acima em branch descartável.
+--   ✅ RESOLVIDAS: set_crm_updated_at() reusada · CASCADE mantido (Duam) ·
+--      GRANT desnecessário (privilégio padrão do schema).
 -- =====================================================================
