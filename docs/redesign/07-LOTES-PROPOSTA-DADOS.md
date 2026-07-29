@@ -212,3 +212,25 @@ existe. Os formulários entram junto com as tabelas — **sem botão que finge f
 ### Validado no teste 1 (sem precisar de branch)
 `crm_user_has_profile()` retorna **FALSE** sem sessão:
 `auth.uid()` = null · função = false · perfis = 0. Evidência do "anônimo bloqueado".
+
+---
+
+## 10. REVISÃO DE DUAM — 6 correções aplicadas (2026-07-29)
+
+### Script de teste (`09-LOTES-TESTES.sql`)
+| # | Achado | Correção | Evidência |
+|---|---|---|---|
+| 1 | **T1 era falso-verde**: tabela nasce vazia, `count=0` passaria com RLS ABERTA | Insere registro ANTES; prova que dono vê 1 e `anon` vê 0 | no script |
+| 2 | **T4 reusava o cliente do T3**, que já ficava com procura ativa → falharia antes da dupla aceitação | T3 e T4 em transações próprias com `rollback`; T4 usa clientes `offset 2/3` + guarda de ≥4 clientes | no script |
+| 3 | `set local role` sem transação explícita não é determinístico | Todos os testes de papel em `begin`/`rollback` | no script |
+
+### Tela (`lotes.html`)
+| # | Achado | Correção | Evidência |
+|---|---|---|---|
+| 4 | **Qualquer erro virava "estrutura não criada"** — depois do banco pronto, esconderia problema real | `tabelaNaoExiste()` testa só `404`. Demais erros → aviso vermelho + `console.error` | **5/5** casos testados: 404→transição · 401/403/500/rede→erro |
+| 5 | Botões pareciam disponíveis | Nascem `disabled`, com `title` e rótulo **"Disponível após ativação da estrutura"**. Liberados só quando as tabelas respondem | captura |
+| 6 | Aviso técnico sobre banco | Trocado por **"A fila de procura está sendo ativada. Nenhuma família foi registrada ainda."** | captura |
+
+**Confirmado:** `node -c` OK · distinção de erro 5/5 · dois estados visualmente distintos
+(âmbar "em ativação" × vermelho "erro ao carregar") verificados em prévia.
+**Não testado:** tela logada com dados reais; testes 2/3/4 do SQL (dependem da branch).

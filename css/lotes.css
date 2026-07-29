@@ -83,11 +83,23 @@ button{font:inherit;cursor:pointer}
 .btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
 
 /* ===================== SEÇÕES ===================== */
+/* Estado de TRANSIÇÃO — a estrutura está sendo ativada. Tom âmbar, informativo. */
 .lt-aviso{
   background:#fdf0dc;border:1px solid #f2ddbd;color:#8a4a10;
   padding:11px 15px;border-radius:11px;font-size:12.5px;
   margin-bottom:18px;font-weight:600;line-height:1.5;
 }
+/* FALHA REAL de carregamento — vermelho, para não ser confundido com transição. */
+.lt-aviso-erro{background:#fdeceb;border-color:#f3ccc9;color:#a5352d}
+
+/* Aviso ao lado dos botões de cadastro enquanto a estrutura não existe */
+.lt-aviso-cadastro{
+  font:10px 'DM Mono',monospace;letter-spacing:.06em;
+  color:var(--muted);align-self:center;white-space:nowrap;
+}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:disabled:hover{border-color:var(--line)}
+.btn-primary:disabled:hover{background:var(--ink);border-color:var(--ink)}
 .lt-sec{margin-bottom:26px}
 .lt-sec-head{display:flex;align-items:baseline;gap:11px;margin-bottom:12px;flex-wrap:wrap}
 .lt-sec-titulo{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--ink)}

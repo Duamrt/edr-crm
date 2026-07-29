@@ -31,8 +31,9 @@
       <div class="topbar">
         <span class="topbar-title">Lotes</span>
         <div class="flex gap-8">
-          <button id="btn-nova-procura" class="btn btn-secondary btn-sm">+ Registrar procura</button>
-          <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm">+ Captar oportunidade</button>
+          <span id="aviso-cadastro" class="lt-aviso-cadastro hidden">Disponível após ativação da estrutura</span>
+          <button id="btn-nova-procura" class="btn btn-secondary btn-sm" disabled>+ Registrar procura</button>
+          <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm" disabled>+ Captar oportunidade</button>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
       </div>
@@ -154,43 +155,70 @@
       return Number(v).toLocaleString('pt-BR') + ' m²'
     }
 
-    // A tela é honesta: sem as tabelas, diz o que falta em vez de erro cru
-    // ou número inventado.
+    // ⚠️ Estrutura ausente ≠ falha de acesso. Tratar tudo igual esconderia um
+    // problema real depois que as tabelas existirem (apontado por Duam).
+    // sbGet lança "GET <tabela>: <status>" — o 404 identifica tabela inexistente.
+    function tabelaNaoExiste(err) {
+      return /:\s*404\b/.test(String(err && err.message))
+    }
+
+    // Estado de TRANSIÇÃO — texto operacional, não jargão de banco.
     function avisarEstruturaPendente() {
       const el = document.getElementById('aviso-estrutura')
-      el.textContent = 'A estrutura de procura de lotes ainda não foi criada no banco. '
-        + 'A tela está pronta e passa a funcionar assim que as tabelas existirem.'
-      el.classList.remove('hidden')
-      document.getElementById('fila-sub').textContent = 'aguardando estrutura'
-      document.getElementById('oport-sub').textContent = 'aguardando estrutura'
+      el.className = 'lt-aviso'
+      el.textContent = 'A fila de procura está sendo ativada. '
+        + 'Nenhuma família foi registrada ainda.'
+      document.getElementById('fila-sub').textContent = 'em ativação'
+      document.getElementById('oport-sub').textContent = 'em ativação'
       document.getElementById('fila-vazia').classList.remove('hidden')
       document.getElementById('oport-vazia').classList.remove('hidden')
       document.getElementById('contador').textContent = ''
+      desabilitarCadastro(true)
+    }
+
+    // FALHA REAL — some com o texto de transição e mostra que algo quebrou.
+    function avisarFalhaCarregamento(err) {
+      const el = document.getElementById('aviso-estrutura')
+      el.className = 'lt-aviso lt-aviso-erro'
+      el.textContent = 'Não foi possível carregar as informações desta tela. '
+        + 'Verifique a conexão e tente novamente. Se continuar, avise o suporte.'
+      document.getElementById('fila-sub').textContent = 'erro ao carregar'
+      document.getElementById('oport-sub').textContent = 'erro ao carregar'
+      document.getElementById('fila-vazia').classList.add('hidden')
+      document.getElementById('oport-vazia').classList.add('hidden')
+      document.getElementById('contador').textContent = ''
+      console.error('Lotes — falha ao carregar:', err)
+    }
+
+    function desabilitarCadastro(desabilitar) {
+      ;['btn-nova-procura','btn-nova-oportunidade'].forEach(id => {
+        const b = document.getElementById(id)
+        b.disabled = desabilitar
+        b.title = desabilitar ? 'Disponível após ativação da estrutura' : ''
+      })
+      document.getElementById('aviso-cadastro').classList.toggle('hidden', !desabilitar)
     }
 
     async function carregar() {
       document.getElementById('loading').classList.remove('hidden')
       try {
         const [procuras, oportunidades] = await Promise.all([
-          sbGet('crm_procura_lote', '?select=*,crm_clientes(id,nome)&order=created_at.asc').catch(() => null),
-          sbGet('crm_oportunidade_lote', '?select=*&order=created_at.desc').catch(() => null)
+          sbGet('crm_procura_lote', '?select=*,crm_clientes(id,nome)&order=created_at.asc'),
+          sbGet('crm_oportunidade_lote', '?select=*&order=created_at.desc')
         ])
-
-        if (procuras === null || oportunidades === null) {
-          _estruturaPronta = false
-          avisarEstruturaPendente()
-          return
-        }
 
         _estruturaPronta = true
         _procuras = procuras || []
         _oportunidades = oportunidades || []
+        document.getElementById('aviso-estrutura').classList.add('hidden')
+        desabilitarCadastro(false)
         montarFiltroCidade()
         renderFila()
         renderOportunidades()
       } catch (err) {
-        console.error('Lotes:', err)
-        avisarEstruturaPendente()
+        _estruturaPronta = false
+        if (tabelaNaoExiste(err)) avisarEstruturaPendente()
+        else avisarFalhaCarregamento(err)
       } finally {
         document.getElementById('loading').classList.add('hidden')
       }
@@ -338,12 +366,9 @@
     document.getElementById('filtro-cidade').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
     document.getElementById('filtro-situacao').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
 
-    // Cadastro entra quando a estrutura existir — sem botão que finge funcionar.
-    function aindaNaoDisponivel() {
-      alert('A estrutura de procura de lotes ainda não foi criada no banco.')
-    }
-    document.getElementById('btn-nova-procura').addEventListener('click', aindaNaoDisponivel)
-    document.getElementById('btn-nova-oportunidade').addEventListener('click', aindaNaoDisponivel)
+    // Os botões nascem desabilitados e só são liberados quando as tabelas
+    // respondem (ver desabilitarCadastro). Sem alert, sem botão que finge
+    // funcionar — o próprio estado do botão comunica.
 
     carregar()
   </script>
