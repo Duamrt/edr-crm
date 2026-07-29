@@ -1330,3 +1330,83 @@ Na tela, com 12 famílias em Jupi e uma oportunidade de R$ 40.000:
 
 - **Gravação com perfil não-admin** — único aceite funcional pendente.
 - **Celular.**
+
+---
+
+## 23. SUGESTÃO SÓ EM OPORTUNIDADE ATIVA — 2026-07-29
+
+Dois achados do Codex, os dois sobre a tela induzir a conclusão errada.
+
+### 1. A mensagem de vazio mentia
+
+Dizia *"Nenhuma família da fila combina com esta cidade."* — mas o vazio tem
+**duas causas**: pode não haver ninguém na cidade, ou pode haver e o teto não
+comportar o valor. Quem lesse a frase concluiria que aquela cidade está sem fila,
+e deixaria de procurar.
+
+Agora: **"Nenhuma família compatível no momento."** Neutro, não afirma o que não
+sabe.
+
+### 2. Lote encerrado continuava sugerindo famílias
+
+A sugestão rodava para qualquer situação. Um lote já vendido apontaria famílias,
+e alguém ligaria para uma pessoa sobre um lote que não existe mais.
+
+```js
+const OPORT_SUGERE = ['disponivel']
+```
+
+| Situação | Sugere? | Por quê |
+|---|---|---|
+| `disponivel` | ✅ | é o caso de uso |
+| `fechada` | ❌ | acabou |
+| `perdida` | ❌ | acabou |
+| `reservada` | ❌ **por ora** | ⚠️ **decisão pendente de Duam** |
+| ausente/inválida | ❌ | não assumir `disponivel` por omissão |
+
+⚠️ **`reservada` é decisão pendente, não regra fechada.** Reservado não é
+encerrado — a reserva pode cair e o lote voltar ao mercado. Deixado sem sugestão
+porque implementar por suposição seria pior. Há teste travando o comportamento
+atual, para que mudá-lo seja deliberado.
+
+Encerrada tem texto próprio — *"Oportunidade fechada — sugestões não se
+aplicam."* — em vez de "nenhuma compatível", que soaria como se o sistema tivesse
+procurado e não achado.
+
+**O filtro fica dentro de `familiasCompativeis()`, não no desenho.** Assim a
+função tem uma resposta só e qualquer chamador futuro herda a proteção; no
+desenho, uma segunda tela que reusasse a função traria o bug de volta.
+
+### Evidência
+
+```
+node docs/redesign/testes-lotes-compat.js    → 29 passaram, 0 falharam
+node docs/redesign/testes-lotes-gravacao.js  → 46 passaram, 0 falharam
+```
+
+Oito testes novos. **Provado por sabotagem:** incluir as quatro situações em
+`OPORT_SUGERE` → **25/4**; restaurado → **29/0**.
+
+Na tela, com Raylane (teto 45k) e uma família de teto 20k em Jupi:
+
+| Oportunidade | Mensagem |
+|---|---|
+| Disponível · R$ 40.000 | `1 família compatível: RAYLANE…` |
+| Disponível · R$ 90.000 | `Nenhuma família compatível no momento.` |
+| Reservada · R$ 40.000 | `Oportunidade reservada — sugestões não se aplicam.` |
+| Fechada · R$ 40.000 | `Oportunidade fechada — sugestões não se aplicam.` |
+| Perdida · R$ 40.000 | `Oportunidade perdida — sugestões não se aplicam.` |
+
+A segunda linha é o achado: **há** famílias em Jupi, o teto é que não comporta.
+A frase antiga teria dito que a cidade não tem ninguém.
+
+### Estado
+
+`GRAVACAO_IMPLEMENTADA` segue `false`, Salvar sem listener, banco intocado.
+
+### Continua NÃO testado
+
+- **Gravação com perfil não-admin** — único aceite funcional pendente.
+- **Celular.**
+- Screenshot desta rodada: o painel do navegador parou de compor frames; a
+  evidência acima é a leitura do DOM renderizado, não imagem.

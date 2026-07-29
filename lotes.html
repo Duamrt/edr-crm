@@ -580,8 +580,18 @@
     //  • Região é só contexto, NÃO filtra: é texto livre digitado à mão, e
     //    comparar "Centro" com "centro " sumiria com a família sem erro.
     //  • Só situações SUGERÍVEIS — ver constante abaixo.
+    // Situações da oportunidade que recebem sugestão. Filtro fica AQUI, não
+    // no desenho: assim a função tem uma resposta só e qualquer chamador
+    // futuro herda a proteção — senão um lote fechado volta a sugerir gente.
+    //
+    // ⚠️ `reservada` está FORA por decisão pendente de Duam, não por regra
+    // definida. Reservado não é encerrado: pode cair e voltar ao mercado.
+    // Deixado sem sugestão por ora — mudar exige decisão, não palpite.
+    const OPORT_SUGERE = ['disponivel']
+
     function familiasCompativeis(oport) {
       if (!oport || !oport.cidade) return []
+      if (!OPORT_SUGERE.includes(oport.situacao)) return []
       // SUGERIVEIS ≠ "ativas no banco". `pausada` continua uma procura válida
       // e aparece na fila normalmente — mas quem pausou pediu para não ser
       // procurado agora, então não recebe oportunidade enquanto estiver assim.
@@ -641,7 +651,13 @@
         sug.className = 'lt-oport-compat' + (compat.length ? '' : ' lt-oport-compat-vazio')
 
         if (!compat.length) {
-          sug.textContent = 'Nenhuma família da fila combina com esta cidade.'
+          // Duas causas diferentes, duas frases diferentes. A antiga dizia
+          // "nenhuma família nesta cidade" — mentira quando existe família na
+          // cidade cujo teto não comporta o valor. Texto neutro não induz erro.
+          sug.textContent = OPORT_SUGERE.includes(o.situacao)
+            ? 'Nenhuma família compatível no momento.'
+            : 'Oportunidade ' + (OPORT_LABEL[o.situacao] || o.situacao).toLowerCase()
+              + ' — sugestões não se aplicam.'
         } else {
           const titulo = document.createElement('span')
           titulo.className = 'lt-compat-titulo'
