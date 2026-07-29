@@ -1,0 +1,351 @@
+/* ============================================================
+   EDR CRM — Lotes (Famílias procurando oportunidade)
+   ISOLADO: não carrega css/style.css nem css/tokens.css.
+
+   Esta tela SUBSTITUIU a planta/quadras/disponibilidade do loteamento
+   antigo. Ver docs/redesign/06, 07 e 08.
+   NADA foi apagado de crm_lotes — o vínculo família↔lote continua em
+   Clientes, Ficha e cadastro de família.
+   ============================================================ */
+
+:root{
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176; --azul:#3178ad;
+  --vermelho:#d9473d; --amarelo:#d97706;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--ink)}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+.flex{display:flex}
+.gap-8{gap:8px}
+.text-sm{font-size:12.5px}
+.text-muted{color:var(--muted)}
+.text-danger{color:var(--vermelho);font-weight:600}
+.font-bold{font-weight:700}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.page-content{padding:26px;flex:1;max-width:1580px;width:100%}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+
+/* ===================== SEÇÕES ===================== */
+/* Estado de TRANSIÇÃO — a estrutura está sendo ativada. Tom âmbar, informativo. */
+.lt-aviso{
+  background:#fdf0dc;border:1px solid #f2ddbd;color:#8a4a10;
+  padding:11px 15px;border-radius:11px;font-size:12.5px;
+  margin-bottom:18px;font-weight:600;line-height:1.5;
+}
+/* FALHA REAL de carregamento — vermelho, para não ser confundido com transição. */
+.lt-aviso-erro{background:#fdeceb;border-color:#f3ccc9;color:#a5352d}
+
+/* Aviso ao lado dos botões de cadastro enquanto a estrutura não existe */
+.lt-aviso-cadastro{
+  font:10px 'DM Mono',monospace;letter-spacing:.06em;
+  color:var(--muted);align-self:center;white-space:nowrap;
+}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:disabled:hover{border-color:var(--line)}
+.btn-primary:disabled:hover{background:var(--ink);border-color:var(--ink)}
+.lt-sec{margin-bottom:26px}
+.lt-sec-head{display:flex;align-items:baseline;gap:11px;margin-bottom:12px;flex-wrap:wrap}
+.lt-sec-titulo{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--ink)}
+.lt-sec-sub{font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* Estado vazio — honesto, sem número inventado */
+.lt-vazio{
+  background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);
+  padding:38px 22px;text-align:center;color:var(--muted);
+}
+.lt-vazio strong{
+  display:block;font-family:'Fraunces',serif;font-size:16px;font-weight:600;
+  color:var(--ink);margin-bottom:6px;
+}
+.lt-vazio span{font-size:12.5px;line-height:1.5;display:block;max-width:440px;margin:0 auto}
+
+/* ===================== FILTROS ===================== */
+.filtros-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filtros-bar input[type="search"],.filtros-bar select{
+  padding:10px 13px;border:1px solid var(--line);border-radius:11px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);
+  outline:none;transition:.15s;min-height:44px;
+}
+.filtros-bar input[type="search"]{min-width:260px;flex:1;max-width:360px}
+.filtros-bar input[type="search"]:focus,.filtros-bar select:focus{
+  border-color:var(--green);box-shadow:0 0 0 3px rgba(22,75,55,.08)
+}
+.filtros-bar #contador{font:11px 'DM Mono',monospace;color:var(--muted);letter-spacing:.06em;margin-left:auto}
+
+/* ===================== TABELA (densa, padrão de Clientes) ===================== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:1080px}
+thead th{
+  background:var(--paper);border-bottom:1px solid var(--line);
+  padding:11px 14px;text-align:left;white-space:nowrap;
+  font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--paper)}
+tbody a.font-bold{color:var(--ink);text-decoration:none}
+tbody tr:hover a.font-bold{color:var(--green)}
+.col-proxima{max-width:250px;overflow:hidden;text-overflow:ellipsis}
+.lt-pref{max-width:160px;overflow:hidden;text-overflow:ellipsis}
+
+/* Situação e ações grudadas à direita: é o que se lê em varredura, e a
+   tabela rola na horizontal. */
+.lt-sit-col{position:sticky;right:118px;background:var(--card)}
+tbody tr:hover .lt-sit-col{background:var(--paper)}
+thead th.lt-sit-col{background:var(--paper)}
+.col-acoes{
+  white-space:nowrap;text-align:right;
+  position:sticky;right:0;background:var(--card);
+  box-shadow:-10px 0 12px -10px rgba(23,53,42,.2);
+}
+tbody tr:hover .col-acoes{background:var(--paper)}
+thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-10px 0 12px -10px rgba(23,53,42,.2)}
+
+/* ===================== SITUAÇÕES ===================== */
+.lt-sit{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.07em;
+  text-transform:uppercase;white-space:nowrap;
+  background:var(--paper);color:var(--muted);border:1px solid var(--line);
+}
+/* Procura */
+.sit-procurando{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.sit-em_analise{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.sit-pausada{background:#f1f0ec;color:var(--muted);border-color:#e0dfd8}
+.sit-atendida{background:var(--green);color:#fff;border-color:var(--green)}
+.sit-desistiu{background:#f1f0ec;color:#8a8a80;border-color:#e0dfd8}
+/* Oportunidade */
+.oport-disponivel{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.oport-reservada{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.oport-fechada{background:var(--green);color:#fff;border-color:var(--green)}
+.oport-perdida{background:#f1f0ec;color:#8a8a80;border-color:#e0dfd8}
+
+/* ===================== OPORTUNIDADES ===================== */
+.lt-oport-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.lt-oport{
+  background:var(--card);border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:var(--radius-sm);padding:14px 16px;box-shadow:var(--shadow);
+}
+.lt-oport-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:7px}
+.lt-oport-titulo{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.35}
+.lt-oport-meta{font:11.5px 'DM Mono',monospace;color:var(--muted);line-height:1.5}
+
+/* ===================== SPINNER ===================== */
+#loading{position:fixed;inset:0;background:rgba(247,246,239,.75);display:grid;place-items:center;z-index:500}
+.spinner{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:girar .7s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:860px){
+  .sidebar{width:96px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  .sidebar-nav a{justify-content:center;padding:12px 4px;font-size:11px;gap:0;text-align:center}
+  .sidebar-footer{display:none}
+  .main{margin-left:96px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+  .filtros-bar input[type="search"]{min-width:100%;max-width:none}
+  .filtros-bar #contador{margin-left:0}
+}
+@media(max-width:560px){
+  .lt-oport-lista{grid-template-columns:1fr}
+  .filtros-bar select{flex:1;min-width:calc(50% - 4px)}
+
+  /* Celular (verificado em 375px, 2026-07-29): os três botões do topo
+     lado a lado somavam 486px e empurravam a PÁGINA INTEIRA para os
+     lados — não era a tabela, que já rola dentro de .table-wrap.
+     Agora a barra quebra em linha e os botões dividem o espaço. */
+  .topbar{flex-wrap:wrap;gap:8px}
+  .topbar .flex{flex-wrap:wrap;width:100%;gap:6px}
+  .topbar .btn{flex:1 1 auto;min-height:44px;white-space:nowrap}
+  /* Sair não precisa de metade da tela; encolhe e deixa espaço aos outros */
+  .topbar .btn:last-child{flex:0 0 auto;padding-left:14px;padding-right:14px}
+  /* O aviso é frase, não botão: linha inteira para não espremer o resto.
+     min-width:0 + white-space:normal são obrigatórios — sem eles o texto
+     vira uma linha só de 892px e volta a empurrar a página. */
+  .lt-aviso-cadastro{
+    flex:1 0 100%;order:-1;min-width:0;
+    white-space:normal;overflow-wrap:anywhere;line-height:1.35
+  }
+  /* Trava final: nada nesta tela pode exceder a largura do celular.
+     A tabela é a exceção legítima e rola dentro de .table-wrap. */
+  .topbar,.page-content,.lt-sec,.card{max-width:100%;min-width:0}
+
+  /* Alvo de toque de 44px nos modais. No dedo, campo de 38px e botão de
+     34px erram o alvo — e aqui é justamente onde se digita o cadastro. */
+  .lt-campo input,.lt-campo select,.lt-campo textarea{min-height:44px}
+  .lt-modal-foot .btn{min-height:44px;flex:1}
+  .lt-modal-close{min-width:44px;min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ============================================================
+   MODAIS DE CADASTRO — Registrar procura · Captar oportunidade
+   Adicionados 2026-07-29. Escritos AQUI e não importados de
+   css/style.css: esta tela é isolada por decisão do redesenho, e
+   importar o CSS global traria a identidade antiga junto.
+   ============================================================ */
+
+.lt-modal-overlay{
+  position:fixed;inset:0;background:rgba(23,53,42,.55);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:16px
+}
+.lt-modal-overlay.hidden{display:none}
+.lt-modal{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  width:100%;max-width:620px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 64px -24px rgba(23,53,42,.45);
+  display:flex;flex-direction:column
+}
+.lt-modal-head{
+  padding:18px 22px 14px;border-bottom:1px solid var(--line);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px
+}
+.lt-modal-titulo{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink)}
+.lt-modal-sub{display:block;font:11px 'DM Mono',monospace;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.lt-modal-close{
+  background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);
+  padding:2px 6px;line-height:1;border-radius:8px;flex-shrink:0
+}
+.lt-modal-close:hover{background:var(--paper);color:var(--ink)}
+.lt-modal-body{padding:20px 22px;flex:1}
+.lt-modal-foot{
+  padding:14px 22px;border-top:1px solid var(--line);
+  display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap
+}
+.lt-modal-foot .lt-foot-aviso{
+  margin-right:auto;font-size:.8rem;color:var(--amarelo);font-weight:600;max-width:280px
+}
+
+/* campos */
+.lt-campo{margin-bottom:15px}
+.lt-campo label{
+  display:block;font:11px 'DM Mono',monospace;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px
+}
+.lt-campo .lt-obrig{color:var(--orange)}
+.lt-campo input,.lt-campo select,.lt-campo textarea{
+  width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:.9rem;color:var(--ink);
+  background:var(--card);transition:border-color .15s
+}
+.lt-campo textarea{resize:vertical;min-height:64px}
+.lt-campo input:focus,.lt-campo select:focus,.lt-campo textarea:focus{
+  outline:none;border-color:var(--green-2)
+}
+.lt-campo input:disabled,.lt-campo select:disabled,.lt-campo textarea:disabled{
+  background:var(--paper);color:var(--muted);cursor:not-allowed
+}
+.lt-campo-dica{display:block;font-size:.76rem;color:var(--muted);margin-top:4px}
+.lt-grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.lt-grid2 .lt-full{grid-column:1/-1}
+
+@media(max-width:560px){
+  .lt-grid2{grid-template-columns:1fr}
+  .lt-modal-foot{flex-direction:column-reverse;align-items:stretch}
+  .lt-modal-foot .lt-foot-aviso{margin-right:0;max-width:none;text-align:center}
+}
+
+/* ── Toast ────────────────────────────────────────────────────────
+   `toast()` vive em js/utils.js (já carregado por esta tela), mas o
+   CSS estava só em css/style.css, que esta tela NÃO importa — o aviso
+   apareceria sem estilo nenhum. Escrito aqui na paleta do módulo.   */
+.toast{
+  position:fixed;bottom:24px;right:24px;padding:12px 20px;
+  border-radius:999px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:.88rem;font-weight:600;z-index:999;max-width:min(420px,calc(100vw - 48px));
+  box-shadow:0 12px 32px -12px rgba(23,53,42,.5);
+  animation:toastEntra .22s ease
+}
+.toast-info{background:var(--ink);color:var(--paper)}
+.toast-success{background:var(--green);color:#fff}
+.toast-error{background:var(--vermelho);color:#fff}
+@keyframes toastEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:560px){
+  .toast{left:16px;right:16px;bottom:16px;max-width:none;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* Sugestão de famílias compatíveis — visual, não vínculo.
+   Separada do resto do card por uma linha: é informação derivada, não
+   dado da oportunidade. Verde discreto para sugerir sem gritar. */
+.lt-oport-compat{
+  margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);
+  font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:baseline
+}
+.lt-oport-compat-vazio{color:#7b8a7f;font-style:italic}
+.lt-compat-titulo{font-weight:700;color:var(--green-2)}
+.lt-compat-lista{display:inline;color:var(--ink)}
+.lt-compat-nome{
+  color:var(--green);font-weight:600;text-decoration:none;
+  border-bottom:1px solid transparent;transition:border-color .15s ease
+}
+.lt-compat-nome:hover,.lt-compat-nome:focus-visible{border-bottom-color:var(--green)}
+/* Alvo de toque em telas pequenas — nomes lado a lado ficam difíceis de acertar */
+@media (max-width:640px){
+  .lt-oport-compat{gap:6px 10px}
+  .lt-compat-nome{display:inline-block;padding:3px 0}
+}
+.lt-compat-mais{color:#7b8a7f;font-style:italic}
