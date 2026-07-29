@@ -1564,3 +1564,60 @@ o retorno não é usado, mas o comentário induziria alguém a desestruturar dir
 
 - **Perfil não-admin** — não existe conta assim hoje.
 - **Celular físico** — medido em emulação 375×812 (seção 24), não em aparelho.
+
+---
+
+## 26. CORREÇÕES PÓS-DEPLOY — 2026-07-29
+
+Dois achados do Codex depois do release. Nenhum toca a lógica.
+
+### 1. Comentários que mentiam sobre o estado
+
+Três lugares ainda diziam que o cadastro não grava, e um deles é a primeira coisa
+que alguém lê ao abrir o arquivo:
+
+| Onde | Dizia | Agora |
+|---|---|---|
+| Cabeçalho do modal | *"NÃO grava: o Salvar fica desabilitado até as tabelas existirem"* | *"Cadastro no ar desde 2026-07-29"* |
+| Bloco da trava | *"continuam DESLIGADAS: sem listener… sem autorização"* | descreve a chave como jeito de **desligar** em manutenção |
+| `MSG_SEM_GRAVACAO` | *"ainda não foi liberado — em implementação"* | *"Cadastro temporariamente indisponível"* |
+| Aviso do topo | *"Cadastro em implementação"* | *"Cadastro indisponível no momento"* |
+
+As duas últimas não são comentários: são **mensagens vivas**, que aparecem se
+`GRAVACAO_IMPLEMENTADA` voltar a `false`. Foram reescritas, não removidas — o
+mecanismo de desligar continua útil (manutenção, incidente no banco), só que
+"em implementação" virou mentira depois do release.
+
+O bloco da trava também ganhou o aviso que faltava: **não mexer no `disabled`
+fora de `desabilitarCadastro()`** — foi exatamente assim que a trava foi
+contornada uma vez (seção 19).
+
+### 2. Relatório de deploy impreciso
+
+Eu disse *"só dois arquivos mudam em produção"*. **Errado como escrito.** Filtrei
+o diff por `*.html`/`*.css` excluindo `docs/`, vi 2 arquivos e reportei isso como
+o total. O merge levou **17**.
+
+Correto: **apenas Lotes teve mudança funcional** (`lotes.html` + `css/lotes.css`).
+Os outros 15 receberam cache-buster nos `?cb=`, a versão do Service Worker
+(`sw.js`) e `CRM_VERSION` em `js/utils.js` — tudo escrito pelo próprio
+`deploy.sh`, comportamento esperado.
+
+A diferença importa: "dois arquivos mudaram" sugere que o resto ficou intocado no
+Git, o que não é verdade.
+
+### Evidência
+
+```
+gravação → 48 passaram, 0 falharam
+compat   → 29 passaram, 0 falharam
+```
+
+Diff só de comentário e string; nenhuma linha de lógica alterada.
+
+### Continua NÃO testado
+
+- **Perfil não-admin** — não existe conta assim.
+- **Celular físico** — emulação apenas.
+- O conteúdo servido em produção **após este commit** (é documental, mas só está
+  no ar depois do próximo deploy).

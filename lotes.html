@@ -100,8 +100,8 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        MODAL 1 — REGISTRAR PROCURA
-       Interface local (2026-07-29). NÃO grava: o botão Salvar fica
-       desabilitado até as tabelas existirem no banco. Ver docs/redesign/07.
+       Cadastro no ar desde 2026-07-29 — grava em crm_procura_lote.
+       Ver docs/redesign/07, seção 25.
        ═══════════════════════════════════════════════════════════════ -->
   <div id="modal-procura" class="lt-modal-overlay hidden" onclick="if(event.target===this)fecharModal('modal-procura')">
     <div class="lt-modal" role="dialog" aria-modal="true" aria-labelledby="mp-titulo">
@@ -335,24 +335,25 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // TRAVA DE GRAVAÇÃO — não remover sem implementar sbPost antes
+    // CHAVE DE GRAVAÇÃO
     // ═══════════════════════════════════════════════════════════════
-    // ESTADO REAL (2026-07-29): as funções de gravação EXISTEM e chamam
-    //    `sbPost` — `salvarProcura()` e `salvarOportunidade()`, mais abaixo.
-    //    Mas continuam DESLIGADAS: sem listener ligando os botões às funções,
-    //    e sem autorização de Duam para escrita real em produção.
+    // LIBERADO em 2026-07-29 (seção 25 do doc): `salvarProcura()` e
+    //    `salvarOportunidade()` gravam de verdade, e os dois Salvar têm
+    //    listener. A escrita foi provada em produção antes de ligar.
     //
-    //    São duas barreiras independentes, de propósito. Mesmo que alguém
-    //    ligue um listener por engano, esta constante mantém os Salvar
-    //    desabilitados INDEPENDENTE de as tabelas responderem.
+    //    A chave continua aqui porque é o jeito de DESLIGAR o cadastro sem
+    //    tirar a tela do ar — manutenção, incidente no banco, o que for.
+    //    Virar para `false` basta: os dois Salvar voltam a ficar
+    //    desabilitados com aviso, e a tela segue servindo para consulta.
     //
-    //    Ligar a gravação exige os três passos JUNTOS: testar com sessão
-    //    real autorizada → adicionar os listeners → virar esta constante.
-    //    Nenhum vale sozinho.
+    //    ⚠️ Não mexa no `disabled` dos botões em outro lugar. Quem decide é
+    //    desabilitarCadastro(), a partir de _estruturaPronta + esta chave.
+    //    Habilitar "na mão" já contornou esta trava uma vez (seção 19).
     const GRAVACAO_IMPLEMENTADA = true
 
     const MSG_SEM_ESTRUTURA = 'Disponível após ativação da estrutura'
-    const MSG_SEM_GRAVACAO  = 'Cadastro ainda não foi liberado — em implementação'
+    // Só aparece se a chave acima for desligada — hoje o cadastro está no ar.
+    const MSG_SEM_GRAVACAO  = 'Cadastro temporariamente indisponível'
 
     // ⚠️ A trava é SÓ na GRAVAÇÃO, não na abertura (correção de UX, Duam
     //    2026-07-29). Abrir e preencher não escreve nada; travar o topo só
@@ -373,7 +374,7 @@
       const avisoTopo = document.getElementById('aviso-cadastro')
       avisoTopo.textContent = semEstrutura
         ? 'Cadastro em ativação — dá para conferir os campos, ainda não salvar'
-        : 'Cadastro em implementação — dá para conferir os campos, ainda não salvar'
+        : 'Cadastro indisponível no momento — dá para conferir os campos, ainda não salvar'
       avisoTopo.classList.toggle('hidden', !bloqueado)
 
       ;[['mp-salvar','mp-aviso'], ['mo-salvar','mo-aviso']].forEach(([bId, aId]) => {
