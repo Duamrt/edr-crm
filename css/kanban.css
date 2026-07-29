@@ -118,14 +118,33 @@ button{font:inherit;cursor:pointer}
 .legenda-sla{background:var(--amarelo)}
 
 /* ===================== COLUNAS ===================== */
+/* ── GRADE 3×2 — decisão de Duam (2026-07-29) ─────────────────────────
+   ANTES: faixa horizontal com 6 colunas de 268px = 1608px, contra ~1136px
+   disponíveis em tela de notebook. Duas colunas ficavam SEMPRE escondidas
+   atrás de rolagem lateral, matando a visão do funil inteiro.
+
+   AGORA: 3 colunas × 2 linhas. A esteira aparece inteira, e cada coluna fica
+   larga o bastante para ler nome e próxima ação sem truncar:
+
+     Triagem  →  Documentação  →  Correspondente
+     Aprovado →  Prefeitura    →  Assinatura
+
+   Descartada a alternativa de encolher as colunas: cards apertados cortariam
+   nomes longos — pior que rolar (Duam).
+
+   ⚠️ SEGURO PARA O ARRASTAR: verificado que o drop NÃO depende de geometria.
+   Não há offsetLeft/getBoundingClientRect/scrollLeft/insertBefore no arquivo;
+   o destino vem de `colEl.dataset.status` (kanban.html:237), lido no evento
+   disparado na coluna sob o cursor. Onde a coluna está na tela é irrelevante.
+   ────────────────────────────────────────────────────────────────── */
 .kanban-wrap{
-  display:flex;gap:14px;align-items:flex-start;
-  overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:14px;align-items:start;padding-bottom:10px;
 }
 .kanban-col{
-  flex:0 0 268px;background:#eef0e9;border:1px solid var(--line);
+  background:#eef0e9;border:1px solid var(--line);
   border-radius:var(--radius);padding:12px;
-  display:flex;flex-direction:column;gap:9px;min-height:150px;
+  display:flex;flex-direction:column;gap:9px;min-height:150px;min-width:0;
   transition:background .15s,border-color .15s;
 }
 .kanban-col-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 3px 6px}
@@ -163,7 +182,13 @@ button{font:inherit;cursor:pointer}
 .kanban-card-nome{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.01em;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kanban-card-lote{font:11px 'DM Mono',monospace;color:var(--muted)}
 .kanban-card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
-.kanban-card-acao{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Com a grade 3×2 a coluna ficou larga: a próxima ação pode ocupar até 2 linhas
+   em vez de truncar. É o dado que diz o que fazer com a família. */
+.kanban-card-acao{
+  font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.kanban-card-nome{overflow-wrap:anywhere}
 
 /* Gravidade do card (classes vindas do JS) */
 .kanban-card.has-impedimento{border-left-color:var(--vermelho)}
@@ -279,8 +304,14 @@ body.bulk-mode .kanban-wrap{padding-bottom:80px}
 @media(max-width:780px){
   .kanban-bulk-bar{left:0}
 }
+/* A grade acompanha a largura: 3 → 2 → 1 coluna. Nunca volta a rolar de lado. */
+@media(max-width:1180px){
+  .kanban-wrap{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  .kanban-wrap{grid-template-columns:1fr}
+}
 @media(max-width:560px){
-  .kanban-col{flex:0 0 82vw}
   .kanban-bulk-bar{padding:12px 16px;gap:9px}
   .kanban-bulk-bar select{min-width:100%}
   .kanban-bulk-bar .btn{flex:1;justify-content:center}
