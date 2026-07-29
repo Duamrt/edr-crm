@@ -179,3 +179,36 @@ Nada de migração automática.
 
 **Próximo passo:** protótipo local da tela (sem tocar em banco). O SQL só é apresentado
 **depois** que Duam aprovar este desenho.
+
+---
+
+## 9. IMPLEMENTAÇÃO DA TELA — 2026-07-29
+
+**Decisão:** implementar a tela ANTES de o banco existir, com estado honesto.
+**Motivo:** a tela antiga mostrava estoque fictício em produção. Trocar já remove a
+informação errada, mesmo que a fila só ganhe dados depois das tabelas.
+
+### Mudança
+- `lotes.html` reescrito · `css/lotes.css` novo (isolado).
+- **SAIU:** planta (`img/mapa-lotes.jpg`), quadras, "disponíveis", lotes avulsos,
+  mapa arrastável (`initDrag`/`savePos`). Verificado: 0 ocorrências de cada.
+- **ENTROU:** fila de famílias procurando + oportunidades captadas.
+- Datas exibidas como "em 4 dias" / "02 ago" — nunca "02/08" solto (exigência de Duam).
+
+### Evidência
+- `node -c` no JS extraído: **OK** (245 linhas).
+- Parte falsa removida: `mapa-lotes`, `quadra`, `avulso`, `initDrag`, `disponiveis` = **0**.
+- `crm_lotes` **não é mais consultada por esta tela** (0 ocorrências), mas **continua**
+  em `clientes.html` (2), `ficha.html` (4), `kanban.html` (2), `familia.html` (1) —
+  o vínculo família↔lote está preservado.
+- `js/` e as outras telas: **0 alterações**.
+- Estado sem tabelas testado em prévia: avisa o que falta, mostra "Ninguém na fila ainda"
+  e "Nenhuma oportunidade captada ainda". Sem erro cru, sem número inventado.
+
+### Pendência
+Os botões "+ Registrar procura" e "+ Captar oportunidade" avisam que a estrutura não
+existe. Os formulários entram junto com as tabelas — **sem botão que finge funcionar**.
+
+### Validado no teste 1 (sem precisar de branch)
+`crm_user_has_profile()` retorna **FALSE** sem sessão:
+`auth.uid()` = null · função = false · perfis = 0. Evidência do "anônimo bloqueado".

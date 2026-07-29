@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <title>EDR CRM — Lotes MCMV</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1785309493">
-  <link rel="stylesheet" href="css/style.css?cb=1785309493">
+  <title>EDR CRM — Lotes</title>
+  <link rel="stylesheet" href="css/lotes.css?cb=1">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="prefetch" href="clientes.html">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  
-  <link rel="prefetch" href="clientes.html">
-  <link rel="prefetch" href="kanban.html">
-  <link rel="preload" href="img/mapa-lotes.jpg" as="image">
   <script>document.documentElement.style.visibility = 'hidden'</script>
 </head>
 <body>
@@ -21,151 +18,89 @@
     <nav class="sidebar">
       <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
-        <a href="dashboard.html">📊 Dashboard</a>
-        <a href="clientes.html">👥 Clientes</a>
-        <a href="kanban.html">📋 Kanban</a>
-        <a href="lotes.html" class="active">🏘️ Lotes</a>
-        <a href="agenda.html">📅 Agenda</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="clientes.html">Clientes</a>
+        <a href="kanban.html">Kanban</a>
+        <a href="lotes.html" class="active">Lotes</a>
+        <a href="agenda.html">Agenda</a>
       </div>
       <div class="sidebar-footer"><div id="sidebar-usuario"></div><div id="crm-versao-footer" class="crm-versao"></div></div>
     </nav>
 
     <div class="main">
       <div class="topbar">
-        <span class="topbar-title">Lotes — MCMV</span>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div id="contador-lotes" class="text-sm text-muted"></div>
-          <button class="btn btn-primary btn-sm" onclick="abrirNovoAvulso()" style="font-size:.8rem;padding:4px 10px;">+ Lote avulso</button>
-          <button id="btn-ajustar" class="btn btn-secondary" onclick="toggleEditMode()" style="font-size:.8rem;padding:4px 10px;">⚙️ Ajustar</button>
+        <span class="topbar-title">Lotes</span>
+        <div class="flex gap-8">
+          <button id="btn-nova-procura" class="btn btn-secondary btn-sm">+ Registrar procura</button>
+          <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm">+ Captar oportunidade</button>
+          <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
       </div>
 
       <div class="page-content">
+        <!-- Exibido só enquanto as tabelas novas não existirem no banco -->
+        <div class="lt-aviso hidden" id="aviso-estrutura"></div>
 
-        <!-- Legenda -->
-        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center;">
-          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#22c55e;border-radius:50%;opacity:.85;"></span>Disponível</span>
-          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#f59e0b;border-radius:50%;opacity:.85;"></span>Reservado</span>
-          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#6b7280;border-radius:50%;opacity:.85;"></span>Vendido</span>
-          <span style="display:flex;align-items:center;gap:5px;font-size:.82rem;"><span style="display:inline-block;width:14px;height:14px;background:#ef4444;border-radius:50%;opacity:.85;"></span>Bloqueado</span>
-        </div>
-
-        <!-- Mapa SVG interativo -->
-        <div style="overflow-x:auto;background:#1f2937;border-radius:12px;padding:4px;">
-          <svg id="mapa-svg" viewBox="0 0 1000 562"
-               style="width:100%;min-width:600px;display:block;border-radius:10px;"
-               xmlns="http://www.w3.org/2000/svg">
-            <!-- renderizado pelo JS -->
-          </svg>
-        </div>
-
-        <!-- Lotes avulsos (fora do empreendimento principal) -->
-        <div id="avulsos-wrap" class="card hidden" style="margin-top:18px;padding:14px 18px;">
-          <div class="card-header" style="margin-bottom:8px;">
-            <h3 class="card-title">📍 Lotes avulsos <span class="text-sm text-muted" id="avulsos-count"></span></h3>
-            <span class="text-sm text-muted">Lotes próprios fora da planta do empreendimento</span>
+        <!-- PARTE 1 — FILA DE FAMÍLIAS -->
+        <section class="lt-sec">
+          <div class="lt-sec-head">
+            <span class="lt-sec-titulo">Famílias procurando lote</span>
+            <span class="lt-sec-sub" id="fila-sub">carregando…</span>
           </div>
-          <div id="avulsos-lista"></div>
-        </div>
 
-        <!-- Modal novo lote avulso -->
-        <div id="modal-novo-avulso" class="modal-overlay hidden">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>+ Novo lote avulso</h3>
-              <button class="modal-close" onclick="fecharNovoAvulso()">✕</button>
-            </div>
-            <div class="modal-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Número da matrícula *</label>
-                  <input type="number" id="avulso-numero" min="1" placeholder="ex: 67">
-                </div>
-                <div class="form-group">
-                  <label>Metragem (m²)</label>
-                  <input type="number" id="avulso-metragem" min="0" step="0.01" placeholder="0,00">
-                </div>
-                <div class="form-group form-full">
-                  <label>Observação</label>
-                  <input type="text" id="avulso-observacao" maxlength="200" placeholder="ex: Terreno próprio, localização, etc">
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button onclick="fecharNovoAvulso()" class="btn btn-secondary">Cancelar</button>
-              <button onclick="salvarNovoAvulso()" class="btn btn-primary">Cadastrar</button>
+          <div class="filtros-bar">
+            <input type="search" id="busca" placeholder="Buscar família...">
+            <select id="filtro-cidade"><option value="">Todas as cidades</option></select>
+            <select id="filtro-situacao">
+              <option value="">Todas as situações</option>
+              <option value="procurando">Procurando</option>
+              <option value="em_analise">Em análise</option>
+              <option value="pausada">Pausada</option>
+              <option value="atendida">Atendida</option>
+              <option value="desistiu">Desistiu</option>
+            </select>
+            <span id="contador"></span>
+          </div>
+
+          <div class="card" style="padding:0">
+            <div class="table-wrap">
+              <table>
+                <thead><tr>
+                  <th>Família</th><th>Cidade / região</th><th>Valor máximo</th><th>Metragem</th>
+                  <th>Preferência</th><th>Próxima ação</th><th class="lt-sit-col">Situação</th><th></th>
+                </tr></thead>
+                <tbody id="fila-tbody"></tbody>
+              </table>
             </div>
           </div>
-        </div>
-
-        <!-- Modal detalhe lote -->
-        <div id="modal-lote" class="modal-overlay hidden">
-          <div class="modal">
-            <div class="modal-header">
-              <h3 id="modal-lote-title">Lote</h3>
-              <button class="modal-close" onclick="fecharModal()">✕</button>
-            </div>
-            <div class="modal-body">
-              <div id="modal-lote-body"></div>
-            </div>
-            <div class="modal-footer">
-              <button onclick="fecharModal()" class="btn btn-secondary">Fechar</button>
-              <button id="modal-btn-editar" class="btn btn-secondary" onclick="abrirEdicao()">✏️ Editar</button>
-              <a href="#" id="modal-btn-cliente" class="btn btn-primary hidden">Ver família</a>
-              <button id="modal-btn-bloquear" class="btn btn-danger hidden" onclick="toggleBloquear()">Bloquear lote</button>
-            </div>
+          <div id="fila-vazia" class="lt-vazio hidden">
+            <strong>Ninguém na fila ainda.</strong>
+            <span>Registre uma família que esteja procurando lote para ela aparecer aqui.</span>
           </div>
-        </div>
+        </section>
 
-        <!-- Modal edição lote -->
-        <div id="modal-editar-lote" class="modal-overlay hidden">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>Editar lote</h3>
-              <button class="modal-close" onclick="fecharEdicao()">✕</button>
-            </div>
-            <div class="modal-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Número</label>
-                  <input type="number" id="edit-numero" min="1">
-                </div>
-                <div class="form-group">
-                  <label>Metragem (m²)</label>
-                  <input type="number" id="edit-metragem" min="0" step="0.01">
-                </div>
-                <div class="form-group">
-                  <label>Quadra</label>
-                  <input type="text" id="edit-quadra" maxlength="10">
-                </div>
-                <div class="form-group">
-                  <label>Status manual</label>
-                  <select id="edit-status">
-                    <option value="disponivel">Disponível</option>
-                    <option value="bloqueado">Bloqueado</option>
-                  </select>
-                </div>
-                <div class="form-group form-full">
-                  <label>Observação</label>
-                  <input type="text" id="edit-observacao" maxlength="100">
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button onclick="fecharEdicao()" class="btn btn-secondary">Cancelar</button>
-              <button onclick="salvarEdicao()" class="btn btn-primary">Salvar</button>
-            </div>
+        <!-- PARTE 2 — OPORTUNIDADES -->
+        <section class="lt-sec">
+          <div class="lt-sec-head">
+            <span class="lt-sec-titulo">Oportunidades captadas</span>
+            <span class="lt-sec-sub" id="oport-sub">carregando…</span>
           </div>
-        </div>
+          <div id="oport-lista" class="lt-oport-lista"></div>
+          <div id="oport-vazia" class="lt-vazio hidden">
+            <strong>Nenhuma oportunidade captada ainda.</strong>
+            <span>Quando aparecer um lote real, cadastre aqui — e o sistema mostra
+            quais famílias da fila combinam com a cidade, a região e o valor.</span>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1785309493"></script>
-  <script src="js/auth.js?cb=1785309493"></script>
-  <script src="js/utils.js?cb=1785309493"></script>
+  <script src="js/supabase.js?cb=1"></script>
+  <script src="js/auth.js?cb=1"></script>
+  <script src="js/utils.js?cb=1"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -173,342 +108,245 @@
     const u = getUsuario()
     document.getElementById('sidebar-usuario').textContent = u?.nome || u?.email || ''
 
-    let _lotes = []
-    let _loteAtual = null
-    let _editMode = false
-    let _drag = null
-
-    const _DEFAULT_POS = {
-      A: [{cx:213,cy:207},{cx:256,cy:207},{cx:298,cy:207},{cx:341,cy:207},{cx:384,cy:207},
-          {cx:426,cy:207},{cx:469,cy:207},{cx:512,cy:207},{cx:554,cy:207},{cx:597,cy:207},
-          {cx:640,cy:207},{cx:682,cy:207},{cx:725,cy:207},{cx:768,cy:207},{cx:810,cy:207},
-          {cx:853,cy:207},{cx:895,cy:207}],
-      B: [{cx:440,cy:402},{cx:486,cy:402},{cx:531,cy:402},{cx:577,cy:402},{cx:622,cy:402},
-          {cx:668,cy:402},{cx:713,cy:402},{cx:759,cy:402},{cx:804,cy:402},{cx:850,cy:402},{cx:895,cy:402}]
+    const SIT_LABEL = {
+      procurando: 'Procurando', em_analise: 'Em análise', pausada: 'Pausada',
+      atendida: 'Atendida', desistiu: 'Desistiu'
+    }
+    const OPORT_LABEL = {
+      disponivel: 'Disponível', reservada: 'Reservada',
+      fechada: 'Fechada', perdida: 'Perdida'
     }
 
-    let _pos = JSON.parse(JSON.stringify(_DEFAULT_POS))
+    let _procuras = []
+    let _oportunidades = []
+    let _estruturaPronta = false
 
-    async function loadPos() {
-      try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/crm_config?chave=eq.lotes_posicoes&select=valor`, { headers: _headers() })
-        if (r.ok) {
-          const data = await r.json()
-          if (data[0]?.valor) {
-            _pos = data[0].valor
-            localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
-            return
-          }
-        }
-      } catch(e) { console.warn('loadPos DB error, usando localStorage:', e) }
-      const cached = localStorage.getItem('edr_lotes_pos')
-      if (cached) try { _pos = JSON.parse(cached) } catch {}
+    // ── Data legível: "em 4 dias" ou "02 ago" ───────────────────────
+    // Exigência de Duam: nunca "02/08" solto — vira ambíguo na virada do ano.
+    function prazoLegivel(iso) {
+      if (!iso) return ''
+      const hoje = new Date(); hoje.setHours(0,0,0,0)
+      const p = new Date(iso + 'T00:00:00'); p.setHours(0,0,0,0)
+      const dias = Math.round((p - hoje) / 86400000)
+      if (dias === 0) return 'hoje'
+      if (dias === 1) return 'amanhã'
+      if (dias === -1) return 'ontem'
+      if (dias > 1 && dias <= 14) return 'em ' + dias + ' dias'
+      if (dias < -1 && dias >= -14) return 'há ' + Math.abs(dias) + ' dias'
+      return p.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')
+    }
+    function prazoVencido(iso) {
+      if (!iso) return false
+      const hoje = new Date(); hoje.setHours(0,0,0,0)
+      return new Date(iso + 'T00:00:00') < hoje
+    }
+    function cidadeRegiao(p) {
+      const reg = (p.regiao === 'Outra' && p.regiao_outra) ? p.regiao_outra : p.regiao
+      if (!p.cidade) return reg || '—'
+      return p.cidade + ' — ' + (reg || '?')
+    }
+    function moeda(v) {
+      if (v === null || v === undefined || v === '') return '—'
+      return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })
+    }
+    function areaM2(v) {
+      if (v === null || v === undefined || v === '') return '—'
+      return Number(v).toLocaleString('pt-BR') + ' m²'
     }
 
-    async function savePos() {
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/crm_config?chave=eq.lotes_posicoes`, {
-          method: 'PATCH',
-          headers: { ..._headers(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ valor: _pos, updated_at: new Date().toISOString() })
-        })
-        localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
-      } catch(e) {
-        localStorage.setItem('edr_lotes_pos', JSON.stringify(_pos))
-        console.warn('savePos fallback localStorage:', e)
-      }
-    }
-
-    // Drag via setPointerCapture — captura todos os eventos mesmo fora do círculo
-    function initDrag() {
-      const svg = document.getElementById('mapa-svg')
-
-      svg.addEventListener('pointerdown', e => {
-        if (!_editMode) return
-        const g = e.target.closest('g[data-q]')
-        if (!g) return
-        e.preventDefault()
-        svg.setPointerCapture(e.pointerId)
-        const rect = svg.getBoundingClientRect()
-        const q = g.dataset.q, i = parseInt(g.dataset.i)
-        _drag = {
-          q, i,
-          scaleX: 1000 / rect.width,
-          scaleY: 562 / rect.height,
-          startX: e.clientX, startY: e.clientY,
-          origCX: _pos[q][i].cx, origCY: _pos[q][i].cy
-        }
-      })
-
-      svg.addEventListener('pointermove', e => {
-        if (!_drag) return
-        const cx = Math.round(_drag.origCX + (e.clientX - _drag.startX) * _drag.scaleX)
-        const cy = Math.round(_drag.origCY + (e.clientY - _drag.startY) * _drag.scaleY)
-        _pos[_drag.q][_drag.i] = { cx, cy }
-        const g = svg.querySelector(`g[data-q="${_drag.q}"][data-i="${_drag.i}"]`)
-        if (!g) return
-        g.querySelector('circle').setAttribute('cx', cx)
-        g.querySelector('circle').setAttribute('cy', cy)
-        g.querySelectorAll('text').forEach(t => t.setAttribute('x', cx))
-      })
-
-      svg.addEventListener('pointerup', () => { if (_drag) savePos(); _drag = null })
-      svg.addEventListener('pointercancel', () => { _drag = null })
-    }
-
-    async function toggleEditMode() {
-      _editMode = !_editMode
-      const btn = document.getElementById('btn-ajustar')
-      if (_editMode) {
-        btn.textContent = '✓ Salvar'
-        btn.className = 'btn btn-primary'
-        toast('Arraste os marcadores para posicionar', 'info')
-      } else {
-        btn.textContent = '⚙️ Ajustar'
-        btn.className = 'btn btn-secondary'
-        await savePos()
-        toast('Posições salvas', 'success')
-      }
-      renderLotes()
+    // A tela é honesta: sem as tabelas, diz o que falta em vez de erro cru
+    // ou número inventado.
+    function avisarEstruturaPendente() {
+      const el = document.getElementById('aviso-estrutura')
+      el.textContent = 'A estrutura de procura de lotes ainda não foi criada no banco. '
+        + 'A tela está pronta e passa a funcionar assim que as tabelas existirem.'
+      el.classList.remove('hidden')
+      document.getElementById('fila-sub').textContent = 'aguardando estrutura'
+      document.getElementById('oport-sub').textContent = 'aguardando estrutura'
+      document.getElementById('fila-vazia').classList.remove('hidden')
+      document.getElementById('oport-vazia').classList.remove('hidden')
+      document.getElementById('contador').textContent = ''
     }
 
     async function carregar() {
-      showLoading()
+      document.getElementById('loading').classList.remove('hidden')
       try {
-        await loadPos()
-        const [lotes, clientes] = await Promise.all([
-          sbGet('crm_lotes', '?order=quadra.asc,numero.asc&select=*'),
-          sbGet('crm_clientes', '?deleted_at=is.null&lote_id=not.is.null&select=id,nome,lote_id,status_kanban')
+        const [procuras, oportunidades] = await Promise.all([
+          sbGet('crm_procura_lote', '?select=*,crm_clientes(id,nome)&order=created_at.asc').catch(() => null),
+          sbGet('crm_oportunidade_lote', '?select=*&order=created_at.desc').catch(() => null)
         ])
-        const clienteMap = {}
-        clientes.forEach(c => { clienteMap[c.lote_id] = c })
-        _lotes = lotes.map(l => {
-          const cliente = clienteMap[l.id]
-          let statusReal = l.status
-          if (cliente) statusReal = cliente.status_kanban === 'concluido' ? 'vendido' : 'reservado'
-          return { ...l, statusReal, cliente }
-        })
-        renderLotes()
-        renderAvulsos()
-        atualizarContador()
-        initDrag()
-      } catch (err) { toast(traduzirErro(err), 'error') }
-      hideLoading()
-    }
 
-    // Lotes fora da planta projetada (quadra ≠ A e ≠ B)
-    function renderAvulsos() {
-      const avulsos = _lotes.filter(l => l.quadra !== 'A' && l.quadra !== 'B')
-      const wrap = document.getElementById('avulsos-wrap')
-      if (!avulsos.length) { wrap.classList.add('hidden'); return }
-      wrap.classList.remove('hidden')
-      document.getElementById('avulsos-count').textContent = `· ${avulsos.length} ${avulsos.length === 1 ? 'lote' : 'lotes'}`
+        if (procuras === null || oportunidades === null) {
+          _estruturaPronta = false
+          avisarEstruturaPendente()
+          return
+        }
 
-      const CORES = { disponivel: '#22c55e', reservado: '#f59e0b', vendido: '#6b7280', bloqueado: '#ef4444' }
-      const LABEL = { disponivel: 'Disponível', reservado: 'Reservado', vendido: 'Vendido', bloqueado: 'Bloqueado' }
-
-      document.getElementById('avulsos-lista').innerHTML = avulsos.map(l => `
-        <div class="card" style="display:flex;align-items:center;gap:14px;padding:10px 14px;margin-bottom:8px;cursor:pointer;" onclick="abrirLote('${l.id}')">
-          <div style="width:10px;height:10px;border-radius:50%;background:${CORES[l.statusReal] || '#94a3b8'};flex-shrink:0;"></div>
-          <div style="flex:1;">
-            <div style="font-weight:700;font-size:.95rem;">Lote ${l.numero} <span class="text-sm text-muted">(${l.quadra})</span></div>
-            <div class="text-sm text-muted">${l.metragem ? l.metragem + ' m² · ' : ''}${LABEL[l.statusReal] || l.statusReal}${l.cliente ? ' · ' + l.cliente.nome : ''}</div>
-            ${l.observacao ? `<div class="text-sm" style="color:#6b7280;margin-top:2px;">${l.observacao}</div>` : ''}
-          </div>
-          <div class="text-sm text-muted">↗</div>
-        </div>
-      `).join('')
-    }
-
-    function abrirNovoAvulso() {
-      document.getElementById('avulso-numero').value = ''
-      document.getElementById('avulso-metragem').value = ''
-      document.getElementById('avulso-observacao').value = ''
-      document.getElementById('modal-novo-avulso').classList.remove('hidden')
-    }
-
-    function fecharNovoAvulso() {
-      document.getElementById('modal-novo-avulso').classList.add('hidden')
-    }
-
-    async function salvarNovoAvulso() {
-      const numero = parseInt(document.getElementById('avulso-numero').value)
-      if (!numero || numero < 1) { toast('Número da matrícula é obrigatório', 'error'); return }
-      const metragem = parseFloat(document.getElementById('avulso-metragem').value) || null
-      const observacao = document.getElementById('avulso-observacao').value.trim() || null
-      try {
-        await sbPost('crm_lotes', {
-          numero, metragem, observacao,
-          quadra: 'Avulso',
-          status: 'disponivel'
-        })
-        toast('Lote avulso cadastrado', 'success')
-        fecharNovoAvulso()
-        carregar()
+        _estruturaPronta = true
+        _procuras = procuras || []
+        _oportunidades = oportunidades || []
+        montarFiltroCidade()
+        renderFila()
+        renderOportunidades()
       } catch (err) {
-        if (err.message?.includes('duplicate') || err.message?.includes('unique')) {
-          toast(`Já existe um lote ${numero} avulso. Use outro número.`, 'error')
+        console.error('Lotes:', err)
+        avisarEstruturaPendente()
+      } finally {
+        document.getElementById('loading').classList.add('hidden')
+      }
+    }
+
+    function montarFiltroCidade() {
+      const sel = document.getElementById('filtro-cidade')
+      const cidades = [...new Set(_procuras.map(p => p.cidade).filter(Boolean))].sort()
+      while (sel.options.length > 1) sel.remove(1)
+      cidades.forEach(c => {
+        const o = document.createElement('option'); o.value = c; o.textContent = c
+        sel.appendChild(o)
+      })
+    }
+
+    function filtrar() {
+      const q = document.getElementById('busca').value.trim().toLowerCase()
+      const cid = document.getElementById('filtro-cidade').value
+      const sit = document.getElementById('filtro-situacao').value
+      return _procuras.filter(p => {
+        if (cid && p.cidade !== cid) return false
+        if (sit && p.situacao !== sit) return false
+        if (q && !(p.crm_clientes?.nome || '').toLowerCase().includes(q)) return false
+        return true
+      })
+    }
+
+    function celula(texto, classe) {
+      const td = document.createElement('td')
+      if (classe) td.className = classe
+      td.textContent = texto
+      return td
+    }
+
+    function renderFila() {
+      const lista = filtrar()
+      const tbody = document.getElementById('fila-tbody')
+      const vazia = document.getElementById('fila-vazia')
+      tbody.replaceChildren()
+
+      const ativas = _procuras.filter(p => ['procurando','em_analise','pausada'].includes(p.situacao)).length
+      document.getElementById('fila-sub').textContent =
+        ativas + (ativas === 1 ? ' ativa' : ' ativas') + ' · ordenadas por entrada'
+      document.getElementById('contador').textContent =
+        lista.length + (lista.length === 1 ? ' família' : ' famílias')
+
+      if (!lista.length) { vazia.classList.remove('hidden'); return }
+      vazia.classList.add('hidden')
+
+      lista.forEach(p => {
+        const tr = document.createElement('tr')
+
+        const tdNome = document.createElement('td')
+        const a = document.createElement('a')
+        a.href = 'ficha.html?id=' + p.cliente_id
+        a.className = 'font-bold'
+        a.textContent = p.crm_clientes?.nome || '(família removida)'
+        tdNome.appendChild(a)
+        tr.appendChild(tdNome)
+
+        tr.appendChild(celula(cidadeRegiao(p), 'text-sm'))
+        tr.appendChild(celula(moeda(p.valor_maximo), 'text-sm'))
+        tr.appendChild(celula(areaM2(p.metragem_desejada), 'text-sm'))
+        tr.appendChild(celula(p.preferencias || '—', 'text-sm text-muted lt-pref'))
+
+        const tdAcao = document.createElement('td')
+        tdAcao.className = 'col-proxima'
+        if (p.proxima_acao) {
+          const txt = p.proxima_acao + (p.proxima_acao_prazo ? ' · ' + prazoLegivel(p.proxima_acao_prazo) : '')
+          const s = document.createElement('span')
+          if (prazoVencido(p.proxima_acao_prazo)) s.className = 'text-danger'
+          s.textContent = txt
+          s.title = txt
+          tdAcao.appendChild(s)
         } else {
-          toast(traduzirErro(err), 'error')
+          tdAcao.textContent = '—'
         }
-      }
+        tr.appendChild(tdAcao)
+
+        const tdSit = document.createElement('td')
+        tdSit.className = 'lt-sit-col'
+        const pill = document.createElement('span')
+        pill.className = 'lt-sit sit-' + p.situacao
+        pill.textContent = SIT_LABEL[p.situacao] || p.situacao
+        tdSit.appendChild(pill)
+        tr.appendChild(tdSit)
+
+        const tdAcoes = document.createElement('td')
+        tdAcoes.className = 'col-acoes'
+        const ver = document.createElement('a')
+        ver.href = 'ficha.html?id=' + p.cliente_id
+        ver.className = 'btn btn-secondary btn-sm'
+        ver.textContent = 'Ver ficha'
+        tdAcoes.appendChild(ver)
+        tr.appendChild(tdAcoes)
+
+        tbody.appendChild(tr)
+      })
     }
 
-    function renderLotes() {
-      const quadraA = _lotes.filter(l => l.quadra === 'A').sort((a, b) => a.numero - b.numero)
-      const quadraB = _lotes.filter(l => l.quadra === 'B').sort((a, b) => a.numero - b.numero)
-      const CORES = { disponivel: '#22c55e', reservado: '#f59e0b', vendido: '#6b7280', bloqueado: '#ef4444' }
+    function renderOportunidades() {
+      const wrap = document.getElementById('oport-lista')
+      const vazia = document.getElementById('oport-vazia')
+      wrap.replaceChildren()
 
-      function badge(lote, pos, q, i) {
-        const { cx, cy } = pos
-        const cor = CORES[lote.statusReal] || '#94a3b8'
-        const label = `${q}${lote.numero}`
-        const nomeAbrev = lote.cliente ? lote.cliente.nome.split(' ')[0].substring(0, 6) : ''
+      document.getElementById('oport-sub').textContent =
+        _oportunidades.length
+          ? _oportunidades.length + (_oportunidades.length === 1 ? ' captada' : ' captadas')
+          : 'nenhuma até agora'
 
-        // Tooltip nativo SVG (hover do browser) — FUNC06
-        const STATUS_PT = { disponivel: 'Disponível', reservado: 'Reservado', vendido: 'Vendido', bloqueado: 'Bloqueado' }
-        const tooltipLinhas = [
-          `Lote ${q}${lote.numero}${lote.metragem ? ' · ' + lote.metragem + 'm²' : ''}`,
-          `Status: ${STATUS_PT[lote.statusReal] || lote.statusReal}`
-        ]
-        if (lote.cliente) {
-          tooltipLinhas.push(`Família: ${lote.cliente.nome}`)
-          if (lote.cliente.faixa_mcmv) tooltipLinhas.push(`Faixa ${lote.cliente.faixa_mcmv}`)
-        }
-        if (lote.observacao) tooltipLinhas.push(`Obs: ${lote.observacao}`)
-        const tooltip = `<title>${escapeHtml(tooltipLinhas.join('\n'))}</title>`
+      if (!_oportunidades.length) { vazia.classList.remove('hidden'); return }
+      vazia.classList.add('hidden')
 
-        if (_editMode) {
-          return `<g data-q="${q}" data-i="${i}" style="cursor:grab">
-            ${tooltip}
-            <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.75" stroke="white" stroke-width="1.5"/>
-            <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
-                  fill="white" font-size="8" font-weight="700" font-family="sans-serif"
-                  pointer-events="none">${label}</text>
-          </g>`
-        }
-        return `<g onclick="abrirLote('${lote.id}')" style="cursor:pointer"
-          onmouseover="this.querySelector('circle').setAttribute('r','15');this.querySelector('circle').setAttribute('opacity','1')"
-          onmouseout="this.querySelector('circle').setAttribute('r','12');this.querySelector('circle').setAttribute('opacity','0.90')">
-          ${tooltip}
-          <circle cx="${cx}" cy="${cy}" r="12" fill="${cor}" opacity="0.90"/>
-          <text x="${cx}" y="${nomeAbrev ? cy - 3 : cy}" text-anchor="middle" dominant-baseline="middle"
-                fill="white" font-size="8" font-weight="700" font-family="sans-serif"
-                pointer-events="none">${label}</text>
-          ${nomeAbrev ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" dominant-baseline="middle"
-                fill="rgba(255,255,255,.85)" font-size="6.5" font-family="sans-serif"
-                pointer-events="none">${escapeHtml(nomeAbrev)}</text>` : ''}
-        </g>`
-      }
+      _oportunidades.forEach(o => {
+        const card = document.createElement('div')
+        card.className = 'lt-oport'
 
-      let s = `<image href="img/mapa-lotes.jpg?v=${CRM_VERSION}" x="0" y="0" width="1000" height="562" preserveAspectRatio="xMidYMid meet"/>`
-      quadraA.forEach((lote, i) => { s += badge(lote, _pos.A[i] || {cx:500,cy:207}, 'A', i) })
-      quadraB.forEach((lote, i) => { s += badge(lote, _pos.B[i] || {cx:700,cy:402}, 'B', i) })
-      document.getElementById('mapa-svg').innerHTML = s
+        const head = document.createElement('div')
+        head.className = 'lt-oport-head'
+        const titulo = document.createElement('span')
+        titulo.className = 'lt-oport-titulo'
+        titulo.textContent = o.descricao
+        const sit = document.createElement('span')
+        sit.className = 'lt-sit oport-' + o.situacao
+        sit.textContent = OPORT_LABEL[o.situacao] || o.situacao
+        head.appendChild(titulo); head.appendChild(sit)
+        card.appendChild(head)
+
+        const meta = document.createElement('div')
+        meta.className = 'lt-oport-meta'
+        const partes = [
+          o.cidade + (o.regiao ? ' — ' + o.regiao : ''),
+          o.valor ? moeda(o.valor) : null,
+          o.metragem ? areaM2(o.metragem) : null,
+          o.origem || null
+        ].filter(Boolean)
+        meta.textContent = partes.join(' · ')
+        card.appendChild(meta)
+
+        wrap.appendChild(card)
+      })
     }
 
-    function atualizarContador() {
-      const disp   = _lotes.filter(l => l.statusReal === 'disponivel').length
-      const reserv = _lotes.filter(l => l.statusReal === 'reservado').length
-      const vend   = _lotes.filter(l => l.statusReal === 'vendido').length
-      document.getElementById('contador-lotes').innerHTML =
-        `<strong>${disp}</strong> disponíveis · <strong>${reserv}</strong> reservados · <strong>${vend}</strong> vendidos`
+    document.getElementById('busca').addEventListener('input', () => { if (_estruturaPronta) renderFila() })
+    document.getElementById('filtro-cidade').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
+    document.getElementById('filtro-situacao').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
+
+    // Cadastro entra quando a estrutura existir — sem botão que finge funcionar.
+    function aindaNaoDisponivel() {
+      alert('A estrutura de procura de lotes ainda não foi criada no banco.')
     }
-
-    function abrirLote(id) {
-      _loteAtual = _lotes.find(l => l.id === id)
-      if (!_loteAtual) return
-
-      document.getElementById('modal-lote-title').textContent =
-        `Lote ${_loteAtual.numero} — Quadra ${_loteAtual.quadra || '?'}`
-
-      const c = _loteAtual.cliente
-      document.getElementById('modal-lote-body').innerHTML = `
-        <div class="form-grid" style="gap:8px 16px;">
-          <div><span class="text-sm text-muted">Metragem</span><br><strong>${_loteAtual.metragem || '?'}m²</strong></div>
-          <div><span class="text-sm text-muted">Quadra</span><br><strong>${_loteAtual.quadra || '?'}</strong></div>
-          <div><span class="text-sm text-muted">Status</span><br><span class="badge status-${_loteAtual.statusReal === 'reservado' ? 'correspondente' : _loteAtual.statusReal === 'vendido' ? 'concluido' : _loteAtual.statusReal === 'bloqueado' ? 'perdido' : 'triagem'}">${_loteAtual.statusReal}</span></div>
-          ${_loteAtual.observacao ? `<div class="form-full"><span class="text-sm text-muted">Observação</span><br>${_loteAtual.observacao}</div>` : ''}
-        </div>
-        ${c ? `<div class="card" style="margin-top:12px;background:#f9fafb;">
-          <div class="text-sm text-muted mb-8">Família vinculada</div>
-          <strong>${c.nome}</strong>
-          <div class="text-sm"><span class="badge status-${c.status_kanban}">${KANBAN_LABEL[c.status_kanban]}</span></div>
-        </div>` : '<p class="text-muted mt-8">Nenhuma família vinculada.</p>'}
-      `
-
-      const btnCliente = document.getElementById('modal-btn-cliente')
-      if (c) {
-        btnCliente.href = `ficha.html?id=${c.id}`
-        btnCliente.classList.remove('hidden')
-      } else {
-        btnCliente.classList.add('hidden')
-      }
-
-      const btnBloquear = document.getElementById('modal-btn-bloquear')
-      if (_loteAtual.statusReal === 'disponivel') {
-        btnBloquear.classList.remove('hidden')
-        btnBloquear.textContent = 'Bloquear lote'
-      } else if (_loteAtual.status === 'bloqueado' && !c) {
-        btnBloquear.classList.remove('hidden')
-        btnBloquear.textContent = 'Desbloquear lote'
-      } else {
-        btnBloquear.classList.add('hidden')
-      }
-
-      document.getElementById('modal-lote').classList.remove('hidden')
-    }
-
-    async function toggleBloquear() {
-      if (!_loteAtual) return
-      const novoStatus = _loteAtual.status === 'bloqueado' ? 'disponivel' : 'bloqueado'
-      try {
-        await sbPatch('crm_lotes', _loteAtual.id, { status: novoStatus })
-        toast(novoStatus === 'bloqueado' ? 'Lote bloqueado' : 'Lote disponível', 'success')
-        fecharModal()
-        carregar()
-      } catch (err) { toast(traduzirErro(err), 'error') }
-    }
-
-    function fecharModal() {
-      document.getElementById('modal-lote').classList.add('hidden')
-      _loteAtual = null
-    }
-
-    function abrirEdicao() {
-      if (!_loteAtual) return
-      document.getElementById('edit-numero').value = _loteAtual.numero || ''
-      document.getElementById('edit-metragem').value = _loteAtual.metragem || ''
-      document.getElementById('edit-quadra').value = _loteAtual.quadra || ''
-      document.getElementById('edit-status').value = _loteAtual.status || 'disponivel'
-      document.getElementById('edit-observacao').value = _loteAtual.observacao || ''
-      document.getElementById('modal-editar-lote').classList.remove('hidden')
-    }
-
-    function fecharEdicao() {
-      document.getElementById('modal-editar-lote').classList.add('hidden')
-    }
-
-    async function salvarEdicao() {
-      if (!_loteAtual) return
-      const payload = {
-        numero: parseInt(document.getElementById('edit-numero').value),
-        metragem: parseFloat(document.getElementById('edit-metragem').value) || null,
-        quadra: document.getElementById('edit-quadra').value.trim() || null,
-        status: document.getElementById('edit-status').value,
-        observacao: document.getElementById('edit-observacao').value.trim() || null
-      }
-      try {
-        await sbPatch('crm_lotes', _loteAtual.id, payload)
-        toast('Lote atualizado', 'success')
-        fecharEdicao()
-        fecharModal()
-        carregar()
-      } catch (err) { toast(traduzirErro(err), 'error') }
-    }
+    document.getElementById('btn-nova-procura').addEventListener('click', aindaNaoDisponivel)
+    document.getElementById('btn-nova-oportunidade').addEventListener('click', aindaNaoDisponivel)
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1785309493"></script>
+  <script src="js/sw-register.js?cb=1"></script>
 </body>
 </html>
