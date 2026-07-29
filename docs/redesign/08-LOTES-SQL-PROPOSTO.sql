@@ -1,11 +1,26 @@
 -- =====================================================================
 -- EDR CRM — Lotes: Famílias procurando oportunidade
--- SQL PROPOSTO PARA REVISÃO DE DUAM — **NÃO APLICADO**
+-- SQL PROPOSTO PARA REVISÃO DE DUAM — **NÃO APLICADO EM PRODUÇÃO**
 --
 -- Data: 2026-07-29
 -- Base: docs/redesign/07-LOTES-PROPOSTA-DADOS.md (conceito aprovado por Duam)
 --
--- ⚠️ NADA AQUI FOI EXECUTADO. Este arquivo é para leitura e aprovação.
+-- ⚠️ ONDE ESTE SQL JÁ RODOU — os três estados, sem ambiguidade:
+--
+--   PRODUÇÃO (mepzoxoahpwcvvlymlfh) ... NUNCA EXECUTADO. Nenhuma linha deste
+--       arquivo tocou o banco real, em momento nenhum.
+--
+--   BRANCH DESCARTÁVEL (`teste-lotes`) ... EXECUTADA uma VERSÃO ANTERIOR deste
+--       arquivo, em 2026-07-29. A branch foi destruída. Foi lá que apareceu o
+--       defeito da seção 5.
+--
+--   ESTA VERSÃO (o texto abaixo) ... NUNCA EXECUTADA do início ao fim. Ela é
+--       a versão anterior MAIS a correção do trigger (seção 5). O conteúdo
+--       corrigido corresponde ao que rodou na branch, mas isso é conferência
+--       de leitura — não é nova execução.
+--
+--   ⇒ Para provar este arquivo como está hoje, rodar do zero em nova branch.
+--     Resumo do que já foi provado: ver o fim do arquivo.
 --
 -- REGRAS RESPEITADAS:
 --   · crm_lotes NÃO é tocada — nenhum ALTER, DROP ou UPDATE nela.
@@ -312,23 +327,40 @@ create trigger trg_crm_procura_oportunidade_updated_at
 -- PENDÊNCIAS ANTES DE APLICAR EM PRODUÇÃO:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---   2. Rodar o plano de teste acima em branch descartável.
+--   2. Rodar ESTE arquivo, do zero, em nova branch descartável, junto com o
+--      09 corrigido. A execução de 2026-07-29 cobriu a versão anterior e
+--      testou o trigger em 1 das 3 tabelas — ver "O QUE JÁ FOI PROVADO".
 --   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário (privilégio
 --      padrão do schema) · updated_at com função PRÓPRIA (o reuso de
 --      set_crm_updated_at quebraria — ver seção 5).
 --
 -- =====================================================================
--- ✅ VALIDADO EM BRANCH DESCARTÁVEL — 2026-07-29
+-- O QUE JÁ FOI PROVADO — execução em branch descartável, 2026-07-29
 -- =====================================================================
 -- Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
--- Produção não foi tocada.
+-- PRODUÇÃO NÃO FOI TOCADA.
+--
+-- ⚠️ ESCOPO DESTA PROVA: rodou a versão do arquivo ANTERIOR à correção do
+--    cabeçalho. O SQL executável (tabelas, índices, policies, triggers) é o
+--    mesmo texto de hoje — a correção posterior foi só no comentário do topo.
+--    Ainda assim, isto NÃO substitui rodar o arquivo atual do zero.
 --
 --   Estrutura ....... 3 tabelas, 12 policies, 3 triggers criados sem erro
 --   T1 anônimo ...... PASSOU — dono lê 1 linha, `anon` lê 0
 --   T2 logado ....... PASSOU — perfil real: função=true, leu 1 linha
 --   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
 --   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
---   Triggers ........ 3/3 OK (verificado por sabotagem: gravar '2000-01-01'
---                     e ver o trigger sobrescrever com a data atual)
--- =====================================================================
+--   Triggers ........ PASSOU em 1 das 3 tabelas (crm_procura_oportunidade),
+--                     por sabotagem: gravar '2000-01-01' e ver o trigger
+--                     sobrescrever com a data atual.
+--                     ⚠️ CORREÇÃO 2026-07-29 (achado do Codex): o registro
+--                     anterior dizia "3/3", mas o teste exercitava só UMA
+--                     tabela. O arquivo 09 foi corrigido para testar as 3;
+--                     essa cobertura ampliada ainda NÃO foi executada.
+--
+-- NÃO PROVADO (honestidade de escopo):
+--   · Este arquivo, do início ao fim, numa branch limpa.
+--   · O EXTRA de updated_at nas outras 2 tabelas.
+--   · Os GRANTs do schema aplicados na branch (não conferidos lá).
+--   · A tela lotes.html contra estas tabelas com dado real.
 -- =====================================================================

@@ -250,7 +250,7 @@ existe. Os formulários entram junto com as tabelas — **sem botão que finge f
 | **T2 logado liberado** | **PASSOU** | perfil real `c9718eb3…`: função=**true**, leu **1** |
 | **T3 2ª procura ativa** | **PASSOU** | bloqueada; procura encerrada convive (histórico) |
 | **T4 2ª aceitação** | **PASSOU** | bloqueada — o bug apontado por Duam está resolvido |
-| Triggers `updated_at` | **PASSOU 3/3** | após correção (abaixo) |
+| Triggers `updated_at` | **PASSOU em 1 de 3** | só `crm_procura_oportunidade` foi exercitada — ver correção abaixo |
 
 ### 🐛 DEFEITO GRAVE que só apareceu por executar de verdade
 O SQL reusava `set_crm_updated_at()` — a função padrão do CRM, que **existe** e parecia
@@ -271,7 +271,26 @@ alterada** — continua servindo `crm_clientes`.
 Comparava `updated_at` antes/depois dentro de uma transação. Mas `now()` é **constante**
 dentro da transação (horário de início) — daria falso-negativo sempre, e `pg_sleep` não
 ajuda. **Método correto:** sabotar o campo com `'2000-01-01'` e verificar se o trigger
-sobrescreve. Com isso: **3/3 tabelas OK**.
+sobrescreve. Com isso, `crm_procura_oportunidade` passou.
+
+### 🐛 Terceiro e quarto defeitos: achados do Codex nos artefatos (2026-07-29)
+Revisão posterior encontrou **2 problemas no arquivo de teste** e **1 na documentação**:
+
+1. **`v_lid` usada sem existir.** O teste EXTRA sabotava `where id = v_lid`, mas a
+   variável nunca foi declarada nem recebeu valor — o bloco **não compilaria**. (Havia
+   ainda um `declare` no meio do corpo executável, inválido em PL/pgSQL.) Corrigido:
+   `v_lid` e `v_v` no `DECLARE` do bloco, e `v_lid` recebe o id via `RETURNING`.
+
+2. **"3/3 tabelas" era afirmação vazia.** O EXTRA exercitava **uma** tabela só. O teste
+   agora cobre as 3 (`EXTRA 1/3`, `2/3`, `3/3`) — mas essa cobertura ampliada **ainda
+   não foi executada**.
+
+3. **Contradição no `08`:** abria com "nada foi executado" e fechava com "validado em
+   branch". Reescrito distinguindo **produção** (nunca tocada) · **branch** (rodou a
+   versão anterior, destruída) · **versão atual** (nunca rodou do início ao fim).
+
+**Estado honesto:** os artefatos estão corrigidos, mas **os arquivos finais nunca
+rodaram inteiros**. Provar isso exige uma nova branch descartável.
 
 ### Produção conferida após destruir a branch
 - Tabelas novas em produção: **0**

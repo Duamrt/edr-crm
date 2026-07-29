@@ -2,8 +2,13 @@
 -- EDR CRM — Lotes: SCRIPT DE TESTE (para ambiente descartável)
 --
 -- Data: 2026-07-29
--- Status: PRONTO PARA RODAR. **NÃO EXECUTADO** — aguarda autorização de
---         Duam para criar a branch de banco.
+--
+-- STATUS DESTA VERSÃO DO ARQUIVO: **NUNCA EXECUTADA.**
+--   Uma versão ANTERIOR rodou em branch descartável (`teste-lotes`, destruída).
+--   Depois disso o arquivo foi corrigido em 3 pontos — ver "HISTÓRICO" no fim.
+--   Portanto: os resultados registrados abaixo vieram da versão anterior.
+--   Esta versão corrigida aguarda autorização de Duam para nova branch.
+--   PRODUÇÃO NUNCA FOI TOCADA, em nenhum momento.
 --
 -- Como usar:
 --   0. ⚠️ A branch nasce com o SCHEMA mas SEM DADOS de produção. Por isso os
@@ -128,6 +133,8 @@ begin;
 do $$
 declare
   v_c1 uuid; v_c2 uuid; v_p1 uuid; v_p2 uuid; v_op uuid;
+  v_lid uuid;              -- id da LIGAÇÃO (crm_procura_oportunidade) sabotada no EXTRA
+  v_v   timestamptz;       -- valor lido de volta após a sabotagem
 begin
   -- branch sem dados: cria os dois clientes do teste (desfeitos no rollback).
   -- Clientes PRÓPRIOS deste teste — não reusa nada do T3, que já foi revertido.
@@ -148,7 +155,7 @@ begin
 
   -- as duas podem VER a oportunidade (situação 'sugerida') — é o normal
   insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
-  values (v_p1, v_op, 'sugerida');
+  values (v_p1, v_op, 'sugerida') returning id into v_lid;   -- guardado para o EXTRA
   insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
   values (v_p2, v_op, 'sugerida');
   raise notice 'T4.1 OK — duas famílias podem avaliar a mesma oportunidade';
@@ -167,22 +174,47 @@ begin
     raise notice 'T4.3 PASSOU — segunda aceitação bloqueada (bug de Duam resolvido)';
   end;
 
-  -- EXTRA — o trigger de updated_at escreve no campo?
+  -- ---------------------------------------------------------------
+  -- EXTRA — o trigger de updated_at escreve no campo? (AS 3 TABELAS)
+  -- ---------------------------------------------------------------
   -- ⚠️ NÃO comparar horários: dentro de uma transação `now()` é CONSTANTE
   --    (horário de início), então updated_at seria igual antes e depois — daria
   --    falso-negativo. pg_sleep não ajuda: now() não avança na transação.
   --    Método correto: SABOTAR o campo com data antiga e ver o trigger
   --    sobrescrever.
-  declare v_v timestamptz;
-  begin
-    update public.crm_procura_oportunidade set updated_at = '2000-01-01' where id = v_lid;
-    select updated_at into v_v from public.crm_procura_oportunidade where id = v_lid;
-    if v_v > '2020-01-01' then
-      raise notice 'EXTRA OK — trigger sobrescreveu a data sabotada';
-    else
-      raise exception 'EXTRA REPROVOU — updated_at ficou em %', v_v;
-    end if;
-  end;
+  --
+  -- ⚠️ CORREÇÃO (2026-07-29): a versão anterior testava SÓ
+  --    crm_procura_oportunidade, mas o resumo afirmava "3/3 tabelas".
+  --    Agora as 3 são realmente exercitadas, uma a uma.
+  --    Este é o teste que pegaria a função errada (set_crm_updated_at grava em
+  --    `ultima_atualizacao`, coluna que não existe aqui) — ver 08-...sql seção 5.
+
+  -- 1/3 — crm_procura_oportunidade (a ligação criada acima)
+  update public.crm_procura_oportunidade set updated_at = '2000-01-01' where id = v_lid;
+  select updated_at into v_v from public.crm_procura_oportunidade where id = v_lid;
+  if v_v > '2020-01-01' then
+    raise notice 'EXTRA 1/3 OK — crm_procura_oportunidade: trigger sobrescreveu';
+  else
+    raise exception 'EXTRA 1/3 REPROVOU — crm_procura_oportunidade ficou em %', v_v;
+  end if;
+
+  -- 2/3 — crm_procura_lote
+  update public.crm_procura_lote set updated_at = '2000-01-01' where id = v_p1;
+  select updated_at into v_v from public.crm_procura_lote where id = v_p1;
+  if v_v > '2020-01-01' then
+    raise notice 'EXTRA 2/3 OK — crm_procura_lote: trigger sobrescreveu';
+  else
+    raise exception 'EXTRA 2/3 REPROVOU — crm_procura_lote ficou em %', v_v;
+  end if;
+
+  -- 3/3 — crm_oportunidade_lote
+  update public.crm_oportunidade_lote set updated_at = '2000-01-01' where id = v_op;
+  select updated_at into v_v from public.crm_oportunidade_lote where id = v_op;
+  if v_v > '2020-01-01' then
+    raise notice 'EXTRA 3/3 OK — crm_oportunidade_lote: trigger sobrescreveu';
+  else
+    raise exception 'EXTRA 3/3 REPROVOU — crm_oportunidade_lote ficou em %', v_v;
+  end if;
 end $$;
 rollback;  -- desfaz tudo
 
@@ -195,17 +227,36 @@ rollback;  -- desfaz tudo
 
 
 -- =====================================================================
--- RESUMO ESPERADO
---   ✅ TODOS EXECUTADOS EM BRANCH DESCARTÁVEL — 2026-07-29
---      Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
+-- RESULTADOS DA EXECUÇÃO ANTERIOR (versão pré-correção) — 2026-07-29
+-- =====================================================================
+-- Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
+-- Produção nunca foi tocada.
 --
 --   T1  anônimo bloqueado ....... PASSOU — dono lê 1, anon lê 0
 --   T2  usuário logado .......... PASSOU — perfil real: função=true, leu 1
 --   T3  2ª procura ativa ........ PASSOU — bloqueada; encerrada convive
 --   T4  2ª aceitação ............ PASSOU — bloqueada
---   EX  updated_at .............. PASSOU (3/3 tabelas) após corrigir o método
+--   EX  updated_at .............. PASSOU em 1 tabela (crm_procura_oportunidade)
 --
---   🐛 O teste encontrou um DEFEITO GRAVE que teria quebrado a produção:
+--   🐛 A execução encontrou um DEFEITO GRAVE que teria quebrado a produção:
 --      set_crm_updated_at() escreve em `ultima_atualizacao`, não em
 --      `updated_at`. Corrigido com função própria — ver 08-...sql seção 5.
+--
+-- =====================================================================
+-- HISTÓRICO DE CORREÇÕES DESTE ARQUIVO (posteriores à execução acima)
+-- =====================================================================
+-- 2026-07-29 — revisão do Codex, 2 achados neste arquivo:
+--
+--   1. `v_lid` era usada no EXTRA sem declaração nem valor. O bloco não
+--      compilaria. (Havia ainda um `declare` no meio do corpo executável,
+--      inválido em PL/pgSQL.) Agora `v_lid` e `v_v` estão no DECLARE do bloco
+--      e `v_lid` recebe o id via RETURNING no insert da ligação.
+--
+--   2. O resumo afirmava "3/3 tabelas", mas o EXTRA exercitava só
+--      crm_procura_oportunidade. Agora o EXTRA testa as 3, uma a uma
+--      (EXTRA 1/3, 2/3, 3/3), e o resumo acima diz o que de fato rodou.
+--
+-- CONSEQUÊNCIA: os resultados acima NÃO valem como prova desta versão.
+-- Para provar o arquivo como está hoje, é preciso rodá-lo do zero numa nova
+-- branch descartável — aguardando autorização de Duam.
 -- =====================================================================
