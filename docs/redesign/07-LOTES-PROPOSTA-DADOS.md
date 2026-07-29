@@ -998,3 +998,66 @@ real.
 
 Depois disso: virar `GRAVACAO_IMPLEMENTADA` para `true`, ligar os listeners nos Salvar e
 só então pedir deploy. São passos separados.
+
+---
+
+## 19. A TRAVA QUE SE DESFAZIA — 2026-07-29 🐛
+
+### Causa
+
+Achado do Codex. O `finally` das duas gravações fazia:
+
+```js
+btn.disabled = false
+```
+
+Isso **desfazia a trava global**. Se `salvarProcura()` fosse chamada — por um listener
+futuro, por engano ou pelo Console — o botão terminava **habilitado**, mesmo com
+`GRAVACAO_IMPLEMENTADA = false`.
+
+A intenção original era boa: se o botão travasse após um erro, a pessoa perderia o que
+digitou sem poder tentar de novo. Mas a implementação reabilitava **na mão**, ignorando a
+única fonte de verdade. Uma proteção que o próprio código anula não é proteção.
+
+### Correção
+
+```js
+function restaurarEstadoBotoes() {
+  desabilitarCadastro(!_estruturaPronta)
+}
+```
+
+O `finally` agora **reaplica o estado central** em vez de mexer no botão diretamente. O
+resultado sai do cálculo `semEstrutura || !GRAVACAO_IMPLEMENTADA` — a mesma regra de
+sempre. Quando a gravação for ligada, o botão volta a reabilitar sozinho, sem código novo.
+
+### Evidência — teste por sabotagem
+
+Não basta o teste passar: ele podia estar passando sem exercitar o caminho. Então
+reintroduzi o bug de propósito:
+
+```
+(com o bug de volta)   FALHOU  apos erro, botao segue BLOQUEADO  -> veio disabled=false
+                       RESULTADO: 41 passaram, 1 falharam
+
+(código restaurado)    RESULTADO: 42 passaram, 0 falharam
+```
+
+O teste **detecta** a regressão. Isso importa porque o teste anterior afirmava o
+comportamento **errado** — exigia `disabled === false` após o erro, ou seja, validava o
+próprio bug. Foi corrigido para exigir que o botão **continue bloqueado**.
+
+### Comentário corrigido
+
+Dizia *"não existe sbPost nesta tela"* — falso desde a seção 18. Agora registra o estado
+real: as funções existem e chamam `sbPost`; o que não existe é **listener** ligando botão
+a função. São duas barreiras independentes — mesmo que alguém ligue um listener por
+engano, o botão continua desabilitado.
+
+### Pendência
+
+Inalterada: **teste com sessão real, gravando de verdade**. Escrita em produção, exige
+escopo próprio de Duam.
+
+Para ligar a gravação, os três passos **juntos**: testar com sessão real → adicionar os
+listeners → virar `GRAVACAO_IMPLEMENTADA` para `true`. Nenhum vale sozinho.

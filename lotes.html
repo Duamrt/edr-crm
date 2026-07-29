@@ -384,6 +384,13 @@
       })
     }
 
+    // Reaplica o estado a partir da ÚNICA fonte de verdade (_estruturaPronta
+    // + GRAVACAO_IMPLEMENTADA). Usado no `finally` das gravações: assim o
+    // botão nunca é reabilitado "na mão", contornando a trava.
+    function restaurarEstadoBotoes() {
+      desabilitarCadastro(!_estruturaPronta)
+    }
+
     // ── MODAIS ──────────────────────────────────────────────────────
     // Padrão V2: remover 'hidden' para abrir. Só isso — o CSS desta tela
     // usa .lt-modal-overlay{display:flex} e .hidden{display:none}.
@@ -695,8 +702,7 @@
       const faltando = validarProcura()
       if (faltando.length) { toast(fraseFaltando(faltando), 'error'); return false }
 
-      const btn = document.getElementById('mp-salvar')
-      btn.disabled = true
+      document.getElementById('mp-salvar').disabled = true
       showLoading()
       try {
         // ⚠️ sbPost devolve OBJETO, não array (gotcha registrado no CLAUDE.md).
@@ -712,7 +718,12 @@
         toast(erroLegivel(err, 'procura'), 'error')
         return false
       } finally {
-        btn.disabled = false
+        // 🐛 CORREÇÃO (achado do Codex, 2026-07-29): aqui havia
+        //    `btn.disabled = false`, que DESFAZIA a trava global — o botão
+        //    voltava a ficar clicável mesmo com GRAVACAO_IMPLEMENTADA=false.
+        //    Uma proteção que o próprio código anula não é proteção.
+        //    Reaplicar o estado central mantém a única fonte de verdade.
+        restaurarEstadoBotoes()
         hideLoading()
       }
     }
@@ -721,8 +732,7 @@
       const faltando = validarOportunidade()
       if (faltando.length) { toast(fraseFaltando(faltando), 'error'); return false }
 
-      const btn = document.getElementById('mo-salvar')
-      btn.disabled = true
+      document.getElementById('mo-salvar').disabled = true
       showLoading()
       try {
         await sbPost('crm_oportunidade_lote', payloadOportunidade())
@@ -737,7 +747,7 @@
         toast(erroLegivel(err, 'oportunidade'), 'error')
         return false
       } finally {
-        btn.disabled = false
+        restaurarEstadoBotoes()   // ver nota em salvarProcura()
         hideLoading()
       }
     }
@@ -756,16 +766,18 @@
     document.getElementById('btn-nova-oportunidade')
       .addEventListener('click', () => abrirModal('modal-oport'))
 
-    // ⚠️ Os botões Salvar NÃO têm listener de gravação — não existe sbPost
-    // nesta tela. É por isso que GRAVACAO_IMPLEMENTADA = false os mantém
-    // desabilitados mesmo com as tabelas no ar (elas existem em produção
-    // desde 29/07). Um handler que só mostrasse "em breve" seria um botão
-    // fingindo funcionar; um botão ativo sem handler é pior ainda — o
-    // usuário preenche tudo, clica e não acontece nada.
+    // ⚠️ Os botões Salvar NÃO têm listener. As funções salvarProcura() e
+    // salvarOportunidade() JÁ EXISTEM e chamam sbPost — o que não existe é
+    // o vínculo entre botão e função. Somado a GRAVACAO_IMPLEMENTADA=false,
+    // são duas barreiras: mesmo que alguém ligue um listener por engano, o
+    // botão continua desabilitado.
     //
-    // Para LIGAR a gravação: escrever os dois sbPost, testar com sessão real
-    // e só então virar GRAVACAO_IMPLEMENTADA para true. Uma coisa não vale
-    // sem a outra.
+    // Para LIGAR a gravação, os três passos juntos:
+    //   1. testar salvarProcura/salvarOportunidade com sessão real, gravando
+    //      de verdade (escrita em produção — exige autorização de Duam);
+    //   2. adicionar os listeners aqui;
+    //   3. virar GRAVACAO_IMPLEMENTADA para true.
+    // Nenhum vale sozinho.
 
     montarSelectsCidade()
     carregarClientes()

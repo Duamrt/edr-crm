@@ -198,8 +198,14 @@ checa('nenhuma mensagem vaza codigo do Postgres',
   checa('erro generico retorna false', r === false)
   checa('erro generico nao expoe jargao',
     _toasts.some(t => t.msg.includes('avise o suporte')))
-  checa('botao volta a ficar clicavel apos erro',
-    campo('mp-salvar').disabled === false)
+
+  // 🐛 Este teste afirmava o comportamento ERRADO: exigia disabled === false
+  //    apos o erro. Isso validava o bug que o Codex achou — o `finally`
+  //    reabilitava o botao "na mao", desfazendo GRAVACAO_IMPLEMENTADA=false.
+  //    Com a trava ligada, o correto e o botao CONTINUAR bloqueado.
+  checa('apos erro, botao segue BLOQUEADO (trava global vale)',
+    campo('mp-salvar').disabled === true,
+    'veio disabled=' + campo('mp-salvar').disabled)
 
   reset(); set({ 'mo-descricao': 'Lote Rua X', 'mo-cidade': 'Jucati' })
   r = await salvarOportunidade()
