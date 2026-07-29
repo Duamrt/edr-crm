@@ -3,11 +3,17 @@
 --
 -- Data: 2026-07-29
 --
--- STATUS: **EXECUTADO E APROVADO** na branch `lotes-v2` (2026-07-29).
---   Cada teste abaixo traz, logo após o SQL, o resultado real que retornou.
---   O SQL versionado aqui é o MESMO que rodou — reconciliado em 2026-07-29
---   após o Codex apontar que o T1 executado divergia do arquivo (ver
---   "RECONCILIAÇÃO DE EVIDÊNCIA" no fim).
+-- STATUS — por teste, sem generalizar:
+--
+--   T1 · T3 · T4 · EXTRA (updated_at) ... ✅ EXECUTADOS E APROVADOS na branch
+--       `lotes-v2` (2026-07-29). O SQL versionado é o MESMO que rodou.
+--
+--   T2 ... ⚠️ PARCIAL. A versão que rodou provava SOMENTE LEITURA (SELECT).
+--       O teste foi AMPLIADO depois para cobrir INSERT/UPDATE/DELETE — as
+--       outras 3 policies de cada tabela — e essa ampliação **ainda NÃO foi
+--       executada**. Ver o bloco de status no fim do T2.
+--       ⇒ CRUD autenticado é PENDÊNCIA de nova branch descartável.
+--
 --   PRODUÇÃO NUNCA FOI TOCADA, em nenhum momento.
 --
 -- Como usar:
@@ -213,42 +219,154 @@ begin;
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
     values (v_cli, 'Petrolina', 'Centro', 'procurando');
 
-    -- temp table: junta as 2 medições num resultado só. Mesmo motivo do T1 —
-    -- com selects separados, o conector devolve apenas o último e a
-    -- contraprova some. É o PAR que prova.
-    create temp table t2_res(etapa text, func boolean, leu bigint) on commit drop;
+    -- temp table: junta todas as medições num resultado só. Mesmo motivo do
+    -- T1 — com selects separados, o conector devolve apenas o último e a
+    -- contraprova some. É o CONJUNTO que prova.
+    create temp table t2_res(etapa text, detalhe text) on commit drop;
   end $$;
 
   -- necessário para os inserts abaixo rodarem como authenticated (ver T1)
   grant insert, select on t2_res to authenticated;
 
-  -- 2a — COM perfil: deve LER
+  -- ===================================================================
+  -- 2a — COM perfil: as QUATRO operações que a tela vai precisar
+  -- ===================================================================
+  -- ⚠️ AMPLIAÇÃO (achado do Codex, 2026-07-29): a versão anterior media SÓ
+  --    o SELECT. Mas o 08 cria 4 POLICIES SEPARADAS por tabela — uma para
+  --    cada operação. Provar SELECT não prova INSERT/UPDATE/DELETE: são
+  --    regras distintas, e qualquer uma delas pode estar errada sozinha.
+  --    Com 3 tabelas × 4 operações, o T2 antigo cobria 1 de 12 policies.
+  --    A tela de Lotes precisa das quatro (cadastrar procura, editar
+  --    situação, remover engano), então as quatro têm de ser exercitadas.
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
-  insert into t2_res values ('t2a_com_perfil', crm_user_has_profile(), (select count(*) from public.crm_procura_lote));
+
+  insert into t2_res values ('t2a_0_funcao',
+    case when crm_user_has_profile() then 'PASSOU func=true' else 'REPROVOU func=false' end);
+
+  -- SELECT: deve enxergar a linha criada no setup
+  insert into t2_res values ('t2a_1_select',
+    case when (select count(*) from public.crm_procura_lote) = 1
+         then 'PASSOU leu 1' else 'REPROVOU leu '||(select count(*) from public.crm_procura_lote) end);
+
+  -- INSERT: cria uma oportunidade como authenticated (tabela vazia, sem
+  -- índice parcial no caminho — isola a policy de INSERT)
+  do $$
+  begin
+    insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
+    values ('T2 INSERT como authenticated', 'Petrolina', 'Centro');
+    insert into t2_res values ('t2a_2_insert', 'PASSOU inseriu');
+  exception when others then
+    insert into t2_res values ('t2a_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
+  end $$;
+
+  -- UPDATE: altera a linha recém-inserida e confere que gravou de fato
+  do $$
+  declare v_n int;
+  begin
+    update public.crm_oportunidade_lote set situacao = 'reservada'
+    where descricao = 'T2 INSERT como authenticated';
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2a_3_update',
+      case when v_n = 1 then 'PASSOU alterou 1' else 'REPROVOU alterou '||v_n end);
+  exception when others then
+    insert into t2_res values ('t2a_3_update', 'REPROVOU '||sqlstate||' '||sqlerrm);
+  end $$;
+
+  -- DELETE: remove a mesma linha e confere a contagem afetada
+  do $$
+  declare v_n int;
+  begin
+    delete from public.crm_oportunidade_lote
+    where descricao = 'T2 INSERT como authenticated';
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2a_4_delete',
+      case when v_n = 1 then 'PASSOU removeu 1' else 'REPROVOU removeu '||v_n end);
+  exception when others then
+    insert into t2_res values ('t2a_4_delete', 'REPROVOU '||sqlstate||' '||sqlerrm);
+  end $$;
   reset role;
 
-  -- 2b — CONTRAPROVA, sem perfil: deve LER ZERO no MESMO dado
+  -- ===================================================================
+  -- 2b — CONTRAPROVA, sem perfil: as mesmas 4 operações devem FALHAR
+  -- ===================================================================
+  -- Sem esta metade, "authenticated consegue tudo" não distinguiria RLS
+  -- funcionando de RLS aberto para qualquer logado.
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated"}';
-  insert into t2_res values ('t2b_sem_perfil', crm_user_has_profile(), (select count(*) from public.crm_procura_lote));
+
+  insert into t2_res values ('t2b_0_funcao',
+    case when crm_user_has_profile() then 'REPROVOU func=true' else 'PASSOU func=false' end);
+
+  -- SELECT: deve ler ZERO no mesmo dado
+  insert into t2_res values ('t2b_1_select',
+    case when (select count(*) from public.crm_procura_lote) = 0
+         then 'PASSOU leu 0' else 'REPROVOU leu '||(select count(*) from public.crm_procura_lote) end);
+
+  -- INSERT: deve ser BLOQUEADO pela policy (WITH CHECK falha)
+  do $$
+  begin
+    insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
+    values ('T2 INSERT sem perfil', 'Petrolina', 'Centro');
+    insert into t2_res values ('t2b_2_insert', 'REPROVOU inseriu sem perfil');
+  exception when insufficient_privilege then
+    insert into t2_res values ('t2b_2_insert', 'PASSOU bloqueado pela policy');
+  when others then
+    insert into t2_res values ('t2b_2_insert', 'PASSOU bloqueado '||sqlstate);
+  end $$;
+
+  -- UPDATE/DELETE sem perfil: as linhas ficam INVISÍVEIS (USING falha), então
+  -- o esperado é 0 linhas afetadas — não erro. Zero aqui é o resultado certo.
+  do $$
+  declare v_n int;
+  begin
+    update public.crm_procura_lote set situacao = 'pausada' where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_3_update',
+      case when v_n = 0 then 'PASSOU alterou 0' else 'REPROVOU alterou '||v_n end);
+  exception when others then
+    insert into t2_res values ('t2b_3_update', 'PASSOU bloqueado '||sqlstate);
+  end $$;
+
+  do $$
+  declare v_n int;
+  begin
+    delete from public.crm_procura_lote where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_4_delete',
+      case when v_n = 0 then 'PASSOU removeu 0' else 'REPROVOU removeu '||v_n end);
+  exception when others then
+    insert into t2_res values ('t2b_4_delete', 'PASSOU bloqueado '||sqlstate);
+  end $$;
   reset role;
 
-  select etapa, func, leu,
-         case when etapa='t2a_com_perfil' and func is true  and leu = 1 then 'PASSOU'
-              when etapa='t2b_sem_perfil' and func is false and leu = 0 then 'PASSOU'
-              else 'REPROVOU' end as veredito
+  -- 2c — a linha do setup continua lá? (prova que 2b não apagou nada)
+  insert into t2_res values ('t2c_dado_intacto',
+    case when (select count(*) from public.crm_procura_lote) = 1
+         then 'PASSOU 1 linha intacta'
+         else 'REPROVOU sobrou '||(select count(*) from public.crm_procura_lote) end);
+
+  select etapa, detalhe,
+         case when detalhe like 'PASSOU%' then 'OK' else 'FALHA' end as veredito
   from t2_res order by etapa;
 rollback;
--- ESPERADO:
---   t2a_com_perfil  → func = true   E  leu = 1
---   t2b_sem_perfil  → func = false  E  leu = 0
+-- ESPERADO: as 11 linhas começando com 'PASSOU'.
+--   t2a_* → com perfil: função true · lê 1 · insere · altera 1 · remove 1
+--   t2b_* → sem perfil: função false · lê 0 · insert bloqueado · update e
+--           delete afetam 0 linhas (as linhas são invisíveis para ele)
+--   t2c   → o dado do setup sobreviveu ao 2b
 --
---   t2a leu 0 → RLS bloqueia quem TEM perfil: REPROVA (fecha demais)
---   t2b leu >0 → RLS deixa passar quem NÃO tem perfil: REPROVA (abre demais)
--- ✅ EXECUTADO na branch `lotes-v2` (2026-07-29):
---      t2a_com_perfil | func=true  | leu=1 | PASSOU
---      t2b_sem_perfil | func=false | leu=0 | PASSOU
+--   t2a com REPROVOU → RLS fecha demais: a tela não funcionaria
+--   t2b com REPROVOU → RLS abre demais: qualquer logado no banco mexeria
+--                      nos dados do CRM
+--
+-- ⚠️ STATUS DESTA VERSÃO DO T2: **NÃO EXECUTADA.**
+--    A execução em `lotes-v2` (2026-07-29) rodou a versão anterior, que
+--    media SOMENTE leitura, e ela passou:
+--        t2a_com_perfil | func=true  | leu=1 | PASSOU
+--        t2b_sem_perfil | func=false | leu=0 | PASSOU
+--    Ou seja: **SELECT está provado; INSERT/UPDATE/DELETE não.**
+--    Esta ampliação aguarda nova branch descartável.
 --    O bypass service_role do setup funcionou na prática — o insert em
 --    crm_profiles passou pelo trigger de escalação sem erro.
 
@@ -427,8 +545,12 @@ rollback;  -- desfaz tudo
 --                      (SELECT/INSERT/UPDATE/DELETE) SEM nenhum GRANT escrito:
 --                      o default ACL do schema aplicou, como previsto
 --   T1  anônimo ...... PASSOU — dono lê 1, anon lê 0 no MESMO dado
---   T2  logado ....... PASSOU com contraprova — com perfil: func=true, leu 1;
---                      sem perfil: func=false, leu 0
+--   T2  logado ....... PASSOU **SÓ LEITURA** — com perfil: func=true, leu 1;
+--                      sem perfil: func=false, leu 0.
+--                      ⚠️ INSERT/UPDATE/DELETE como authenticated NÃO foram
+--                      exercitados nesta execução. Das 12 policies criadas
+--                      pelo 08 (3 tabelas × 4 operações), esta execução tocou
+--                      as de SELECT. O T2 foi ampliado depois e aguarda branch.
 --   T3  2ª procura ... PASSOU — bloqueada; encerrada convive
 --   T4  2ª aceitação . PASSOU — bloqueada
 --   EX  updated_at ... PASSOU nas 3 tabelas (1/3, 2/3, 3/3)
@@ -488,14 +610,29 @@ rollback;  -- desfaz tudo
 --      com temp table + SELECT final, e cada um traz o resultado real logo
 --      abaixo. Arquivo e evidência batem.
 --
--- =====================================================================
--- ESTADO ATUAL
--- =====================================================================
--- Este arquivo FOI executado inteiro na branch `lotes-v2` e passou.
--- O SQL aqui é o mesmo que rodou (reconciliado no item 4 acima).
+--   5. T2 provava só LEITURA (achado do Codex, 2026-07-29):
+--      o 08 cria 4 policies SEPARADAS por tabela — SELECT, INSERT, UPDATE e
+--      DELETE. São regras distintas: provar uma não prova as outras. Com 3
+--      tabelas, a execução em `lotes-v2` exercitou as de SELECT e deixou 9
+--      policies sem teste. A tela de Lotes vai precisar das quatro.
 --
--- O que continua NÃO testado:
---   · a tela lotes.html contra estas tabelas com dado real;
---   · os formulários de cadastro de procura/oportunidade (não existem ainda);
---   · qualquer coisa em celular.
+--      T2 ampliado para rodar as 4 operações como usuário COM perfil, e as
+--      mesmas 4 como usuário SEM perfil (contraprova), mais uma checagem de
+--      que o dado do setup sobreviveu. AINDA NÃO EXECUTADO.
+--
+-- =====================================================================
+-- ESTADO ATUAL — o que está provado e o que não está
+-- =====================================================================
+-- ✅ PROVADO em `lotes-v2` (2026-07-29):
+--    · T1 (anônimo bloqueado) · T3 (2ª procura ativa) · T4 (2ª aceitação)
+--    · EXTRA updated_at nas 3 tabelas
+--    · Estrutura, owner, GRANT efetivo, RLS ativa, 4 policies por tabela
+--    · T2 SOMENTE na parte de LEITURA
+--
+-- ⚠️ NÃO PROVADO:
+--    · CRUD autenticado — INSERT/UPDATE/DELETE como `authenticated` com
+--      perfil. É o T2 ampliado acima; exige nova branch descartável.
+--    · A tela lotes.html contra estas tabelas com dado real.
+--    · Os formulários de cadastro de procura/oportunidade (não existem ainda).
+--    · Qualquer coisa em celular.
 -- =====================================================================

@@ -12,7 +12,9 @@
 --       cada branch: 0 tabelas novas, crm_lotes=31, vínculos=7.
 --
 --   BRANCH `lotes-v2` (2026-07-29) ... ✅ ESTA VERSÃO foi EXECUTADA do início
---       ao fim e PASSOU, junto com os testes do 09. Branch destruída.
+--       ao fim e criou tudo sem erro. Os testes do 09 passaram, com UM limite
+--       conhecido: só a policy de SELECT foi exercitada. INSERT/UPDATE/DELETE
+--       como `authenticated` seguem sem teste. Branch destruída.
 --       Resultados completos no fim deste arquivo.
 --
 --   BRANCH `teste-lotes` (anterior, descartada) ... rodou uma versão
@@ -319,11 +321,15 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --                                deve VIOLAR crm_po_uma_aceita_por_oportunidade
 --
 -- ✅ Os 4 casos foram provados em `lotes-v2` (2026-07-29) — ver fim do arquivo.
+--    (O caso 2 foi provado só na leitura — ver a ressalva do T2 lá embaixo.)
 --
--- PENDÊNCIA ANTES DE APLICAR EM PRODUÇÃO:
+-- PENDÊNCIAS ANTES DE APLICAR EM PRODUÇÃO:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---      ⇒ É a ÚNICA pendência que resta. Decisão de negócio de Duam.
+--      ⇒ Decisão de negócio de Duam.
+--   2. Provar o CRUD autenticado (INSERT/UPDATE/DELETE como `authenticated`
+--      com perfil) — 9 das 12 policies ainda sem teste. Exige nova branch
+--      descartável, com o T2 ampliado do arquivo 09.
 --   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário — agora
 --      PROVADO por has_table_privilege, não só inferido do pg_default_acl ·
 --      updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
@@ -357,9 +363,15 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --                     do schema aplicou, como a seção 6 previa.
 --                     É o RLS que barra o anon — o T1 prova isso.
 --   T1 anônimo ...... PASSOU — dono lê 1, `anon` lê 0 no MESMO dado
---   T2 logado ....... PASSOU com CONTRAPROVA — com perfil: função=true, leu 1;
---                     sem perfil: função=false, leu 0. O bypass service_role
---                     do setup funcionou na prática.
+--   T2 logado ....... PASSOU **SOMENTE LEITURA**, com contraprova — com
+--                     perfil: função=true, leu 1; sem perfil: função=false,
+--                     leu 0. O bypass service_role do setup funcionou.
+--                     ⚠️ LIMITE (achado do Codex): esta seção cria 4 POLICIES
+--                     SEPARADAS por tabela — SELECT, INSERT, UPDATE, DELETE.
+--                     A execução exercitou as de SELECT. As outras 9 (3
+--                     tabelas × 3 operações) NÃO foram testadas. O T2 no 09
+--                     foi ampliado para cobrir as quatro e aguarda nova
+--                     branch. ⇒ CRUD autenticado é PENDÊNCIA.
 --   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
 --   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
 --   Triggers ........ PASSOU nas 3 tabelas (EXTRA 1/3, 2/3, 3/3), por
@@ -368,6 +380,9 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   Resíduo ......... 0 em todas as tabelas (tudo em ROLLBACK)
 --
 -- NÃO PROVADO (honestidade de escopo):
+--   · CRUD autenticado: INSERT/UPDATE/DELETE como `authenticated` com perfil.
+--     São 9 das 12 policies criadas aqui. Só o SELECT foi exercitado.
+--     ⇒ Exige nova branch descartável, com o T2 ampliado do 09.
 --   · A tela lotes.html contra estas tabelas com dado real.
 --   · Os formulários de cadastro de procura/oportunidade — não existem ainda.
 --   · Qualquer coisa em celular.

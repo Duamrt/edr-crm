@@ -369,7 +369,7 @@ migrations de CRM. Elas são autossuficientes (só dependem de `auth.users`, `au
 | Estrutura | **OK** | 3 tabelas · dono `postgres` · RLS ativa · 4 policies e 1 trigger por tabela |
 | **GRANT** | **PROVADO** | `has_table_privilege` = true para `anon` **e** `authenticated` (SELECT/INSERT/UPDATE/DELETE), **sem GRANT escrito** — o default ACL aplicou |
 | **T1 anônimo** | **PASSOU** | dono lê **1** · `anon` lê **0**, mesmo dado |
-| **T2 logado** | **PASSOU com contraprova** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0** |
+| **T2 logado** | **PASSOU só na LEITURA** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0**. ⚠️ INSERT/UPDATE/DELETE **não testados** — ver achado 7 |
 | **T3 2ª procura ativa** | **PASSOU** | bloqueada; encerrada convive |
 | **T4 2ª aceitação** | **PASSOU** | bloqueada |
 | **Triggers `updated_at`** | **PASSOU 3/3** | `EXTRA 1/3`, `2/3`, `3/3` — agora de verdade nas 3 tabelas |
@@ -393,11 +393,36 @@ temp table + `SELECT` final — e cada um traz o resultado real logo abaixo.
 - Tabelas novas: **0** · `crm_lotes`: **31** · vínculos: **7** · migrations: **46**
 - `list_branches` → só a `main`
 
+### 🐛 Sétimo achado: o T2 provava só leitura (Codex, 2026-07-29)
+
+O `08` cria **4 policies separadas por tabela** — uma para `SELECT`, outra para `INSERT`,
+outra para `UPDATE`, outra para `DELETE`. São regras distintas: provar uma **não** prova
+as outras. Com 3 tabelas, a execução em `lotes-v2` exercitou as de `SELECT` e deixou
+**9 das 12 policies sem teste** — justamente as que a tela vai usar para cadastrar uma
+procura, mudar a situação e desfazer um engano.
+
+**Correção:** o T2 no arquivo `09` foi ampliado para rodar as **quatro** operações como
+usuário **com** perfil, e as mesmas quatro como usuário **sem** perfil (contraprova), mais
+uma checagem de que o dado do setup sobreviveu.
+
+Um detalhe que o teste precisa tratar de formas diferentes: sem perfil, o `INSERT` falha
+com **erro** (a policy usa `WITH CHECK`, que é barreira), enquanto `UPDATE` e `DELETE`
+afetam **zero linhas** sem erro (a policy usa `USING`, que funciona como filtro — as
+linhas simplesmente não existem para quem não passa). Por isso a verificação final de que
+a linha continua lá: sem ela, "removeu 0" poderia significar "não havia nada".
+
+**Esta ampliação AINDA NÃO FOI EXECUTADA.**
+
 ### O que continua NÃO testado
+- **CRUD autenticado** — `INSERT`/`UPDATE`/`DELETE` como usuário com perfil. **Pendente de
+  nova branch descartável**
 - A tela `lotes.html` contra estas tabelas com dado real
 - Os formulários de cadastro de procura/oportunidade — **não existem ainda**
 - Qualquer coisa em celular
 
-### Pendência única para produção
-**Definir a lista de cidades/regiões.** É decisão de negócio de Duam — o banco está
-provado.
+### Pendências para produção
+1. **Definir a lista de cidades/regiões** — decisão de negócio de Duam
+2. **Provar o CRUD autenticado** em nova branch, com o T2 ampliado
+
+O banco está provado na estrutura, no bloqueio de anônimo, nas regras de negócio (índices
+únicos parciais) e nos triggers. **Falta provar a escrita autenticada.**
