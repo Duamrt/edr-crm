@@ -98,19 +98,20 @@ body {
   border-bottom: 1px solid var(--sidebar-border);
 }
 
+/* Placa clara com o SIMBOLO OFICIAL da EDR (img/edr-simbolo.svg).
+   Antes era a letra "E" branca sobre --verde. O fundo TEM de ser claro:
+   o simbolo e traco preto + verde escuro da marca, e sobre verde solido
+   ficaria invisivel. Mesma decisao das seis telas redesenhadas. */
 .brand-logo {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--verde);
-  color: #fff;
+  background: var(--eh-papel);
   display: grid;
   place-items: center;
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
-  font-size: 14px;
   flex-shrink: 0;
 }
+.brand-logo img { width: 68%; height: 68%; object-fit: contain; display: block; }
 
 .sidebar-logo .logo-title {
   font-family: 'Inter', sans-serif;

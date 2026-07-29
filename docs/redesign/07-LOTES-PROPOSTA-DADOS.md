@@ -1626,9 +1626,9 @@ Diff só de comentário e string; nenhuma linha de lógica alterada.
 
 ## 27. MARCA OFICIAL NA SIDEBAR — 2026-07-29
 
-Ajuste de identidade nas **seis telas redesenhadas** (Dashboard, Clientes, Ficha,
-Kanban, Agenda, Lotes). Não é específico de Lotes, mas fica registrado aqui
-porque é onde mora o histórico do redesenho.
+Ajuste de identidade nas **sete telas** do CRM: Dashboard, Clientes, Ficha,
+Kanban, Agenda, Lotes e **familia.html**. Não é específico de Lotes, mas fica
+registrado aqui porque é onde mora o histórico do redesenho.
 
 ### O problema
 
