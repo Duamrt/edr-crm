@@ -1,0 +1,145 @@
+<meta charset="utf-8">
+<title>Protótipo — Lotes (Famílias procurando oportunidade)</title>
+<link rel="stylesheet" href="../../css/clientes.css">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* PROTÓTIPO — não é o CRM. Reusa css/clientes.css só para parecer o sistema. */
+  .lt-aviso{background:#fdf0dc;border:1px solid #f2ddbd;color:#8a4a10;padding:10px 14px;
+    border-radius:11px;font-size:12.5px;margin-bottom:18px;font-weight:600}
+  .lt-sec{margin-bottom:26px}
+  .lt-sec-head{display:flex;align-items:baseline;gap:11px;margin-bottom:12px;flex-wrap:wrap}
+  .lt-sec-titulo{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--ink)}
+  .lt-sec-sub{font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .lt-vazio{background:var(--card);border:1px dashed var(--line);border-radius:16px;
+    padding:38px 22px;text-align:center;color:var(--muted)}
+  .lt-vazio strong{display:block;font-family:'Fraunces',serif;font-size:16px;font-weight:600;
+    color:var(--ink);margin-bottom:6px}
+  .lt-vazio span{font-size:12.5px;line-height:1.5;display:block;max-width:430px;margin:0 auto}
+  .lt-sit{display:inline-block;padding:3px 9px;border-radius:999px;font:9.5px 'DM Mono',monospace;
+    font-weight:500;letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--line)}
+  .sit-procurando{background:#e2f0e6;color:#164b37;border-color:#c6e0ce}
+  .sit-em_analise{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+  .sit-pausada{background:#f1f0ec;color:#718176;border-color:#e0dfd8}
+</style>
+
+<div class="app-shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
+    <div class="sidebar-nav">
+      <a href="#">Dashboard</a><a href="#">Clientes</a><a href="#">Kanban</a>
+      <a href="#" class="active">Lotes</a><a href="#">Agenda</a>
+    </div>
+    <div class="sidebar-footer"><div>Protótipo</div><div class="crm-versao">não é o sistema</div></div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Lotes</span>
+      <div class="flex gap-8">
+        <a href="#" class="btn btn-secondary btn-sm">+ Registrar procura</a>
+        <a href="#" class="btn btn-primary btn-sm">+ Captar oportunidade</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="lt-aviso">PROTÓTIPO — dados de exemplo. Não é o CRM e não lê o banco.</div>
+
+      <!-- PARTE 1 — FILA -->
+      <section class="lt-sec">
+        <div class="lt-sec-head">
+          <span class="lt-sec-titulo">Famílias procurando lote</span>
+          <span class="lt-sec-sub">6 na fila · ordenadas por entrada</span>
+        </div>
+
+        <div class="filtros-bar">
+          <input type="search" placeholder="Buscar família...">
+          <select><option>Todas as regiões</option><option>Centro</option><option>Zona Norte</option></select>
+          <select><option>Todas as situações</option><option>Procurando</option><option>Em análise</option><option>Pausada</option></select>
+          <span id="contador">6 família(s)</span>
+        </div>
+
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Família</th><th>Região</th><th>Valor máximo</th><th>Metragem</th>
+                <th>Preferência</th><th>Próxima ação</th><th>Situação</th><th></th>
+              </tr></thead>
+              <tbody id="tb"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PARTE 2 — OPORTUNIDADES (VAZIA) -->
+      <section class="lt-sec">
+        <div class="lt-sec-head">
+          <span class="lt-sec-titulo">Oportunidades captadas</span>
+          <span class="lt-sec-sub">nenhuma até agora</span>
+        </div>
+        <div class="lt-vazio">
+          <strong>Nenhuma oportunidade captada ainda.</strong>
+          <span>Quando aparecer um lote real, cadastre aqui — e o sistema mostra
+          quais famílias da fila combinam com a região e o valor.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+// Dados de EXEMPLO — o protótipo não lê banco. Montado com métodos DOM seguros.
+var FILA = [
+  ['Ana Carolina Andrade da Silva','Centro','R$ 45.000','200 m²','Perto de escola','Ligar para confirmar interesse · 02/08','procurando'],
+  ['Josimar de Souza Zumba','Zona Norte','R$ 38.000','—','Rua asfaltada','—','procurando'],
+  ['Maria das Graças da Silva','Centro','R$ 52.000','250 m²','Esquina','Aguardando retorno da família · 05/08','em_analise'],
+  ['Carlos Eduardo Souza','Zona Sul','R$ 60.000','300 m²','Sem aclive','—','procurando'],
+  ['Fernanda Lima','Zona Norte','R$ 41.000','180 m²','Perto do trabalho','Reavaliar teto de valor · 07/08','pausada'],
+  ['Roberto Nunes','Centro','—','—','—','Coletar preferências · 03/08','procurando']
+];
+var LBL = { procurando:'Procurando', em_analise:'Em análise', pausada:'Pausada' };
+
+function td(texto, classe){
+  var el = document.createElement('td');
+  if (classe) el.className = classe;
+  el.textContent = texto;
+  return el;
+}
+function botao(texto){
+  var a = document.createElement('a');
+  a.href = '#'; a.className = 'btn btn-secondary btn-sm'; a.textContent = texto;
+  return a;
+}
+
+var tb = document.getElementById('tb');
+FILA.forEach(function(f){
+  var tr = document.createElement('tr');
+
+  var tdNome = document.createElement('td');
+  var link = document.createElement('a');
+  link.href = '#'; link.className = 'font-bold'; link.textContent = f[0];
+  tdNome.appendChild(link);
+  tr.appendChild(tdNome);
+
+  tr.appendChild(td(f[1], 'text-sm'));
+  tr.appendChild(td(f[2], 'text-sm'));
+  tr.appendChild(td(f[3], 'text-sm'));
+  tr.appendChild(td(f[4], 'text-sm text-muted'));
+  tr.appendChild(td(f[5], 'col-proxima'));
+
+  var tdSit = document.createElement('td');
+  var pill = document.createElement('span');
+  pill.className = 'lt-sit sit-' + f[6];
+  pill.textContent = LBL[f[6]];
+  tdSit.appendChild(pill);
+  tr.appendChild(tdSit);
+
+  var tdAcoes = document.createElement('td');
+  tdAcoes.className = 'col-acoes';
+  tdAcoes.appendChild(botao('Ver ficha'));
+  tdAcoes.appendChild(botao('Editar'));
+  tr.appendChild(tdAcoes);
+
+  tb.appendChild(tr);
+});
+</script>
