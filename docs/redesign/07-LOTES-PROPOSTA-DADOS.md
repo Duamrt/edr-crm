@@ -166,7 +166,10 @@ a família disse que está procurando lote.
 Nada de migração automática.
 
 ## 7b. Ainda em aberto (não bloqueiam o SQL)
-- Quais cidades e regiões entram na lista inicial? (Petrolina e Juazeiro já citadas)
+- ~~Quais cidades e regiões entram na lista inicial?~~ ✅ **DECIDIDO — ver seção 14.**
+  Jupi · Garanhuns · Lajedo · Jucati. Região opcional.
+  (Petrolina e Juazeiro apareciam aqui como exemplo meu, não como decisão — as
+  cidades reais são outras.)
 - Critério de ordenação da fila além da entrada.
 
 ---
@@ -532,7 +535,63 @@ qualquer erro como "bloqueado" e teria aprovado um RLS aberto.
 - Qualquer coisa em celular
 
 ### Pendência única para produção
-**Definir a lista de cidades/regiões** — decisão de negócio de Duam.
+~~Definir a lista de cidades/regiões~~ — **decidida na seção 14.**
 
 O banco está provado: estrutura, bloqueio de anônimo, regras de negócio (índices únicos
 parciais), triggers e **as 12 policies de RLS com contraprova**.
+
+---
+
+## 14. CIDADES E REGIÕES — decisão de Duam, 2026-07-29 ✅
+
+### Lista inicial controlada de cidades
+
+| Cidade |
+|---|
+| Jupi |
+| Garanhuns |
+| Lajedo |
+| Jucati |
+
+**Cidade é obrigatória** e vem dessa lista. A validação fica na **aplicação**, não no
+banco — assim entra cidade nova sem precisar de migration.
+
+### Região/bairro: opcional nesta primeira versão
+
+**Decisão de Duam:** *"não inventar bairros agora... assim não nasce dado falso como
+'Centro' só para preencher campo"*.
+
+Não existe lista real de bairros para essas quatro cidades. Um campo obrigatório
+forçaria o usuário a escrever qualquer coisa para conseguir salvar — e aí a busca por
+região passaria a mentir, o que é pior que não ter o dado.
+
+**Quando a região não é informada, a sugestão de compatibilidade considera apenas a
+cidade.** Se a família informou uma região, ela também entra na comparação.
+
+Quando houver lista real de bairros, o campo pode virar obrigatório por migration.
+
+### Mudança de schema que isso exigiu
+
+`regiao` era `text not null` nas **duas** tabelas (`crm_procura_lote` e
+`crm_oportunidade_lote`). Passou a aceitar nulo. Sem essa mudança, o campo obrigatório
+produziria exatamente o dado inventado que a decisão evita.
+
+**O que isso faz com a validação da seção 13:** quase nada. As 12 policies chamam
+`crm_user_has_profile()`, que não olha coluna nenhuma; os índices únicos parciais
+filtram por `situacao`; os triggers escrevem em `updated_at`. Nenhum deles toca
+`regiao`.
+
+**O que deixou de estar coberto:** inserir com `regiao` **nula** — caminho que nenhum
+teste percorreu, porque na branch a coluna era obrigatória. É pequeno e não exige uma
+branch só para isso: dá para verificar junto da aplicação em produção, ou numa branch
+futura, se você preferir.
+
+### Ajustes no protótipo `lotes.html`
+
+- `cidadeRegiao()` mostrava **"Garanhuns — ?"** quando faltava região. Agora mostra só
+  **"Garanhuns"** — ponto de interrogação transformaria dado ausente em ruído visual e
+  pareceria erro de cadastro.
+- O texto do estado vazio deixou de prometer casamento por região como se fosse sempre
+  garantido; agora diz que combina por cidade e valor, e considera a região quando ela
+  existe.
+- A listagem de oportunidades já tratava região ausente corretamente — não precisou mudar.

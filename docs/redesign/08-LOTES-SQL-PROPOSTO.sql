@@ -48,10 +48,20 @@ create table public.crm_procura_lote (
   cliente_id          uuid not null references public.crm_clientes(id) on delete cascade,
 
   -- Cidade separada da região: "Centro" sozinho pode ser cidades diferentes.
-  -- Exigência de Duam (2026-07-29). Exibido como "Petrolina — Centro".
+  -- Exigência de Duam (2026-07-29). Exibido como "Garanhuns — Centro" quando
+  -- há região, ou só "Garanhuns" quando não há.
+  --
+  -- ⚠️ DECISÃO DE DUAM (2026-07-29): `regiao` é OPCIONAL nesta 1ª versão.
+  --    Motivo: não existe lista real de bairros para as 4 cidades. Campo
+  --    obrigatório forçaria o usuário a inventar valor ("Centro") só para
+  --    salvar — e dado falso é pior que dado ausente, porque a busca por
+  --    região passaria a mentir. Quando houver lista real, vira obrigatório
+  --    por migration.
+  --    A lista de CIDADES é controlada na aplicação — ver comentário no fim
+  --    da tabela.
   cidade              text not null,
-  regiao              text not null,
-  regiao_outra        text,          -- preenchido quando cidade/regiao = 'Outra'
+  regiao              text,          -- OPCIONAL — ver decisão acima
+  regiao_outra        text,          -- texto livre quando regiao = 'Outra'
 
   valor_maximo        numeric(12,2),
   metragem_desejada   numeric(10,2),
@@ -84,12 +94,18 @@ create unique index crm_procura_uma_ativa_por_familia
 
 create index crm_procura_cliente   on public.crm_procura_lote (cliente_id);
 create index crm_procura_situacao  on public.crm_procura_lote (situacao);
+-- (cidade, regiao) e não (cidade) sozinho: o índice composto serve às DUAS
+-- buscas — só por cidade (prefixo) e por cidade+região. Com `regiao` nula a
+-- linha continua indexada, então a busca por cidade encontra todo mundo.
 create index crm_procura_cidade    on public.crm_procura_lote (cidade, regiao);
 
 comment on table public.crm_procura_lote is
   'Fila de famílias procurando lote. Só entra quem manifestou interesse real — '
   'nunca cadastro automático de todo cliente (decisão de Duam, 2026-07-29). '
-  'Não duplica faixa/renda/status: isso vive em crm_clientes.';
+  'Não duplica faixa/renda/status: isso vive em crm_clientes. '
+  'CIDADE é obrigatória e vem de lista controlada na aplicação (Jupi, '
+  'Garanhuns, Lajedo, Jucati). REGIÃO é opcional nesta 1ª versão: não há '
+  'lista real de bairros, e campo obrigatório geraria dado inventado.';
 
 
 -- ---------------------------------------------------------------------
@@ -99,8 +115,10 @@ comment on table public.crm_procura_lote is
 create table public.crm_oportunidade_lote (
   id           uuid primary key default gen_random_uuid(),
   descricao    text not null,        -- "Lote na Rua X, ao lado do nº 40"
+  -- mesma decisão da procura: cidade obrigatória (lista controlada),
+  -- região opcional enquanto não houver lista real de bairros.
   cidade       text not null,
-  regiao       text not null,
+  regiao       text,
   valor        numeric(12,2),
   metragem     numeric(10,2),
   origem       text,                 -- quem ofereceu / onde foi encontrado
@@ -121,7 +139,9 @@ create index crm_oport_cidade   on public.crm_oportunidade_lote (cidade, regiao)
 comment on table public.crm_oportunidade_lote is
   'Lotes reais captados no mercado. Nasce vazia e só recebe registro quando '
   'uma oportunidade concreta aparecer. PROIBIDO migrar os lotes das quadras '
-  'A/B de crm_lotes para cá — são sobra do loteamento antigo.';
+  'A/B de crm_lotes para cá — são sobra do loteamento antigo. '
+  'CIDADE obrigatória (lista controlada); REGIÃO opcional — mesma decisão '
+  'de crm_procura_lote.';
 
 
 -- ---------------------------------------------------------------------
@@ -323,11 +343,31 @@ create trigger trg_crm_procura_oportunidade_updated_at
 -- ✅ Os 4 casos foram provados em `lotes-v2` (2026-07-29) — ver fim do arquivo.
 --    (O caso 2 foi provado só na leitura — ver a ressalva do T2 lá embaixo.)
 --
--- PENDÊNCIA ANTES DE APLICAR EM PRODUÇÃO:
---   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
---      fica na aplicação, não no banco — permite ajustar sem migration)
---      ⇒ ÚNICA pendência restante. Decisão de negócio de Duam.
---   ✅ RESOLVIDA: CRUD autenticado — as 12 policies provadas em `lotes-v3`.
+-- ✅ TODAS AS PENDÊNCIAS RESOLVIDAS:
+--   · CRUD autenticado — as 12 policies provadas em `lotes-v3`.
+--   · Lista de cidades/regiões — DECIDIDA POR DUAM em 2026-07-29:
+--
+--       CIDADES (lista controlada, obrigatória): Jupi · Garanhuns ·
+--       Lajedo · Jucati. A validação fica na APLICAÇÃO, não no banco —
+--       assim entra cidade nova sem migration.
+--
+--       REGIÃO/BAIRRO: **opcional**. Não existe lista real de bairros para
+--       essas cidades. Duam: "não inventar bairros agora... assim não nasce
+--       dado falso como 'Centro' só para preencher campo".
+--       Quando não informada, a sugestão de compatibilidade considera
+--       apenas a CIDADE.
+--
+-- ⚠️ MUDANÇA DE SCHEMA que esta decisão exigiu (2026-07-29):
+--    `regiao` era `text not null` nas DUAS tabelas (procura e oportunidade).
+--    Passou a ser `text` (nulo permitido). Sem isso, o campo obrigatório
+--    forçaria exatamente o dado inventado que a decisão evita.
+--
+--    ⚠️ CONSEQUÊNCIA PARA A VALIDAÇÃO: o SQL provado em `lotes-v3` tinha
+--       `regiao not null`. A alteração é posterior e **não foi executada**.
+--       O que continua válido daquela execução: as 12 policies, os índices
+--       únicos parciais, os triggers e a estrutura geral — nada disso
+--       depende da obrigatoriedade da coluna. O que NÃO foi exercitado é
+--       inserir com `regiao` NULA. Ver "NÃO PROVADO" no fim.
 --   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário — agora
 --      PROVADO por has_table_privilege, não só inferido do pg_default_acl ·
 --      updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
@@ -391,6 +431,13 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   Resíduo ......... 0 em todas as tabelas (tudo em ROLLBACK)
 --
 -- NÃO PROVADO (honestidade de escopo):
+--   · ⚠️ `regiao` NULA. A execução em `lotes-v3` rodou com `regiao not null`;
+--     a coluna virou opcional DEPOIS, por decisão de Duam. Inserir sem
+--     região é um caminho que nenhum teste percorreu.
+--     ⇒ O resto da validação continua valendo: policies, índices únicos
+--       parciais e triggers não olham essa coluna.
+--     ⇒ Não exige branch só para isso — dá para cobrir junto da aplicação
+--       do SQL em produção, ou numa branch futura se Duam preferir.
 --   · A tela lotes.html contra estas tabelas com dado real.
 --   · Os formulários de cadastro de procura/oportunidade — não existem ainda.
 --   · Qualquer coisa em celular.

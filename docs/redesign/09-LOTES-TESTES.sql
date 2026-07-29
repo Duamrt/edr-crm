@@ -16,6 +16,17 @@
 --
 --   PRODUÇÃO NUNCA FOI TOCADA, em nenhum momento.
 --
+-- ⚠️ CIDADES DOS DADOS DE TESTE trocadas em 2026-07-29, DEPOIS das execuções:
+--    as execuções usaram 'Petrolina'/'Juazeiro' (exemplos meus); o arquivo
+--    passou a usar 'Garanhuns'/'Jupi', que são cidades reais da lista de Duam
+--    (seção 14 do 07). São dados descartáveis dentro de ROLLBACK e nenhum
+--    teste depende do valor da cidade — a troca não invalida os resultados.
+--
+-- ⚠️ `regiao` VIROU OPCIONAL depois das execuções (decisão de Duam). Os
+--    testes abaixo ainda preenchem região sempre. Inserir com `regiao` NULA
+--    é o único caminho novo que nenhuma execução percorreu — ver "NÃO
+--    PROVADO" no fim do arquivo 08.
+--
 -- Como usar:
 --   0. ⚠️ COMO A BRANCH REALMENTE NASCE (confirmado por log em 2026-07-29):
 --      a criação da branch aplica TODAS as 46 migrations do projeto, e ela
@@ -88,7 +99,7 @@ begin;
     insert into public.crm_clientes (nome, cpf, telefone)
     values ('TESTE T1', '00000000001', '00000000000') returning id into v_cli;
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-    values (v_cli, 'Petrolina', 'Centro', 'procurando');
+    values (v_cli, 'Garanhuns', 'Centro', 'procurando');
     create temp table t1_res(etapa text, valor bigint) on commit drop;
     -- como postgres (dono): o registro EXISTE
     insert into t1_res values ('t1a_dono_deve_ver_1', (select count(*) from public.crm_procura_lote));
@@ -232,11 +243,11 @@ begin;
 
     -- 1/3 — crm_procura_lote
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-    values (v_cli, 'Petrolina', 'Centro', 'procurando') returning id into v_proc;
+    values (v_cli, 'Garanhuns', 'Centro', 'procurando') returning id into v_proc;
 
     -- 2/3 — crm_oportunidade_lote
     insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
-    values ('T2 setup - oportunidade', 'Petrolina', 'Centro') returning id into v_oport;
+    values ('T2 setup - oportunidade', 'Garanhuns', 'Centro') returning id into v_oport;
 
     -- 3/3 — crm_procura_oportunidade (a ligação entre as duas acima)
     insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
@@ -253,7 +264,7 @@ begin;
     --    restrição de duplicidade. Por isso: uma oportunidade EXTRA, livre,
     --    para a ligação de teste usar.
     insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
-    values ('T2 setup - oportunidade LIVRE', 'Petrolina', 'Centro')
+    values ('T2 setup - oportunidade LIVRE', 'Garanhuns', 'Centro')
     returning id into v_oport_livre;
 
     -- guarda os ids para os blocos 2a e 2b.
@@ -337,7 +348,7 @@ begin;
     v_novo := null;
     begin
       insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-      values (v_cli, 'Juazeiro', 'Zona Norte', 'atendida') returning id into v_novo;
+      values (v_cli, 'Jupi', 'Zona Norte', 'atendida') returning id into v_novo;
       insert into t2_res values ('t2a_procura_2_insert', 'PASSOU inseriu');
     exception when others then
       insert into t2_res values ('t2a_procura_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
@@ -378,7 +389,7 @@ begin;
     v_novo := null;
     begin
       insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
-      values ('T2 escrita autenticada', 'Petrolina', 'Centro') returning id into v_novo;
+      values ('T2 escrita autenticada', 'Garanhuns', 'Centro') returning id into v_novo;
       insert into t2_res values ('t2a_oport_2_insert', 'PASSOU inseriu');
     exception when others then
       insert into t2_res values ('t2a_oport_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
@@ -689,13 +700,13 @@ begin
 
   -- 1ª procura: deve passar
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-  values (v_cliente, 'Petrolina', 'Centro', 'procurando');
+  values (v_cliente, 'Garanhuns', 'Centro', 'procurando');
   insert into t3_res values ('T3.1 primeira procura', 'OK inserida');
 
   -- 2ª procura ATIVA para o MESMO cliente: deve FALHAR
   begin
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-    values (v_cliente, 'Juazeiro', 'Zona Norte', 'em_analise');
+    values (v_cliente, 'Jupi', 'Zona Norte', 'em_analise');
     insert into t3_res values ('T3.2 segunda ativa', 'REPROVOU aceita indevidamente');
   exception when unique_violation then
     insert into t3_res values ('T3.2 segunda ativa', 'PASSOU bloqueada pelo indice');
@@ -703,7 +714,7 @@ begin
 
   -- 3ª procura com situação ENCERRADA: deve PASSAR (histórico preservado)
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-  values (v_cliente, 'Petrolina', 'Zona Sul', 'desistiu');
+  values (v_cliente, 'Garanhuns', 'Zona Sul', 'desistiu');
   insert into t3_res values ('T3.3 encerrada convive', 'PASSOU historico preservado');
 end $$;
 select * from t3_res order by etapa;
@@ -742,13 +753,13 @@ begin
 
   -- duas famílias diferentes procurando
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-  values (v_c1, 'Petrolina', 'Centro', 'procurando') returning id into v_p1;
+  values (v_c1, 'Garanhuns', 'Centro', 'procurando') returning id into v_p1;
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
-  values (v_c2, 'Petrolina', 'Centro', 'procurando') returning id into v_p2;
+  values (v_c2, 'Garanhuns', 'Centro', 'procurando') returning id into v_p2;
 
   -- uma oportunidade
   insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
-  values ('Lote teste na Rua X', 'Petrolina', 'Centro') returning id into v_op;
+  values ('Lote teste na Rua X', 'Garanhuns', 'Centro') returning id into v_op;
 
   -- as duas podem VER a oportunidade (situação 'sugerida') — é o normal
   insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
