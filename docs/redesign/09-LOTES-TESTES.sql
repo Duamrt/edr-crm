@@ -8,12 +8,11 @@
 --   T1 · T3 · T4 · EXTRA (updated_at) ... ✅ EXECUTADOS E APROVADOS na branch
 --       `lotes-v2` (2026-07-29). O SQL versionado é o MESMO que rodou.
 --
---   T2 ... ⚠️ PARCIAL. A versão que rodou provava SOMENTE o SELECT de
---       crm_procura_lote — **1 das 12 policies**. O teste foi ampliado
---       depois para uma MATRIZ COMPLETA (3 tabelas × 4 operações × 2
---       identidades), e essa versão **ainda NÃO foi executada**.
---       ⇒ CRUD autenticado nas 3 tabelas é PENDÊNCIA de nova branch.
---       ⇒ NÃO declarar "12 policies provadas" antes dessa execução.
+--   T2 ... ✅ EXECUTADO E APROVADO na branch `lotes-v3` (2026-07-29):
+--       **29 de 29 vereditos PASSOU**. As 12 policies provadas uma a uma
+--       (3 tabelas × 4 operações), com contraprova sem perfil em cada.
+--       As 3 contraprovas de INSERT retornaram 42501 — erro de RLS, não
+--       de FK: é o que separa esta execução do falso-verde anterior.
 --
 --   PRODUÇÃO NUNCA FOI TOCADA, em nenhum momento.
 --
@@ -623,13 +622,43 @@ rollback;
 --    não seja 42501 numa contraprova, o resultado é REPROVA — foi assim que
 --    a versão anterior mascarou um RLS potencialmente aberto.
 --
--- ⚠️ STATUS DESTA VERSÃO DO T2: **NÃO EXECUTADA.**
---    A execução em `lotes-v2` (2026-07-29) rodou uma versão que media
---    SOMENTE leitura de crm_procura_lote, e ela passou:
---        t2a_com_perfil | func=true  | leu=1 | PASSOU
---        t2b_sem_perfil | func=false | leu=0 | PASSOU
---    Ou seja: **1 das 12 policies está provada** (SELECT de
---    crm_procura_lote). As outras 11 aguardam nova branch descartável.
+-- ✅ EXECUTADO na branch `lotes-v3` (2026-07-29): 29 de 29 PASSOU.
+--    As 12 policies provadas, uma a uma:
+--
+--      t2a_0_funcao ................. PASSOU func=true
+--      t2a_procura_1_select ......... PASSOU leu 1
+--      t2a_procura_2_insert ......... PASSOU inseriu
+--      t2a_procura_3_update ......... PASSOU alterou 1
+--      t2a_procura_4_delete ......... PASSOU removeu 1
+--      t2a_oport_1_select ........... PASSOU leu 2
+--      t2a_oport_2_insert ........... PASSOU inseriu
+--      t2a_oport_3_update ........... PASSOU alterou 1
+--      t2a_oport_4_delete ........... PASSOU removeu 1
+--      t2a_ligacao_1_select ......... PASSOU leu 1
+--      t2a_ligacao_2_insert ......... PASSOU inseriu
+--      t2a_ligacao_3_update ......... PASSOU alterou 1
+--      t2a_ligacao_4_delete ......... PASSOU removeu 1
+--      t2b_0_funcao ................. PASSOU func=false
+--      t2b_procura_1_select ......... PASSOU leu 0
+--      t2b_procura_2_insert ......... PASSOU bloqueado 42501 (RLS)
+--      t2b_procura_3_update ......... PASSOU alterou 0
+--      t2b_procura_4_delete ......... PASSOU removeu 0
+--      t2b_oport_1_select ........... PASSOU leu 0
+--      t2b_oport_2_insert ........... PASSOU bloqueado 42501 (RLS)
+--      t2b_oport_3_update ........... PASSOU alterou 0
+--      t2b_oport_4_delete ........... PASSOU removeu 0
+--      t2b_ligacao_1_select ......... PASSOU leu 0
+--      t2b_ligacao_2_insert ......... PASSOU bloqueado 42501 (RLS)
+--      t2b_ligacao_3_update ......... PASSOU alterou 0
+--      t2b_ligacao_4_delete ......... PASSOU removeu 0
+--      t2c_intacto_procura .......... PASSOU 1 linha intacta
+--      t2c_intacto_oport ............ PASSOU 2 linhas intactas
+--      t2c_intacto_ligacao .......... PASSOU 1 linha intacta
+--
+--    ⚠️ O detalhe que valida a correção do falso-verde: as 3 contraprovas de
+--       INSERT retornaram **42501**, o erro de RLS — não 23503 (FK). Ou seja,
+--       o bloqueio veio da policy, não de dado inválido. Era exatamente isso
+--       que a versão anterior não conseguia distinguir.
 --    O bypass service_role do setup funcionou na prática — o insert em
 --    crm_profiles passou pelo trigger de escalação sem erro.
 
@@ -907,22 +936,21 @@ rollback;  -- desfaz tudo
 -- =====================================================================
 -- ESTADO ATUAL — o que está provado e o que não está
 -- =====================================================================
--- ✅ PROVADO em `lotes-v2` (2026-07-29):
+-- ✅ PROVADO — `lotes-v2` (estrutura) + `lotes-v3` (as 12 policies):
 --    · T1 (anônimo bloqueado) · T3 (2ª procura ativa) · T4 (2ª aceitação)
 --    · EXTRA updated_at nas 3 tabelas
 --    · Estrutura, owner, GRANT efetivo, RLS ativa, 4 policies por tabela
---      (que as policies EXISTEM — não que cada uma se comporta como deve)
---    · T2 apenas no SELECT de crm_procura_lote
---
--- ⚠️ NÃO PROVADO — cobertura de policy por tabela:
+--    · T2: as 12 policies, com contraprova — 29/29 em `lotes-v3`
 --
 --      tabela                      | SELECT | INSERT | UPDATE | DELETE
 --      ----------------------------|--------|--------|--------|--------
---      crm_procura_lote            |   ✅   |   ❌   |   ❌   |   ❌
---      crm_oportunidade_lote       |   ❌   |   ❌   |   ❌   |   ❌
---      crm_procura_oportunidade    |   ❌   |   ❌   |   ❌   |   ❌
+--      crm_procura_lote            |   ✅   |   ✅   |   ✅   |   ✅
+--      crm_oportunidade_lote       |   ✅   |   ✅   |   ✅   |   ✅
+--      crm_procura_oportunidade    |   ✅   |   ✅   |   ✅   |   ✅
 --
---    ⇒ 1 de 12. O T2 em matriz cobre as 12, mas exige nova branch.
+--      (cada ✅ = funciona com perfil E é barrado sem perfil)
+--
+-- ⚠️ NÃO PROVADO:
 --    · A tela lotes.html contra estas tabelas com dado real.
 --    · Os formulários de cadastro de procura/oportunidade (não existem ainda).
 --    · Qualquer coisa em celular.

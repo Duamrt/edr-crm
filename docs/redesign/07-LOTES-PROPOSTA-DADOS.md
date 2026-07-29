@@ -454,7 +454,7 @@ Outros cuidados mantidos:
   parcial do T3 só cobre situações *ativas*; com `'procurando'` o teste bateria na regra
   de negócio e eu leria "REPROVOU" achando que era a policy.
 
-### Cobertura real de policies hoje
+### Cobertura de policies após `lotes-v2` (antes da execução final)
 
 | Tabela | SELECT | INSERT | UPDATE | DELETE |
 |---|:--:|:--:|:--:|:--:|
@@ -462,8 +462,8 @@ Outros cuidados mantidos:
 | `crm_oportunidade_lote` | ❌ | ❌ | ❌ | ❌ |
 | `crm_procura_oportunidade` | ❌ | ❌ | ❌ | ❌ |
 
-**1 de 12 provada.** O que a execução em `lotes-v2` confirmou é que as 12 policies
-**existem** e estão ativas — não que cada uma se comporta como deve.
+Era **1 de 12**. O que `lotes-v2` confirmou é que as 12 policies **existem** e estão
+ativas — não que cada uma se comporta como deve. **Resolvido na seção 13.**
 
 ### Como cada policy será provada
 
@@ -482,15 +482,57 @@ Duas assimetrias que o teste respeita, porque vêm de como o Postgres aplica RLS
 Por isso o bloco final confere que o dado do setup **sobreviveu**: sem ele, "removeu 0"
 poderia significar apenas "não havia nada para remover".
 
+---
+
+## 13. EXECUÇÃO FINAL — branch `lotes-v3` — 2026-07-29 ✅
+
+**Autorizado por Duam.** Branch `lotes-v3` (`qedtxzwdynivysqoqsez`) criada, usada e
+**DESTRUÍDA**. Produção não foi tocada.
+
+Como esperado, a branch nasceu em `MIGRATIONS_FAILED` (a migration de índices do EDR,
+já diagnosticada na seção 12), mas com o banco `ACTIVE_HEALTHY`. As migrations de CRM
+necessárias foram aplicadas à mão, na ordem, e o portão de pré-requisitos passou 5/5.
+
+### As 12 policies — provadas uma a uma
+
+| Tabela | SELECT | INSERT | UPDATE | DELETE |
+|---|:--:|:--:|:--:|:--:|
+| `crm_procura_lote` | ✅ | ✅ | ✅ | ✅ |
+| `crm_oportunidade_lote` | ✅ | ✅ | ✅ | ✅ |
+| `crm_procura_oportunidade` | ✅ | ✅ | ✅ | ✅ |
+
+Cada ✅ significa **duas coisas provadas**: funciona para quem tem perfil, e é barrado
+para quem não tem. **29 de 29 vereditos `PASSOU`.**
+
+### O detalhe que valida a correção do falso-verde
+
+As três contraprovas de `INSERT` retornaram **`42501`** (`insufficient_privilege`) — o
+erro do RLS. **Não** `23503` (chave estrangeira). Como os inserts usaram IDs válidos
+preparados no setup, o único motivo possível de bloqueio era a policy — e foi ela.
+
+Era exatamente essa distinção que a versão anterior não conseguia fazer: ela aceitava
+qualquer erro como "bloqueado" e teria aprovado um RLS aberto.
+
+### Demais testes, reexecutados nesta branch
+| Teste | Resultado |
+|---|---|
+| **T1 anônimo** | **PASSOU** — dono lê 1 · `anon` lê 0 |
+| **T3 2ª procura ativa** | **PASSOU** — bloqueada; encerrada convive |
+| **T4 2ª aceitação** | **PASSOU** — bloqueada |
+| **Triggers `updated_at`** | **PASSOU 3/3** |
+| Resíduo na branch | **0** em todas as tabelas, inclusive `auth.users` |
+
+### Produção conferida após destruir a branch
+- Tabelas novas: **0** · `crm_lotes`: **31** · vínculos: **7** · migrations: **46**
+- `list_branches` → só a `main`
+
 ### O que continua NÃO testado
-- **CRUD autenticado nas 3 tabelas** — 11 das 12 policies. **Pendente de nova branch**
 - A tela `lotes.html` contra estas tabelas com dado real
 - Os formulários de cadastro de procura/oportunidade — **não existem ainda**
 - Qualquer coisa em celular
 
-### Pendências para produção
-1. **Definir a lista de cidades/regiões** — decisão de negócio de Duam
-2. **Provar as 12 policies** em nova branch, com o T2 em matriz
+### Pendência única para produção
+**Definir a lista de cidades/regiões** — decisão de negócio de Duam.
 
-O banco está provado na estrutura, no bloqueio de anônimo, nas regras de negócio (índices
-únicos parciais) e nos triggers. **Falta provar o comportamento das policies de escrita.**
+O banco está provado: estrutura, bloqueio de anônimo, regras de negócio (índices únicos
+parciais), triggers e **as 12 policies de RLS com contraprova**.

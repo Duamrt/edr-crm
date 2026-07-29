@@ -323,12 +323,11 @@ create trigger trg_crm_procura_oportunidade_updated_at
 -- ✅ Os 4 casos foram provados em `lotes-v2` (2026-07-29) — ver fim do arquivo.
 --    (O caso 2 foi provado só na leitura — ver a ressalva do T2 lá embaixo.)
 --
--- PENDÊNCIAS ANTES DE APLICAR EM PRODUÇÃO:
+-- PENDÊNCIA ANTES DE APLICAR EM PRODUÇÃO:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---      ⇒ Decisão de negócio de Duam.
---   2. Provar o CRUD autenticado nas 3 tabelas — 11 das 12 policies ainda
---      sem teste. Exige nova branch descartável, com o T2 em matriz do 09.
+--      ⇒ ÚNICA pendência restante. Decisão de negócio de Duam.
+--   ✅ RESOLVIDA: CRUD autenticado — as 12 policies provadas em `lotes-v3`.
 --   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário — agora
 --      PROVADO por has_table_privilege, não só inferido do pg_default_acl ·
 --      updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
@@ -362,27 +361,22 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --                     do schema aplicou, como a seção 6 previa.
 --                     É o RLS que barra o anon — o T1 prova isso.
 --   T1 anônimo ...... PASSOU — dono lê 1, `anon` lê 0 no MESMO dado
---   T2 logado ....... PASSOU **SOMENTE no SELECT de crm_procura_lote**, com
---                     contraprova — com perfil: função=true, leu 1; sem
---                     perfil: função=false, leu 0. O bypass service_role do
---                     setup funcionou.
---                     ⚠️ LIMITE (achado do Codex): esta seção cria 12
---                     POLICIES — 3 tabelas × 4 operações (SELECT, INSERT,
---                     UPDATE, DELETE), todas independentes. A execução
---                     exercitou UMA delas:
+--   T2 logado ....... ✅ AS 12 POLICIES PROVADAS na branch `lotes-v3`
+--                     (2026-07-29): 29 de 29 vereditos PASSOU.
 --
 --                       tabela                    | SEL | INS | UPD | DEL
 --                       --------------------------|-----|-----|-----|-----
---                       crm_procura_lote          |  ✅ |  ❌ |  ❌ |  ❌
---                       crm_oportunidade_lote     |  ❌ |  ❌ |  ❌ |  ❌
---                       crm_procura_oportunidade  |  ❌ |  ❌ |  ❌ |  ❌
+--                       crm_procura_lote          |  ✅ |  ✅ |  ✅ |  ✅
+--                       crm_oportunidade_lote     |  ✅ |  ✅ |  ✅ |  ✅
+--                       crm_procura_oportunidade  |  ✅ |  ✅ |  ✅ |  ✅
 --
---                     O T2 no 09 cobre as 12 (3 blocos explícitos, um por
---                     tabela), mas AGUARDA nova branch.
---                     ⇒ CRUD autenticado é PENDÊNCIA.
---                     ⇒ NÃO declarar "12 policies provadas" antes disso.
+--                     Cada ✅ = funciona com perfil E é barrado sem perfil.
+--                     As 3 contraprovas de INSERT retornaram **42501**
+--                     (insufficient_privilege) — o erro do RLS, não 23503
+--                     (FK). É essa distinção que separa esta execução do
+--                     falso-verde da versão anterior.
 --
---                     ⚠️ Duas armadilhas já corrigidas no 09, que valem como
+--                     ⚠️ Duas armadilhas corrigidas no 09, que valem como
 --                     aviso para qualquer teste futuro destas policies:
 --                       · usar IDs INVENTADOS faz o insert falhar por FK
 --                         (23503) antes de o RLS ser consultado;
@@ -397,10 +391,6 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   Resíduo ......... 0 em todas as tabelas (tudo em ROLLBACK)
 --
 -- NÃO PROVADO (honestidade de escopo):
---   · 11 das 12 policies criadas aqui. Só o SELECT de crm_procura_lote foi
---     exercitado — as tabelas crm_oportunidade_lote e crm_procura_oportunidade
---     não foram tocadas por nenhum teste de policy, em operação nenhuma.
---     ⇒ Exige nova branch descartável, com o T2 em matriz do 09.
 --   · A tela lotes.html contra estas tabelas com dado real.
 --   · Os formulários de cadastro de procura/oportunidade — não existem ainda.
 --   · Qualquer coisa em celular.
