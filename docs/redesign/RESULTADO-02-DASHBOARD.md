@@ -142,8 +142,31 @@ arquivos localmente. Para o navegador era a mesma URL, então servia a cópia em
 **Lição:** ao testar mudança de JS localmente, trocar o `cb=` ou o navegador serve a versão velha —
 e a validação vira falso-negativo (ou pior, falso-positivo). Em produção o `deploy.sh` faz isso sozinho.
 
+---
+
+## 🚀 Evidência de PRODUÇÃO (deploy 2026-07-28)
+
+**Autorizado por Duam.** `./deploy.sh` — merge `main`: `beb1e02..71ebe1a`. Cache buster: `1785259395`.
+
+Verificado por `curl` em `https://crm.edreng.com.br`:
+- `/`, `/dashboard.html`, `/css/dashboard.css` → **HTTP 200**. ✓
+- Painel de foco publicado (`foco-title` = 1). ✓
+- Skeleton do card Lotes = **0** — removido. ✓
+- JS publicado gera **3 cards** (Cobrar hoje · Em movimento · Concluídos no mês); `josue` em código ativo = **False**. ✓
+- CSS publicado com grade de **3 colunas**. ✓
+- Cache buster aplicado: `cb=1785259395`. ✓
+- **Domínio `crm.edreng.com.br` respondendo** — CNAME preservado, como o merge de teste previu. ✓
+- **Login (módulo 1) intacto** — "Acessar operação" presente. ✓
+
+### Outras telas — só cache buster, zero conteúdo
+O `deploy.sh` renumera o cache buster do projeto inteiro. Verificado arquivo a arquivo:
+`clientes.html`, `kanban.html`, `lotes.html`, `agenda.html`, `ficha.html`, `familia.html`,
+`index.html` → **0 linhas** de mudança não-cache-buster em cada um.
+`js/utils.js` e `sw.js` mudaram apenas a constante de versão. Comportamento e visual inalterados.
+
+**STATUS DO MÓDULO 2 (DASHBOARD): PUBLICADO.** Aguardando validação final de Duam em produção.
+
 ## Pendente
-- [ ] **Autorização explícita de deploy** (NÃO concedida — nada publicado).
 - [ ] Cliques não exercitados: Atualizar, Sair, "Cobrei agora", "Ver pendências", "+ ADD".
 - [ ] Celular real não validado.
 - [ ] Estado "tudo em dia" não exercitado no CRM real (hoje há 3 documentos vencendo).

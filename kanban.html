@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Kanban Esteira MCMV</title>
-  <link rel="stylesheet" href="css/tokens.css?cb=1785259395">
-  <link rel="stylesheet" href="css/style.css?cb=1785259395">
+  <link rel="stylesheet" href="css/kanban.css?cb=1785309493">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
@@ -15,40 +15,17 @@
   <link rel="prefetch" href="lotes.html">
   <link rel="prefetch" href="ficha.html">
   <script>document.documentElement.style.visibility = 'hidden'</script>
-  <style>
-    /* Modo seleção múltipla (Bulk Action) */
-    .kanban-bulk-bar{
-      position:fixed;bottom:0;left:var(--sidebar-width);right:0;
-      background:var(--sidebar-bg);
-      border-top:1px solid var(--sidebar-border);
-      box-shadow:0 -4px 16px rgba(0,0,0,.06);
-      padding:14px 24px;
-      display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-      z-index:150;
-      transform:translateY(110%);transition:transform .18s ease;
-    }
-    .kanban-bulk-bar.show{transform:translateY(0)}
-    .kanban-bulk-count{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.95rem;color:var(--text-primary)}
-    .kanban-bulk-count b{color:var(--verde);font-size:1.1rem}
-    .kanban-bulk-bar select{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:.88rem;font-family:inherit;background:#fff;cursor:pointer;color:var(--text-primary);min-width:180px}
-    .kanban-bulk-bar .grow{flex:1}
-    .kanban-card.bulk-selected{outline:3px solid var(--verde);outline-offset:1px;background:var(--verde-surface)!important}
-    .kanban-card.bulk-mode{cursor:pointer}
-    body.bulk-mode .kanban-card{user-select:none}
-    body.bulk-mode .kanban-wrap{padding-bottom:80px}
-    @media (max-width:780px){.kanban-bulk-bar{left:0}}
-  </style>
 </head>
 <body>
   <div class="app-shell">
     <nav class="sidebar">
       <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
-        <a href="dashboard.html">📊 Dashboard</a>
-        <a href="clientes.html">👥 Clientes</a>
-        <a href="kanban.html" class="active">📋 Kanban</a>
-        <a href="lotes.html">🏘️ Lotes</a>
-        <a href="agenda.html">📅 Agenda</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="clientes.html">Clientes</a>
+        <a href="kanban.html" class="active">Kanban</a>
+        <a href="lotes.html">Lotes</a>
+        <a href="agenda.html">Agenda</a>
       </div>
       <div class="sidebar-footer"><div id="sidebar-usuario"></div><div id="crm-versao-footer" class="crm-versao"></div></div>
     </nav>
@@ -60,7 +37,7 @@
           <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-secondary);cursor:pointer;user-select:none;">
             <input type="checkbox" id="toggle-finalizados" style="cursor:pointer;"> Mostrar finalizados
           </label>
-          <button id="btn-modo-selecao" onclick="toggleModoSelecao()" class="btn btn-secondary btn-sm" title="Selecionar vários clientes e aplicar ação em lote">☑ Selecionar vários</button>
+          <button id="btn-modo-selecao" onclick="toggleModoSelecao()" class="btn btn-secondary btn-sm" title="Selecionar vários clientes e aplicar ação em lote">Selecionar vários</button>
           <a href="familia.html" class="btn btn-primary btn-sm">+ Novo cliente</a>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
@@ -101,10 +78,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1785259395"></script>
-  <script src="js/auth.js?cb=1785259395"></script>
-  <script src="js/utils.js?cb=1785259395"></script>
-  <script src="js/data/clientes.js?cb=1785259395"></script>
+  <script src="js/supabase.js?cb=1785309493"></script>
+  <script src="js/auth.js?cb=1785309493"></script>
+  <script src="js/utils.js?cb=1785309493"></script>
+  <script src="js/data/clientes.js?cb=1785309493"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -371,6 +348,6 @@
 
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1785259395"></script>
+  <script src="js/sw-register.js?cb=1785309493"></script>
 </body>
 </html>

@@ -1,0 +1,468 @@
+/* ============================================================
+   EDR CRM — Ficha do cliente
+   ISOLADO: esta tela NÃO carrega css/style.css nem css/tokens.css.
+
+   ⚠️ ESCOPO (decisão de Duam): "organizar melhor a leitura sem mexer nas
+   ações já existentes". Visual novo; fluxo, botões e lógica intocados.
+
+   ⚠️ ARMADILHAS DESTA TELA (ver docs/redesign/04-CLIENTES-FICHA.md):
+   1. `.hidden` PRECISA de !important — o #modal-ai traz display:flex INLINE,
+      e sem !important o modal abre e NUNCA fecha.
+   2. `.imp-item` e `.resolvido` são alvo de querySelectorAll
+      ('.imp-item:not(.resolvido)') → renomear quebra a CONTAGEM de
+      impedimentos ativos.
+   3. `.auditoria-progresso > div` — a barra é o FILHO DIRETO, não uma classe.
+   4. As classes `undo-toast-*` vêm de js/utils.js (toastUndo, chamado na
+      linha 519 desta tela). Sem elas, o botão "Desfazer" fica sem estilo.
+   5. 6 status de documento; 3 deles NÃO tinham estilo no CSS antigo
+      (pendente, bloqueado, nao_aplicavel) — corrigido aqui.
+   ============================================================ */
+
+:root{
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176; --azul:#3178ad;
+  --vermelho:#d9473d; --amarelo:#d97706;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+
+  /* ⚠️ CONTRATO: o JS da Ficha usa estas variáveis em style= INLINE
+     (--azul, --amarelo, --text-secondary). Faltar uma = texto sem cor.
+     Verificar com: grep -o "var(--[a-z-]*" ficha.html | sort -u
+     As demais (--text-*, --surface, --border…) entram por segurança, caso
+     algum trecho do JS passe a usá-las. */
+  --text-primary:#17352a;
+  --text-secondary:#718176;
+  --text-tertiary:#9aa89d;
+  --surface:#fffefa;
+  --border:#dce2d8;
+  --bg:#f7f6ef;
+  --verde:#164b37;
+  --sombra:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+/* A Ficha é uma página LONGA. Sem este fundo no html, a área à esquerda
+   abaixo da sidebar (que é fixa e tem 100vh) aparece na cor do papel,
+   dando a impressão de que a barra "acaba no meio". */
+html{background:var(--ink)}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+/* ⚠️ !important OBRIGATÓRIO — o #modal-ai tem display:flex inline. */
+.hidden{display:none!important}
+.flex{display:flex}
+.flex-center{display:flex;align-items:center}
+.gap-8{gap:8px}
+.text-sm{font-size:12.5px}
+.text-muted{color:var(--muted)}
+.text-danger{color:var(--vermelho);font-weight:600}
+.font-bold{font-weight:700}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.page-content{padding:26px;flex:1;max-width:1380px;width:100%}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-outline{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn-danger{background:var(--card);color:var(--vermelho);border-color:#f0c9c6}
+.btn-danger:hover{background:#fdeceb;border-color:var(--vermelho)}
+.btn-whatsapp{background:#1f7a4d;color:#fff;border-color:#1f7a4d}
+.btn-whatsapp:hover{background:#186340;border-color:#186340}
+.btn-ai{background:var(--lime);color:var(--ink);border-color:var(--lime)}
+.btn-ai:hover{filter:brightness(1.06)}
+.btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+
+/* ===================== CARDS ===================== */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:20px;margin-bottom:16px;
+}
+.card-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+
+/* ===================== RESUMO / FORM ===================== */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{
+  padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);
+  outline:none;transition:.15s;min-height:44px;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--green);box-shadow:0 0 0 3px rgba(22,75,55,.08)
+}
+.form-group input:disabled,.form-group select:disabled{background:var(--paper);color:var(--muted)}
+.cpf-masked{cursor:pointer;font-family:'DM Mono',monospace;font-size:12.5px;border-bottom:1px dashed var(--line)}
+.cpf-masked:hover{color:var(--green);border-bottom-color:var(--green)}
+
+/* ===================== BADGES ===================== */
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.07em;
+  text-transform:uppercase;white-space:nowrap;
+  background:var(--paper);color:var(--muted);border:1px solid var(--line);
+}
+/* Status do funil (badge status-${status_kanban}) — 8 valores */
+.status-triagem{background:#eef2f6;color:#41607a;border-color:#d6e2ec}
+.status-documentacao{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.status-correspondente{background:#ece7f7;color:#4c3579;border-color:#ddd4ef}
+.status-aprovado{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.status-prefeitura{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.status-assinatura{background:#e0efef;color:#17605c;border-color:#c2dedd}
+.status-concluido{background:var(--green);color:#fff;border-color:var(--green)}
+.status-perdido{background:#f1f0ec;color:#8a8a80;border-color:#e0dfd8}
+.badge-red{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.badge-yellow{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.badge-gray{background:#f1f0ec;color:var(--muted);border-color:#e0dfd8}
+.pill-faixa{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.07em;
+  border:1px solid var(--line);background:var(--paper);color:var(--muted);
+}
+.pill-faixa-1{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.pill-faixa-2{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.pill-faixa-3{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.pill-faixa-4{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+
+/* ===================== BANNER TERMINAL ===================== */
+.banner-terminal{
+  display:flex;align-items:flex-start;gap:13px;padding:16px 18px;
+  border:1px solid var(--line);border-left:4px solid var(--orange);
+  border-radius:var(--radius-sm);background:#fdf3e9;margin-bottom:16px;
+}
+.banner-terminal-icon{font-size:18px;flex-shrink:0;line-height:1.2}
+.banner-terminal-body{flex:1;min-width:0}
+.banner-terminal-titulo{font-weight:800;font-size:13.5px;color:var(--ink);margin-bottom:3px}
+.banner-terminal-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.banner-terminal-btn{flex-shrink:0}
+
+/* ===================== AUDITORIA ===================== */
+.auditoria-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px;
+}
+/* O header contém título + bloco de completude lado a lado; em tela estreita
+   a completude quebra para a linha de baixo e ocupa a largura toda. */
+.auditoria-header{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.auditoria-icone{font-size:17px;line-height:1}
+/* .auditoria-titulo é um CONTAINER (ícone + texto), não texto solto. */
+.auditoria-titulo{
+  font-family:'Fraunces',serif;font-size:15.5px;font-weight:600;color:var(--ink);
+  display:flex;align-items:center;gap:9px;
+}
+.auditoria-selo{
+  font:9.5px 'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;background:var(--lime-soft);color:#3f6b13;
+  border:1px solid #cfe6a8;
+}
+/* A barra precisa de espaço real: o bloco cresce e a barra ocupa o que sobra. */
+.auditoria-completude{display:flex;align-items:center;gap:11px;flex:1;min-width:240px}
+.auditoria-completude #auditoria-percent{font:12px 'DM Mono',monospace;font-weight:500;color:var(--green);white-space:nowrap}
+/* ⚠️ CONTRATO: a barra é o FILHO DIRETO (> div), não uma classe. */
+.auditoria-progresso{flex:1;height:8px;background:var(--paper);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+.auditoria-progresso > div{height:100%;background:var(--green);border-radius:999px;transition:width .3s ease}
+.auditoria-frac{font:11.5px 'DM Mono',monospace;color:var(--muted);white-space:nowrap}
+.auditoria-body{display:flex;flex-direction:column;gap:9px}
+.auditoria-checks{display:flex;flex-direction:column;gap:7px}
+.auditoria-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.auditoria-na{margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.auditoria-na-titulo{font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.auditoria-na-lista{display:flex;flex-direction:column;gap:5px}
+.auditoria-na-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+
+/* ===================== TRIAGEM ===================== */
+.triagem-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px;
+}
+/* Título à esquerda, veredito à direita, na mesma linha. */
+.triagem-header{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;justify-content:space-between}
+.triagem-icone{font-size:17px;line-height:1}
+.triagem-titulo{font-family:'Fraunces',serif;font-size:15.5px;font-weight:600;color:var(--ink);flex:1}
+/* ── VEREDITO DA TRIAGEM — é a primeira coisa que deve ser entendida ao abrir
+      a ficha. Antes era um selo pequeno e cinza, lido por último.
+      O JS aplica `triagem-status status-${statusCor}` (js/utils.js:599-624):
+        vermelho → BLOQUEADO           (não pode seguir)
+        amarelo  → APTO COM RESSALVA   (segue, mas tem o que resolver)
+        azul     → FORA DO MCMV        (rota SBPE — atendível, outro produto)
+        verde    → APTO                (segue limpo)
+      O texto vem como UMA string ("APTO COM RESSALVA · pendência operacional")
+      via textContent, então a hierarquia é feita por tamanho/cor, não por
+      quebra de linha — quebrar exigiria mexer na lógica. ── */
+.triagem-status{
+  font:12.5px 'Plus Jakarta Sans',sans-serif;font-weight:800;
+  letter-spacing:.04em;text-transform:uppercase;
+  padding:7px 14px;border-radius:10px;
+  background:var(--paper);color:var(--ink);border:1px solid var(--line);
+  /* A caixa acompanha o texto: sem max-width fixo (que deixava um vazio
+     âmbar à esquerda) e sem text-align:right (que colava tudo no canto).
+     `white-space:nowrap` mantém o veredito em UMA linha; se não couber,
+     o flex-wrap do .triagem-header o joga para a linha de baixo inteiro. */
+  line-height:1.3;white-space:nowrap;flex-shrink:0;
+}
+/* Âmbar sólido: pode seguir, mas tem pendência. É o caso mais comum. */
+.triagem-status.status-amarelo{background:#fdf0dc;border-color:#e8c88f;color:#8a4a10}
+/* Vermelho SÓ para bloqueado. */
+.triagem-status.status-vermelho{background:#fdeceb;border-color:#e8a9a3;color:#a5352d}
+/* Verde SÓ para apto sem ressalva. */
+.triagem-status.status-verde{background:var(--lime-soft);border-color:#bcd992;color:#3f6b13}
+/* Azul: fora do MCMV (rota SBPE) — informativo, não é erro. */
+.triagem-status.status-azul{background:#eaf1f7;border-color:#b8cee0;color:#2b5b80}
+/* ── A Triagem é um RESUMO PARA DECIDIR O PRÓXIMO PASSO, não uma listagem.
+      Quatro partes com hierarquia clara (definido por Duam):
+      1. diagnóstico compacto (Faixa + Subsídio)
+      2. alerta de divergência, em faixa própria
+      3. pendências, em bloco com fundo suave
+      4. próximas ações, em bloco destacado
+      Tudo por CSS — o JS não é tocado. ─────────────────────────── */
+
+/* 1. DIAGNÓSTICO — linhas compactas, sem respiro sobrando */
+.triagem-resumo{margin-bottom:12px}
+.triagem-body{display:flex;flex-direction:column;gap:0}
+/* ⚠️ .triagem-bloco é uma LINHA rótulo/valor: o JS gera
+   <div class="triagem-bloco"><span class="triagem-label">Rótulo</span><strong>Valor</strong>…</div>
+   — os filhos são IRMÃOS. Sem display:flex o texto sai corrido. */
+.triagem-bloco{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:5px 0;
+}
+.triagem-bloco .triagem-label{
+  flex:0 0 132px;font:10px 'DM Mono',monospace;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+.triagem-bloco strong{font-size:14px;font-weight:700;color:var(--ink)}
+
+/* 2. ALERTA DE DIVERGÊNCIA — o JS o gera como irmão do valor, na mesma linha.
+   `width:100%` faz o flex-wrap quebrá-lo para a linha de baixo, virando uma
+   faixa curta própria em vez de texto solto na ponta direita.
+   A faixa acompanha o texto (largura automática) em vez de atravessar o card. */
+/* Quebra para a linha de baixo (width:100% dentro do flex) e alinha sob o
+   valor via ::before, que ocupa a mesma largura do rótulo. Sem margem fixa:
+   funciona em qualquer largura de tela. A cor fica no texto, não numa faixa
+   atravessando o card. */
+.triagem-bloco > span.text-sm{
+  width:100%;margin:3px 0 1px;font-size:12px;
+  display:flex;align-items:center;gap:0;color:#8a4a10;
+}
+.triagem-bloco > span.text-sm::before{content:'';flex:0 0 132px}
+.triagem-bloco > span.text-sm.text-muted{color:var(--muted)}
+
+/* 3. PENDÊNCIAS — cada grupo é um bloco com fundo suave e cor por gravidade */
+.triagem-checks{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.triagem-grupo{
+  padding:11px 13px;border-radius:var(--radius-sm);
+  background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--muted);
+}
+.triagem-grupo-titulo{
+  font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:7px;
+}
+.triagem-grupo-contagem{
+  font-weight:500;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:1px 7px;font-size:9.5px;
+}
+.triagem-grupo-itens{display:flex;flex-direction:column;gap:5px}
+.triagem-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
+.triagem-check-icone{flex-shrink:0;line-height:1.35}
+/* Cor por gravidade — o JS marca cada grupo com data-tipo */
+.triagem-grupo[data-tipo="bloqueador"]{border-left-color:var(--vermelho);background:#fdf6f5;border-color:#f0c9c6}
+.triagem-grupo[data-tipo="risco"]{border-left-color:var(--vermelho);background:#fdf6f5;border-color:#f0c9c6}
+.triagem-grupo[data-tipo="operacional"]{border-left-color:var(--amarelo);background:#fdf9f2;border-color:#f2ddbd}
+.triagem-grupo[data-tipo="desvio"]{border-left-color:var(--azul);background:#f2f6fa;border-color:#d6e2ec}
+.triagem-grupo[data-tipo="positivo"]{border-left-color:var(--green);background:#f4faf5;border-color:#c6e0ce}
+
+/* 4. PRÓXIMAS AÇÕES — bloco próprio, mais destacado: é a saída do resumo.
+   ⚠️ O JS gera <li> dentro de <ul id="triagem-acoes">. */
+.triagem-acoes{
+  display:block;margin-top:12px;padding:13px 15px;
+  border-radius:var(--radius-sm);background:var(--lime-soft);
+  border:1px solid #cfe6a8;border-left:3px solid var(--green);
+}
+.triagem-acoes-titulo{
+  font:10px 'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:#3f6b13;margin-bottom:8px;font-weight:500;
+}
+.triagem-acoes ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.triagem-acoes li{
+  position:relative;padding-left:17px;font-size:13.5px;
+  line-height:1.45;color:var(--ink);font-weight:600;
+}
+.triagem-acoes li::before{
+  content:'→';position:absolute;left:0;top:0;color:var(--green);font-weight:800;
+}
+/* Fora dos blocos de grupo, .triagem-label volta a ser texto simples
+   (o JS reusa a classe dentro de .triagem-check). */
+.triagem-check .triagem-label{flex:1;min-width:0;font:inherit;letter-spacing:normal;text-transform:none;color:inherit}
+
+/* ===================== DOCUMENTOS =====================
+   ⚠️ CONTRATO: `doc-item status-${d.status}` — 6 valores.
+   pendente/bloqueado/nao_aplicavel NÃO tinham estilo no CSS antigo. */
+.doc-list{display:flex;flex-direction:column;gap:8px}
+.docs-responsivo{display:flex;flex-direction:column;gap:8px}
+.doc-item{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;
+  border:1px solid var(--line);border-left:3px solid var(--line);
+  border-radius:var(--radius-sm);background:var(--card);flex-wrap:wrap;
+}
+.doc-nome{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink)}
+.doc-status{
+  font:9.5px 'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;white-space:nowrap;
+  background:var(--paper);color:var(--muted);border:1px solid var(--line);
+}
+.doc-item.status-entregue{border-left-color:var(--green);background:#f4faf5}
+.doc-item.status-entregue .doc-status{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.doc-item.status-pendente{border-left-color:var(--amarelo)}
+.doc-item.status-pendente .doc-status{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.doc-item.status-recusado{border-left-color:var(--vermelho);background:#fdf6f5}
+.doc-item.status-recusado .doc-status{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.doc-item.status-vencido{border-left-color:var(--vermelho)}
+.doc-item.status-vencido .doc-status{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.doc-item.status-bloqueado{border-left-color:#8a8a80;background:#f7f7f4}
+.doc-item.status-bloqueado .doc-status{background:#f1f0ec;color:#5f5f57;border-color:#e0dfd8}
+.doc-item.status-nao_aplicavel{border-left-color:var(--line);opacity:.62}
+.doc-item.status-nao_aplicavel .doc-status{background:var(--paper);color:var(--muted)}
+
+/* ===================== IMPEDIMENTOS =====================
+   ⚠️ CONTRATO: .imp-item e .resolvido são alvo de
+   querySelectorAll('.imp-item:not(.resolvido)') → NÃO renomear. */
+.imp-list{display:flex;flex-direction:column;gap:8px}
+.imp-item{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;
+  border:1px solid #f0c9c6;border-left:3px solid var(--vermelho);
+  border-radius:var(--radius-sm);background:#fdf6f5;flex-wrap:wrap;
+}
+.imp-item.resolvido{border-color:var(--line);border-left-color:var(--green);background:var(--paper);opacity:.66}
+.imp-item.resolvido .imp-nome{text-decoration:line-through;color:var(--muted)}
+.imp-nome{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink)}
+
+/* ===================== HISTÓRICO ===================== */
+.hist-list{display:flex;flex-direction:column}
+.hist-item{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.hist-item:last-child{border-bottom:none}
+.hist-icon{flex-shrink:0;font-size:14px;line-height:1.35;width:20px;text-align:center}
+.hist-desc{flex:1;min-width:0;font-size:13px;line-height:1.45}
+.hist-data{font:11px 'DM Mono',monospace;color:var(--muted);white-space:nowrap;flex-shrink:0}
+
+/* ===================== CONFIRMAÇÃO INLINE ===================== */
+.confirm-inline-title{font-weight:800;font-size:13px;margin-bottom:7px;color:var(--ink)}
+.confirm-inline-list{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:11px;padding-left:16px}
+.confirm-inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ===================== MODAIS ===================== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(23,53,42,.45);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 24px 60px -20px rgba(23,53,42,.4);
+  width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;
+}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 20px;border-bottom:1px solid var(--line);
+}
+.modal-header h3,.modal-header .card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--ink)}
+.modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);line-height:1;padding:4px 8px;border-radius:8px}
+.modal-close:hover{background:var(--paper);color:var(--ink)}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+
+/* ===================== UNDO TOAST (js/utils.js → toastUndo) =====================
+   ⚠️ Chamado por esta tela (ficha.html:519). Sem estas classes o botão
+   "Desfazer" — que reverte uma exclusão — aparece sem estilo. */
+.undo-toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;border-radius:14px;z-index:400;
+  box-shadow:0 16px 40px -12px rgba(23,53,42,.5);
+  min-width:300px;max-width:min(94vw,480px);overflow:hidden;
+}
+.undo-toast-content{display:flex;align-items:center;gap:11px;padding:13px 15px}
+.undo-toast-icon{color:var(--lime);font-size:15px;flex-shrink:0}
+.undo-toast-msg{flex:1;min-width:0;font-size:13px;line-height:1.4}
+.undo-toast-btn{
+  background:var(--lime);color:var(--ink);border:none;border-radius:9px;
+  padding:7px 13px;font-size:12px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;flex-shrink:0;
+}
+.undo-toast-btn:hover{filter:brightness(1.06)}
+.undo-toast-close{background:none;border:none;color:#9fb6a6;font-size:15px;padding:2px 5px;flex-shrink:0;border-radius:6px}
+.undo-toast-close:hover{color:#fff}
+.undo-toast-bar{height:3px;background:rgba(255,255,255,.15)}
+.undo-toast-bar-fill{height:100%;background:var(--lime);width:100%}
+
+/* ===================== SPINNER ===================== */
+#loading{position:fixed;inset:0;background:rgba(247,246,239,.75);display:grid;place-items:center;z-index:500}
+.spinner{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:girar .7s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:860px){
+  .sidebar{width:96px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  /* Sem emoji nos links, o rótulo em texto É a navegação — nunca zerar a fonte */
+  .sidebar-nav a{justify-content:center;padding:12px 4px;font-size:11px;gap:0;text-align:center}
+  .sidebar-footer{display:none}
+  .main{margin-left:96px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+}
+@media(max-width:560px){
+  .form-grid{grid-template-columns:1fr}
+  .doc-item,.imp-item{gap:8px}
+  .banner-terminal{flex-direction:column}
+  .banner-terminal-btn{width:100%}
+  .modal-footer .btn{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

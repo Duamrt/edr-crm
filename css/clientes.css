@@ -1,0 +1,219 @@
+/* ============================================================
+   EDR CRM — Clientes (lista operacional densa)
+   ISOLADO: esta tela NÃO carrega css/style.css nem css/tokens.css.
+
+   ⚠️ ESCOPO (decisão de Duam): "visual novo mantendo a operação densa".
+   A lista é uma TABELA e continua tabela — mesmas 9 colunas, linhas compactas.
+   Nada de virar cards arejados.
+
+   ⚠️ CONTRATO com o JS inline de clientes.html e com js/utils.js:
+   - .th-sort e .sort-ind são usadas como SELETOR (querySelector) → renomear
+     quebra a ordenação da tabela.
+   - .status-* e .pill-faixa-* são geradas por concatenação → todos os
+     valores precisam existir.
+   Ver docs/redesign/04-CLIENTES-FICHA.md
+   ============================================================ */
+
+:root{
+  --ink:#17352a; --green:#164b37; --green-2:#2d6a4f;
+  --paper:#f7f6ef; --card:#fffefa; --line:#dce2d8;
+  --orange:#e86d1c; --lime:#c9e86a; --lime-soft:#e2f4c2;
+  --muted:#718176;
+  --vermelho:#d9473d; --amarelo:#d97706;
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 1px 2px rgba(23,53,42,.04), 0 8px 24px -16px rgba(23,53,42,.25);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+/* Fundo escuro no html: garante que a faixa da sidebar (fixa, 100vh) nunca
+   mostre a cor do papel se a pagina for menor que a janela. */
+html{background:var(--ink)}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+.flex{display:flex}
+.gap-8{gap:8px}
+.text-center{text-align:center}
+.text-sm{font-size:12.5px}
+.text-muted{color:var(--muted)}
+.text-danger{color:var(--vermelho);font-weight:600}
+.font-bold{font-weight:700}
+
+/* ===================== SHELL / SIDEBAR ===================== */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:252px;flex-shrink:0;background:var(--ink);color:#e8efe6;
+  display:flex;flex-direction:column;padding:22px 16px;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:6px 8px 24px}
+.brand-logo{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:var(--lime-soft);color:var(--ink);
+  display:grid;place-items:center;font-weight:800;font-size:15px;
+}
+.sidebar-logo .logo-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:#fff;letter-spacing:.2px}
+.sidebar-logo .logo-sub{font:10px 'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7fa08c;margin-top:2px}
+.sidebar-nav{display:flex;flex-direction:column;gap:3px;margin-top:4px;flex:1;overflow-y:auto}
+.sidebar-nav a{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  color:#b9cabf;text-decoration:none;font-weight:500;font-size:14px;
+  transition:background .15s,color .15s;min-height:44px;
+}
+.sidebar-nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-nav a.active{background:var(--green);color:#fff;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#cfe0d3}
+.crm-versao{font:10px 'DM Mono',monospace;color:#7fa08c;margin-top:5px}
+
+.main{margin-left:252px;flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ===================== TOPBAR ===================== */
+.topbar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.page-content{padding:26px;flex:1;max-width:1580px;width:100%}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;
+  transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+}
+.btn:hover{border-color:#b9c8b6}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-secondary{background:var(--card);color:var(--ink)}
+.btn-danger{background:var(--card);color:var(--vermelho);border-color:#f0c9c6}
+.btn-danger:hover{background:#fdeceb;border-color:var(--vermelho)}
+.btn-sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+
+/* ===================== FILTROS ===================== */
+.filtros-bar{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;
+}
+.filtros-bar input[type="search"],.filtros-bar select{
+  padding:10px 13px;border:1px solid var(--line);border-radius:11px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:var(--card);
+  outline:none;transition:.15s;min-height:44px;
+}
+.filtros-bar input[type="search"]{min-width:280px;flex:1;max-width:380px}
+.filtros-bar input[type="search"]:focus,.filtros-bar select:focus{
+  border-color:var(--green);box-shadow:0 0 0 3px rgba(22,75,55,.08)
+}
+.filtros-bar #contador{font:11px 'DM Mono',monospace;color:var(--muted);letter-spacing:.06em;margin-left:auto}
+
+/* ===================== CARD / TABELA (DENSA) ===================== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  background:var(--paper);border-bottom:1px solid var(--line);
+  padding:11px 14px;text-align:left;white-space:nowrap;
+  font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);position:sticky;top:0;z-index:2;
+}
+/* ⚠️ CONTRATO: .th-sort é alvo de querySelectorAll — não renomear */
+th.th-sort{cursor:pointer;user-select:none;transition:color .15s}
+th.th-sort:hover{color:var(--green)}
+/* ⚠️ CONTRATO: .sort-ind é alvo de querySelector — não renomear */
+.sort-ind{font-size:9px;color:var(--green);margin-left:3px}
+/* Densidade: cada linha ocupa UMA linha de texto. Sem quebra em nome, CPF,
+   telefone e badges — quebrar engorda a linha e destrói a leitura operacional.
+   A tabela tem largura mínima e rola na horizontal quando não couber. */
+tbody td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+tbody td.col-proxima{white-space:nowrap}
+table{min-width:1080px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--paper)}
+tbody a.font-bold{color:var(--ink);text-decoration:none}
+tbody tr:hover a.font-bold{color:var(--green)}
+.col-proxima{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+/* ⚠️ `display:flex` num <td> o tira do fluxo da tabela e descola a coluna.
+   Os botões são alinhados por margem, não por flex no próprio td.
+   A coluna fica GRUDADA à direita: as ações são o que mais se clica e não
+   podem exigir rolagem horizontal para aparecer. */
+.col-acoes{
+  white-space:nowrap;text-align:right;
+  position:sticky;right:0;background:var(--card);
+  box-shadow:-10px 0 12px -10px rgba(23,53,42,.2);
+}
+tbody tr:hover .col-acoes{background:var(--paper)}
+.col-acoes .btn{margin-left:4px;vertical-align:middle}
+/* O cabeçalho da coluna de ações acompanha a fixação */
+thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-10px 0 12px -10px rgba(23,53,42,.2)}
+.cpf-masked{cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;border-bottom:1px dashed var(--line);white-space:nowrap}
+.cpf-masked:hover{color:var(--green);border-bottom-color:var(--green)}
+
+/* ===================== BADGES DE STATUS =====================
+   ⚠️ CONTRATO: geradas por `badge status-${status_kanban}`.
+   Os 8 valores do funil precisam existir — faltar um = badge sem cor. */
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.07em;
+  text-transform:uppercase;white-space:nowrap;
+  background:var(--paper);color:var(--muted);border:1px solid var(--line);
+}
+.status-triagem{background:#eef2f6;color:#41607a;border-color:#d6e2ec}
+.status-documentacao{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.status-correspondente{background:#ece7f7;color:#4c3579;border-color:#ddd4ef}
+.status-aprovado{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.status-prefeitura{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.status-assinatura{background:#e0efef;color:#17605c;border-color:#c2dedd}
+.status-concluido{background:var(--green);color:#fff;border-color:var(--green)}
+.status-perdido{background:#f1f0ec;color:#8a8a80;border-color:#e0dfd8}
+
+/* Badges de alerta (js/utils.js → slaBadge) */
+.badge-red{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.badge-yellow{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.badge-gray{background:#f1f0ec;color:var(--muted);border-color:#e0dfd8}
+
+/* Pílulas de faixa (js/utils.js → pillFaixa) — 4 valores */
+.pill-faixa{
+  display:inline-block;padding:3px 9px;border-radius:999px;
+  font:9.5px 'DM Mono',monospace;font-weight:500;letter-spacing:.07em;
+  border:1px solid var(--line);background:var(--paper);color:var(--muted);
+}
+.pill-faixa-1{background:#e2f0e6;color:var(--green);border-color:#c6e0ce}
+.pill-faixa-2{background:var(--lime-soft);color:#3f6b13;border-color:#cfe6a8}
+.pill-faixa-3{background:#fdf0dc;color:#8a4a10;border-color:#f2ddbd}
+.pill-faixa-4{background:#fdeceb;color:#a5352d;border-color:#f3ccc9}
+.pill-faixa-sm{font-size:8.5px;padding:2px 7px}
+
+/* ===================== SPINNER ===================== */
+#loading{position:fixed;inset:0;background:rgba(247,246,239,.75);display:grid;place-items:center;z-index:500}
+.spinner{
+  width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--green);
+  border-radius:50%;animation:girar .7s linear infinite;
+}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+/* ===================== RESPONSIVO ===================== */
+@media(max-width:860px){
+  .sidebar{width:96px;padding:20px 9px}
+  .sidebar-logo{justify-content:center;padding:6px 0 20px}
+  .sidebar-logo div:not(.brand-logo){display:none}
+  /* Sem emoji nos links, o rótulo em texto É a navegação — nunca zerar a fonte */
+  .sidebar-nav a{justify-content:center;padding:12px 4px;font-size:11px;gap:0;text-align:center}
+  .sidebar-footer{display:none}
+  .main{margin-left:96px}
+  .page-content{padding:18px}
+  .topbar{padding:12px 18px}
+  .filtros-bar input[type="search"]{min-width:100%;max-width:none}
+  .filtros-bar #contador{margin-left:0}
+}
+@media(max-width:560px){
+  /* A tabela CONTINUA tabela — rola na horizontal em vez de virar cards,
+     preservando a densidade operacional pedida por Duam.
+     (min-width já definido na regra base; aqui só o toque suave.) */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .filtros-bar{gap:7px}
+  .filtros-bar select{flex:1;min-width:calc(50% - 4px)}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
