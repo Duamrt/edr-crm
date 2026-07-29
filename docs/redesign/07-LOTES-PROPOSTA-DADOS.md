@@ -161,12 +161,13 @@ por região passaria a mentir.
 > bairros e opção "Outra região" — ambas descartadas pela decisão da seção 14, que é a
 > que vale. Detalhes e consequências de schema: **seção 14**.
 
-> ⚠️ **Arquivo desatualizado, ainda não corrigido:** `docs/redesign/prototipo-lotes.html`
-> é a **maquete estática** feita antes da tela real (dados fictícios, não roda nada).
-> Ela ainda traz `Petrolina`/`Juazeiro` e a opção **"Outra região"** num `<select>`.
-> Não afeta o sistema — mas, se alguém a abrir, vai ver o desenho antigo.
-> **Não foi alterada** porque o escopo autorizado era só os dois documentos.
-> Fica registrado para decisão de Duam: corrigir ou apagar.
+> 🗑️ **`docs/redesign/prototipo-lotes.html` foi REMOVIDO** (2026-07-29, decisão de Duam).
+> Era a maquete estática feita antes da tela real, com dados fictícios. Ficou obsoleta:
+> mostrava `Petrolina`/`Juazeiro` e a opção "Outra região", já descartadas.
+> **Motivo da remoção, não da correção:** a tela real
+> [`lotes.html`](../../lotes.html) já representa a direção nova, e manter duas versões
+> só abre espaço para alguém consultar a errada.
+> Recuperável pelo histórico do Git (commits `f86a59c` e `e8d60de`) se for preciso.
 
 ### 2. Uma procura ativa por família
 Se a família aceita dois bairros ou duas faixas de valor, isso vira **preferência dentro
