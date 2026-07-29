@@ -211,6 +211,32 @@ thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-
 @media(max-width:560px){
   .lt-oport-lista{grid-template-columns:1fr}
   .filtros-bar select{flex:1;min-width:calc(50% - 4px)}
+
+  /* Celular (verificado em 375px, 2026-07-29): os três botões do topo
+     lado a lado somavam 486px e empurravam a PÁGINA INTEIRA para os
+     lados — não era a tabela, que já rola dentro de .table-wrap.
+     Agora a barra quebra em linha e os botões dividem o espaço. */
+  .topbar{flex-wrap:wrap;gap:8px}
+  .topbar .flex{flex-wrap:wrap;width:100%;gap:6px}
+  .topbar .btn{flex:1 1 auto;min-height:44px;white-space:nowrap}
+  /* Sair não precisa de metade da tela; encolhe e deixa espaço aos outros */
+  .topbar .btn:last-child{flex:0 0 auto;padding-left:14px;padding-right:14px}
+  /* O aviso é frase, não botão: linha inteira para não espremer o resto.
+     min-width:0 + white-space:normal são obrigatórios — sem eles o texto
+     vira uma linha só de 892px e volta a empurrar a página. */
+  .lt-aviso-cadastro{
+    flex:1 0 100%;order:-1;min-width:0;
+    white-space:normal;overflow-wrap:anywhere;line-height:1.35
+  }
+  /* Trava final: nada nesta tela pode exceder a largura do celular.
+     A tabela é a exceção legítima e rola dentro de .table-wrap. */
+  .topbar,.page-content,.lt-sec,.card{max-width:100%;min-width:0}
+
+  /* Alvo de toque de 44px nos modais. No dedo, campo de 38px e botão de
+     34px erram o alvo — e aqui é justamente onde se digita o cadastro. */
+  .lt-campo input,.lt-campo select,.lt-campo textarea{min-height:44px}
+  .lt-modal-foot .btn{min-height:44px;flex:1}
+  .lt-modal-close{min-width:44px;min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 

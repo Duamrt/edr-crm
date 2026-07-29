@@ -1410,3 +1410,74 @@ A frase antiga teria dito que a cidade não tem ninguém.
 - **Celular.**
 - Screenshot desta rodada: o painel do navegador parou de compor frames; a
   evidência acima é a leitura do DOM renderizado, não imagem.
+
+---
+
+## 24. CELULAR — 2026-07-29 🐛
+
+Pendência aberta desde a seção 20. **Tinha bug real.**
+
+### O que estava quebrado (medido em 375×812)
+
+```
+innerWidth 375 · scrollWidth 486 · ROLA_HORIZONTAL: true
+```
+
+A página inteira rolava para os lados. Causa: a barra do topo — três botões de
+142px lado a lado somavam **486px**. Também: botões com **34px** de altura,
+abaixo do mínimo de 44px para toque.
+
+⚠️ **A tabela NÃO era o problema.** `.table-wrap{overflow-x:auto}` já existia e
+funcionava; ela rola por dentro, como deve. Uma medição anterior pelo painel do
+navegador acusou a tabela, mas aquele viewport não estava sendo aplicado de
+verdade (`body` media 1280px com viewport de 375) — número errado leva a
+diagnóstico errado. Refeito com Playwright, viewport real.
+
+### Correções (todas dentro de `@media(max-width:560px)`)
+
+| Problema | Correção |
+|---|---|
+| Barra do topo vazando 111px | `flex-wrap` + botões dividindo a linha |
+| Aviso em linha única de 892px | `white-space:normal` + `min-width:0` — a regra base tem `nowrap`, precisava ser sobrescrita |
+| Botões de 34px | `min-height:44px` |
+| Campos de modal 38–40px | `min-height:44px` em input/select/textarea |
+| Fechar (✕) pequeno | `44×44` |
+
+Mais uma trava: `.topbar,.page-content,.lt-sec,.card{max-width:100%;min-width:0}`
+— nada nesta tela pode exceder a largura do celular, com a tabela como exceção
+legítima.
+
+### Depois
+
+```
+375px  →  scrollWidth 360 · ROLA_HORIZONTAL: false · 0 controles < 44px
+560px  →  scrollWidth 560 · sem rolagem
+1280px →  topbar em 1 linha (63px) · botões 142×34 · sem rolagem
+```
+
+Modal em 375px: largura 343, **nada vazando**, todos os controles em 44px.
+
+**Desktop não regrediu** — as mudanças ficaram contidas na media query; conferido
+em 1280px e no limite de 560px, onde media query costuma falhar.
+
+### Nota de método
+
+O Playwright abre navegador limpo e o `authGuard` mandava para o Login. Injetar
+sessão falsa não resolveu: o `carregar()` chama o Supabase, toma 401, e o
+`refreshSession()` sem `refresh_token` redireciona (`auth.js:34`). Solução:
+fixture temporária `_layout-test.html` sem auth e sem chamada ao banco, **medida
+e apagada** — não ficou no repositório.
+
+### Evidência das suítes
+
+```
+compat    → 29 passaram, 0 falharam
+gravação  → 46 passaram, 0 falharam
+```
+
+### Continua NÃO testado
+
+- **Gravação com perfil não-admin** — o único aceite funcional que resta.
+- **Celular físico** — medido em emulação 375×812, não em aparelho real.
+- Screenshot: o painel do navegador parou de compor frames nesta rodada; a
+  evidência é medição de DOM, que para layout é mais precisa que olhar.
