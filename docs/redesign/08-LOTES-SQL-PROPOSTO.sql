@@ -5,22 +5,18 @@
 -- Data: 2026-07-29
 -- Base: docs/redesign/07-LOTES-PROPOSTA-DADOS.md (conceito aprovado por Duam)
 --
--- ⚠️ ONDE ESTE SQL JÁ RODOU — os três estados, sem ambiguidade:
+-- ⚠️ ONDE ESTE SQL JÁ RODOU — sem ambiguidade:
 --
 --   PRODUÇÃO (mepzoxoahpwcvvlymlfh) ... NUNCA EXECUTADO. Nenhuma linha deste
---       arquivo tocou o banco real, em momento nenhum.
+--       arquivo tocou o banco real, em momento nenhum. Conferido depois de
+--       cada branch: 0 tabelas novas, crm_lotes=31, vínculos=7.
 --
---   BRANCH DESCARTÁVEL (`teste-lotes`) ... EXECUTADA uma VERSÃO ANTERIOR deste
---       arquivo, em 2026-07-29. A branch foi destruída. Foi lá que apareceu o
---       defeito da seção 5.
+--   BRANCH `lotes-v2` (2026-07-29) ... ✅ ESTA VERSÃO foi EXECUTADA do início
+--       ao fim e PASSOU, junto com os testes do 09. Branch destruída.
+--       Resultados completos no fim deste arquivo.
 --
---   ESTA VERSÃO (o texto abaixo) ... NUNCA EXECUTADA do início ao fim. Ela é
---       a versão anterior MAIS a correção do trigger (seção 5). O conteúdo
---       corrigido corresponde ao que rodou na branch, mas isso é conferência
---       de leitura — não é nova execução.
---
---   ⇒ Para provar este arquivo como está hoje, rodar do zero em nova branch.
---     Resumo do que já foi provado: ver o fim do arquivo.
+--   BRANCH `teste-lotes` (anterior, descartada) ... rodou uma versão
+--       pré-correção. Foi lá que apareceu o defeito da seção 5.
 --
 -- REGRAS RESPEITADAS:
 --   · crm_lotes NÃO é tocada — nenhum ALTER, DROP ou UPDATE nela.
@@ -322,50 +318,59 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --   4. Segunda aceitação BLOQUEADA → 2ª ligação 'aceita' na mesma oportunidade
 --                                deve VIOLAR crm_po_uma_aceita_por_oportunidade
 --
--- Só depois desses 4 verdes, Duam decide sobre aplicar no banco real.
+-- ✅ Os 4 casos foram provados em `lotes-v2` (2026-07-29) — ver fim do arquivo.
 --
--- PENDÊNCIAS ANTES DE APLICAR EM PRODUÇÃO:
+-- PENDÊNCIA ANTES DE APLICAR EM PRODUÇÃO:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---   2. Rodar ESTE arquivo, do zero, em nova branch descartável, junto com o
---      09 corrigido. A execução de 2026-07-29 cobriu a versão anterior e
---      testou o trigger em 1 das 3 tabelas — ver "O QUE JÁ FOI PROVADO".
---   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário (privilégio
---      padrão do schema) · updated_at com função PRÓPRIA (o reuso de
---      set_crm_updated_at quebraria — ver seção 5).
+--      ⇒ É a ÚNICA pendência que resta. Decisão de negócio de Duam.
+--   ✅ RESOLVIDAS: CASCADE mantido (Duam) · GRANT desnecessário — agora
+--      PROVADO por has_table_privilege, não só inferido do pg_default_acl ·
+--      updated_at com função PRÓPRIA (o reuso de set_crm_updated_at
+--      quebraria — ver seção 5) · execução completa em branch.
 --
 -- =====================================================================
--- O QUE JÁ FOI PROVADO — execução em branch descartável, 2026-07-29
+-- ✅ PROVADO — execução completa na branch `lotes-v2`, 2026-07-29
 -- =====================================================================
--- Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
--- PRODUÇÃO NÃO FOI TOCADA.
+-- Branch `lotes-v2` (lrhpnbvghrfxbjlgvbdt), criada, usada e DESTRUÍDA.
+-- PRODUÇÃO NÃO FOI TOCADA (conferido depois: 0 tabelas novas, crm_lotes=31,
+-- vínculos=7, 46 migrations).
 --
--- ⚠️ ESCOPO DESTA PROVA: rodou a versão do arquivo ANTERIOR à correção do
---    cabeçalho. O SQL executável (tabelas, índices, policies, triggers) é o
---    mesmo texto de hoje — a correção posterior foi só no comentário do topo.
---    Ainda assim, isto NÃO substitui rodar o arquivo atual do zero.
+-- COMO A BRANCH FOI PREPARADA (importante — corrige o que eu dizia antes):
+--   A criação da branch aplica as 46 migrations do projeto e FALHA na 1ª,
+--   `performance_indexes_edr_system`, com:
+--       ERROR: relation "adicional_pagamentos" does not exist
+--   (ela indexa tabelas do EDR que nunca foram criadas por migration).
+--   Isso deixa a branch em MIGRATIONS_FAILED com 0 tabelas — mas com o banco
+--   ACTIVE_HEALTHY. As 15 migrations de CRM foram então aplicadas À MÃO, na
+--   ordem original, e passaram 15/15. Elas são autossuficientes.
+--   ⚠️ Eu havia escrito que "o CRM não usa migrations versionadas" e que
+--      "a branch nasce sem schema". As DUAS afirmações estavam ERRADAS:
+--      há 15 migrations de CRM versionadas, e a branch falha por causa de
+--      uma migration do EDR — não por ausência de migrations.
 --
---   Estrutura ....... 3 tabelas, 12 policies, 3 triggers criados sem erro
---   T1 anônimo ...... PASSOU — dono lê 1 linha, `anon` lê 0
---   T2 logado ....... PASSOU, com ressalva: o T2 estava COMENTADO no arquivo
---                     09. O resultado veio de SQL digitado à mão na branch,
---                     usando um perfil que existia lá, e sem contraprova de
---                     usuário SEM perfil. O 09 foi corrigido (teste executável,
---                     cria a própria identidade, prova por contraste) — mas
---                     essa versão AINDA NÃO RODOU.
+--   Estrutura ....... 3 tabelas · dono `postgres` · RLS ativa · 4 policies e
+--                     1 trigger por tabela
+--   GRANT ........... PROVADO por has_table_privilege (não mais inferido):
+--                     anon E authenticated com SELECT/INSERT/UPDATE/DELETE
+--                     nas 3 tabelas, SEM nenhum GRANT escrito. O default ACL
+--                     do schema aplicou, como a seção 6 previa.
+--                     É o RLS que barra o anon — o T1 prova isso.
+--   T1 anônimo ...... PASSOU — dono lê 1, `anon` lê 0 no MESMO dado
+--   T2 logado ....... PASSOU com CONTRAPROVA — com perfil: função=true, leu 1;
+--                     sem perfil: função=false, leu 0. O bypass service_role
+--                     do setup funcionou na prática.
 --   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
 --   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
---   Triggers ........ PASSOU em 1 das 3 tabelas (crm_procura_oportunidade),
---                     por sabotagem: gravar '2000-01-01' e ver o trigger
+--   Triggers ........ PASSOU nas 3 tabelas (EXTRA 1/3, 2/3, 3/3), por
+--                     sabotagem: gravar '2000-01-01' e ver o trigger
 --                     sobrescrever com a data atual.
---                     ⚠️ CORREÇÃO 2026-07-29 (achado do Codex): o registro
---                     anterior dizia "3/3", mas o teste exercitava só UMA
---                     tabela. O arquivo 09 foi corrigido para testar as 3;
---                     essa cobertura ampliada ainda NÃO foi executada.
+--   Resíduo ......... 0 em todas as tabelas (tudo em ROLLBACK)
 --
 -- NÃO PROVADO (honestidade de escopo):
---   · Este arquivo, do início ao fim, numa branch limpa.
---   · O EXTRA de updated_at nas outras 2 tabelas.
---   · Os GRANTs do schema aplicados na branch (não conferidos lá).
 --   · A tela lotes.html contra estas tabelas com dado real.
+--   · Os formulários de cadastro de procura/oportunidade — não existem ainda.
+--   · Qualquer coisa em celular.
+--   · Este SQL foi aplicado como UM bloco via apply_migration, não statement
+--     a statement.
 -- =====================================================================

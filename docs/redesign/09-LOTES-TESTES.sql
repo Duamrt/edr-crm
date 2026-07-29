@@ -3,22 +3,32 @@
 --
 -- Data: 2026-07-29
 --
--- STATUS DESTA VERSÃO DO ARQUIVO: **NUNCA EXECUTADA.**
---   Uma versão ANTERIOR rodou em branch descartável (`teste-lotes`, destruída).
---   Depois disso o arquivo foi corrigido em 3 pontos — ver "HISTÓRICO" no fim.
---   Portanto: os resultados registrados abaixo vieram da versão anterior.
---   Esta versão corrigida aguarda autorização de Duam para nova branch.
+-- STATUS: **EXECUTADO E APROVADO** na branch `lotes-v2` (2026-07-29).
+--   Cada teste abaixo traz, logo após o SQL, o resultado real que retornou.
+--   O SQL versionado aqui é o MESMO que rodou — reconciliado em 2026-07-29
+--   após o Codex apontar que o T1 executado divergia do arquivo (ver
+--   "RECONCILIAÇÃO DE EVIDÊNCIA" no fim).
 --   PRODUÇÃO NUNCA FOI TOCADA, em nenhum momento.
 --
 -- Como usar:
---   0. ⚠️ A branch nasce com o SCHEMA mas SEM DADOS de produção. Por isso os
---      testes criam seus próprios clientes dentro de cada transação — tudo é
---      desfeito no rollback.
+--   0. ⚠️ COMO A BRANCH REALMENTE NASCE (confirmado por log em 2026-07-29):
+--      a criação da branch aplica TODAS as 46 migrations do projeto, e ela
+--      FALHA logo na 1ª (`performance_indexes_edr_system`, do EDR), com
+--        ERROR: relation "adicional_pagamentos" does not exist
+--      porque essa migration indexa tabelas do EDR que nunca foram criadas
+--      por migration. Resultado: branch em MIGRATIONS_FAILED, com 0 tabelas —
+--      mas com o banco ACTIVE_HEALTHY e utilizável.
+--      ⇒ O caminho que FUNCIONA: aplicar à mão, na ordem, o conteúdo exato
+--        das 15 migrations de CRM. Elas são autossuficientes (só dependem de
+--        auth.users/auth.uid()/gen_random_uuid) e passaram 15/15.
+--      A branch traz o SCHEMA mas nunca os DADOS de produção — por isso os
+--      testes criam seus próprios clientes e são desfeitos no rollback.
 --   1. Criar branch de banco no Supabase (ambiente separado, descartável)
---   2. Rodar 08-LOTES-SQL-PROPOSTO.sql
---   3. Rodar ESTE arquivo
---   4. Conferir os 4 resultados
---   5. Destruir a branch
+--   2. Aplicar as 15 migrations de CRM (ver nota 0)
+--   3. Rodar 08-LOTES-SQL-PROPOSTO.sql
+--   4. Rodar ESTE arquivo
+--   5. Conferir os resultados
+--   6. Destruir a branch
 --
 -- Nenhum destes comandos toca o banco de produção.
 -- =====================================================================
@@ -42,6 +52,27 @@
 --    A tabela começa vazia, então `count = 0` passaria mesmo com RLS ABERTA.
 --    Agora: insere um registro ANTES e prova que `anon` NÃO o enxerga.
 --    Transação explícita — `set local role` só é determinístico dentro dela.
+--
+-- ⚠️ CORREÇÃO 2 (achado do Codex, 2026-07-29) — RECONCILIAÇÃO DE EVIDÊNCIA:
+--    A versão anterior fazia DOIS selects separados. Ao executar na branch
+--    `lotes-v2`, o conector MCP devolveu apenas o resultado do ÚLTIMO select
+--    (t1b = 0) e engoliu o primeiro. Sem ver t1a, o teste era inválido:
+--    t1a = 0 significaria que o insert falhou e o "anon lê 0" não provaria nada.
+--
+--    O SQL abaixo é EXATAMENTE o que foi executado e retornou:
+--        t1a_dono_deve_ver_1     | 1 | PASSOU
+--        t1b_anon_deve_ser_zero  | 0 | PASSOU
+--
+--    Mudanças em relação à versão anterior, e por quê:
+--      · temp table `t1_res` — junta as duas medições em UM resultado, para
+--        que o par apareça na saída. É o par que prova, não o número solto.
+--      · `grant insert, select on t1_res to anon` — sem isso o insert como
+--        anon falha com 42501 (permission denied for table t1_res). A temp
+--        table pertence ao dono da sessão; anon não a enxerga por padrão.
+--        Isso NÃO afeta a prova: o grant é sobre a tabela de resultado, não
+--        sobre crm_procura_lote, que continua protegida só pelo RLS.
+--      · coluna `veredito` — o próprio Postgres decide PASSOU/REPROVOU, em
+--        vez de eu comparar números a olho.
 begin;
   do $$
   declare v_cli uuid;
@@ -52,19 +83,29 @@ begin;
     values ('TESTE T1', '00000000001', '00000000000') returning id into v_cli;
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
     values (v_cli, 'Petrolina', 'Centro', 'procurando');
+    create temp table t1_res(etapa text, valor bigint) on commit drop;
+    -- como postgres (dono): o registro EXISTE
+    insert into t1_res values ('t1a_dono_deve_ver_1', (select count(*) from public.crm_procura_lote));
   end $$;
 
-  -- como postgres (dono): o registro EXISTE
-  select count(*) as t1a_dono_deve_ver_1 from public.crm_procura_lote;
+  -- necessário para o insert abaixo rodar como anon (ver nota acima)
+  grant insert, select on t1_res to anon;
 
   -- como anon: NÃO pode enxergar o mesmo registro
   set local role anon;
-  select count(*) as t1b_anon_deve_ser_zero from public.crm_procura_lote;
+  insert into t1_res values ('t1b_anon_deve_ser_zero', (select count(*) from public.crm_procura_lote));
   reset role;
+
+  select etapa, valor,
+         case when etapa like 't1a%' and valor = 1 then 'PASSOU'
+              when etapa like 't1b%' and valor = 0 then 'PASSOU'
+              else 'REPROVOU' end as veredito
+  from t1_res order by etapa;
 rollback;
 -- ESPERADO: t1a = 1 (o dado existe) E t1b = 0 (anon não vê).
 --   t1a = 0  → o insert falhou, teste inválido
 --   t1b > 0  → RLS ABERTA, REPROVA
+-- ✅ EXECUTADO na branch `lotes-v2` (2026-07-29): t1a=1 PASSOU · t1b=0 PASSOU
 
 
 -- ---------------------------------------------------------------------
@@ -171,28 +212,45 @@ begin;
     values ('TESTE T2', '00000000002', '00000000000') returning id into v_cli;
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
     values (v_cli, 'Petrolina', 'Centro', 'procurando');
+
+    -- temp table: junta as 2 medições num resultado só. Mesmo motivo do T1 —
+    -- com selects separados, o conector devolve apenas o último e a
+    -- contraprova some. É o PAR que prova.
+    create temp table t2_res(etapa text, func boolean, leu bigint) on commit drop;
   end $$;
+
+  -- necessário para os inserts abaixo rodarem como authenticated (ver T1)
+  grant insert, select on t2_res to authenticated;
 
   -- 2a — COM perfil: deve LER
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
-  select crm_user_has_profile()                         as t2a_funcao_deve_ser_true,
-         (select count(*) from public.crm_procura_lote) as t2a_deve_ler_1;
+  insert into t2_res values ('t2a_com_perfil', crm_user_has_profile(), (select count(*) from public.crm_procura_lote));
   reset role;
 
   -- 2b — CONTRAPROVA, sem perfil: deve LER ZERO no MESMO dado
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated"}';
-  select crm_user_has_profile()                         as t2b_funcao_deve_ser_false,
-         (select count(*) from public.crm_procura_lote) as t2b_deve_ser_zero;
+  insert into t2_res values ('t2b_sem_perfil', crm_user_has_profile(), (select count(*) from public.crm_procura_lote));
   reset role;
+
+  select etapa, func, leu,
+         case when etapa='t2a_com_perfil' and func is true  and leu = 1 then 'PASSOU'
+              when etapa='t2b_sem_perfil' and func is false and leu = 0 then 'PASSOU'
+              else 'REPROVOU' end as veredito
+  from t2_res order by etapa;
 rollback;
 -- ESPERADO:
---   t2a_funcao_deve_ser_true  = true   E  t2a_deve_ler_1    = 1
---   t2b_funcao_deve_ser_false = false  E  t2b_deve_ser_zero = 0
+--   t2a_com_perfil  → func = true   E  leu = 1
+--   t2b_sem_perfil  → func = false  E  leu = 0
 --
---   t2a = 0 → RLS bloqueia quem TEM perfil: REPROVA (fecha demais)
---   t2b > 0 → RLS deixa passar quem NÃO tem perfil: REPROVA (abre demais)
+--   t2a leu 0 → RLS bloqueia quem TEM perfil: REPROVA (fecha demais)
+--   t2b leu >0 → RLS deixa passar quem NÃO tem perfil: REPROVA (abre demais)
+-- ✅ EXECUTADO na branch `lotes-v2` (2026-07-29):
+--      t2a_com_perfil | func=true  | leu=1 | PASSOU
+--      t2b_sem_perfil | func=false | leu=0 | PASSOU
+--    O bypass service_role do setup funcionou na prática — o insert em
+--    crm_profiles passou pelo trigger de escalação sem erro.
 
 
 -- ---------------------------------------------------------------------
@@ -203,7 +261,14 @@ rollback;
 -- ⚠️ CORREÇÃO (Duam): T3 e T4 agora rodam em TRANSAÇÃO própria com ROLLBACK.
 --    Antes, T3 deixava o 1º cliente com procura ativa e o T4 reusava o mesmo
 --    cliente — o T4 falharia no insert, ANTES de chegar à dupla aceitação.
+--
+-- ⚠️ CORREÇÃO 2 (reconciliação, 2026-07-29): a versão anterior usava
+--    `raise notice`. Notices NÃO voltam pelo conector MCP — o teste rodaria
+--    e não se veria nada, dando falsa impressão de silêncio-é-sucesso.
+--    Agora grava numa temp table e faz SELECT no fim: o veredito aparece.
+--    Este é o SQL exatamente como foi executado na branch.
 begin;
+create temp table t3_res(etapa text, veredito text) on commit drop;
 do $$
 declare
   v_cliente uuid;
@@ -215,23 +280,28 @@ begin
   -- 1ª procura: deve passar
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
   values (v_cliente, 'Petrolina', 'Centro', 'procurando');
-  raise notice 'T3.1 OK — primeira procura inserida';
+  insert into t3_res values ('T3.1 primeira procura', 'OK inserida');
 
   -- 2ª procura ATIVA para o MESMO cliente: deve FALHAR
   begin
     insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
     values (v_cliente, 'Juazeiro', 'Zona Norte', 'em_analise');
-    raise exception 'T3.2 REPROVOU — a segunda procura ativa foi aceita!';
+    insert into t3_res values ('T3.2 segunda ativa', 'REPROVOU aceita indevidamente');
   exception when unique_violation then
-    raise notice 'T3.2 PASSOU — segunda procura ativa bloqueada pelo índice';
+    insert into t3_res values ('T3.2 segunda ativa', 'PASSOU bloqueada pelo indice');
   end;
 
   -- 3ª procura com situação ENCERRADA: deve PASSAR (histórico preservado)
   insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
   values (v_cliente, 'Petrolina', 'Zona Sul', 'desistiu');
-  raise notice 'T3.3 OK — procura encerrada convive com a ativa (histórico)';
+  insert into t3_res values ('T3.3 encerrada convive', 'PASSOU historico preservado');
 end $$;
+select * from t3_res order by etapa;
 rollback;  -- desfaz tudo: o T4 recebe o banco limpo
+-- ✅ EXECUTADO na branch `lotes-v2` (2026-07-29):
+--      T3.1 primeira procura  | OK inserida
+--      T3.2 segunda ativa     | PASSOU bloqueada pelo indice
+--      T3.3 encerrada convive | PASSOU historico preservado
 
 
 -- ---------------------------------------------------------------------
@@ -241,7 +311,12 @@ rollback;  -- desfaz tudo: o T4 recebe o banco limpo
 -- sem ele, um mesmo lote seria "aceito" por duas famílias.
 -- ⚠️ Usa clientes DIFERENTES dos do T3 (offset 2 e 3) e roda em transação
 --    própria — dupla proteção contra interferência entre testes.
+--
+-- ⚠️ CORREÇÃO (reconciliação, 2026-07-29): `raise notice` trocado por temp
+--    table + SELECT final — notices não voltam pelo conector MCP. Este é o
+--    SQL exatamente como foi executado na branch `lotes-v2`.
 begin;
+create temp table t4_res(etapa text, veredito text) on commit drop;
 do $$
 declare
   v_c1 uuid; v_c2 uuid; v_p1 uuid; v_p2 uuid; v_op uuid;
@@ -270,20 +345,20 @@ begin
   values (v_p1, v_op, 'sugerida') returning id into v_lid;   -- guardado para o EXTRA
   insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
   values (v_p2, v_op, 'sugerida');
-  raise notice 'T4.1 OK — duas famílias podem avaliar a mesma oportunidade';
+  insert into t4_res values ('T4.1 duas familias avaliam', 'OK');
 
   -- 1ª aceitação: passa
   update public.crm_procura_oportunidade set situacao='aceita'
   where procura_id=v_p1 and oportunidade_id=v_op;
-  raise notice 'T4.2 OK — primeira aceitação registrada';
+  insert into t4_res values ('T4.2 primeira aceitacao', 'OK registrada');
 
   -- 2ª aceitação da MESMA oportunidade: deve FALHAR
   begin
     update public.crm_procura_oportunidade set situacao='aceita'
     where procura_id=v_p2 and oportunidade_id=v_op;
-    raise exception 'T4.3 REPROVOU — a mesma oportunidade foi aceita 2x!';
+    insert into t4_res values ('T4.3 segunda aceitacao', 'REPROVOU aceita 2x');
   exception when unique_violation then
-    raise notice 'T4.3 PASSOU — segunda aceitação bloqueada (bug de Duam resolvido)';
+    insert into t4_res values ('T4.3 segunda aceitacao', 'PASSOU bloqueada');
   end;
 
   -- ---------------------------------------------------------------
@@ -304,31 +379,30 @@ begin
   -- 1/3 — crm_procura_oportunidade (a ligação criada acima)
   update public.crm_procura_oportunidade set updated_at = '2000-01-01' where id = v_lid;
   select updated_at into v_v from public.crm_procura_oportunidade where id = v_lid;
-  if v_v > '2020-01-01' then
-    raise notice 'EXTRA 1/3 OK — crm_procura_oportunidade: trigger sobrescreveu';
-  else
-    raise exception 'EXTRA 1/3 REPROVOU — crm_procura_oportunidade ficou em %', v_v;
-  end if;
+  insert into t4_res values ('EXTRA 1/3 crm_procura_oportunidade',
+    case when v_v > '2020-01-01' then 'PASSOU trigger sobrescreveu' else 'REPROVOU ficou '||v_v end);
 
   -- 2/3 — crm_procura_lote
   update public.crm_procura_lote set updated_at = '2000-01-01' where id = v_p1;
   select updated_at into v_v from public.crm_procura_lote where id = v_p1;
-  if v_v > '2020-01-01' then
-    raise notice 'EXTRA 2/3 OK — crm_procura_lote: trigger sobrescreveu';
-  else
-    raise exception 'EXTRA 2/3 REPROVOU — crm_procura_lote ficou em %', v_v;
-  end if;
+  insert into t4_res values ('EXTRA 2/3 crm_procura_lote',
+    case when v_v > '2020-01-01' then 'PASSOU trigger sobrescreveu' else 'REPROVOU ficou '||v_v end);
 
   -- 3/3 — crm_oportunidade_lote
   update public.crm_oportunidade_lote set updated_at = '2000-01-01' where id = v_op;
   select updated_at into v_v from public.crm_oportunidade_lote where id = v_op;
-  if v_v > '2020-01-01' then
-    raise notice 'EXTRA 3/3 OK — crm_oportunidade_lote: trigger sobrescreveu';
-  else
-    raise exception 'EXTRA 3/3 REPROVOU — crm_oportunidade_lote ficou em %', v_v;
-  end if;
+  insert into t4_res values ('EXTRA 3/3 crm_oportunidade_lote',
+    case when v_v > '2020-01-01' then 'PASSOU trigger sobrescreveu' else 'REPROVOU ficou '||v_v end);
 end $$;
+select * from t4_res order by etapa;
 rollback;  -- desfaz tudo
+-- ✅ EXECUTADO na branch `lotes-v2` (2026-07-29):
+--      T4.1 duas familias avaliam         | OK
+--      T4.2 primeira aceitacao            | OK registrada
+--      T4.3 segunda aceitacao             | PASSOU bloqueada
+--      EXTRA 1/3 crm_procura_oportunidade | PASSOU trigger sobrescreveu
+--      EXTRA 2/3 crm_procura_lote         | PASSOU trigger sobrescreveu
+--      EXTRA 3/3 crm_oportunidade_lote    | PASSOU trigger sobrescreveu
 
 
 -- ---------------------------------------------------------------------
@@ -339,23 +413,37 @@ rollback;  -- desfaz tudo
 
 
 -- =====================================================================
--- RESULTADOS DA EXECUÇÃO ANTERIOR (versão pré-correção) — 2026-07-29
+-- ✅ EXECUÇÃO DEFINITIVA — branch `lotes-v2`, 2026-07-29
 -- =====================================================================
--- Branch `teste-lotes` (pxldvwlzvducninsfavo), criada, usada e DESTRUÍDA.
--- Produção nunca foi tocada.
+-- Branch `lotes-v2` (lrhpnbvghrfxbjlgvbdt), criada, usada e DESTRUÍDA.
+-- Produção nunca foi tocada (conferido depois: 0 tabelas novas, crm_lotes=31,
+-- vínculos=7, 46 migrations).
 --
---   T1  anônimo bloqueado ....... PASSOU — dono lê 1, anon lê 0
---   T2  usuário logado .......... PASSOU, mas NÃO a partir deste arquivo:
---                                 o T2 estava todo comentado. O resultado veio
---                                 de SQL digitado à mão na branch, com um
---                                 perfil que existia lá. Sem contraprova.
---   T3  2ª procura ativa ........ PASSOU — bloqueada; encerrada convive
---   T4  2ª aceitação ............ PASSOU — bloqueada
---   EX  updated_at .............. PASSOU em 1 tabela (crm_procura_oportunidade)
+--   Migrations CRM ... 15/15 aplicadas sem erro (à mão — ver nota 0 no topo)
+--   Portão pré-08 .... 4/4 dependências presentes
+--   Estrutura ........ 3 tabelas · dono postgres · RLS on · 4 policies e
+--                      1 trigger por tabela
+--   GRANT ............ has_table_privilege = true para anon E authenticated
+--                      (SELECT/INSERT/UPDATE/DELETE) SEM nenhum GRANT escrito:
+--                      o default ACL do schema aplicou, como previsto
+--   T1  anônimo ...... PASSOU — dono lê 1, anon lê 0 no MESMO dado
+--   T2  logado ....... PASSOU com contraprova — com perfil: func=true, leu 1;
+--                      sem perfil: func=false, leu 0
+--   T3  2ª procura ... PASSOU — bloqueada; encerrada convive
+--   T4  2ª aceitação . PASSOU — bloqueada
+--   EX  updated_at ... PASSOU nas 3 tabelas (1/3, 2/3, 3/3)
+--   Resíduo .......... 0 em todas as tabelas (tudo em ROLLBACK)
 --
---   🐛 A execução encontrou um DEFEITO GRAVE que teria quebrado a produção:
+-- =====================================================================
+-- EXECUÇÃO ANTERIOR (branch `teste-lotes`, descartada) — só histórico
+-- =====================================================================
+--   Rodou uma versão pré-correção. Serve apenas para registrar o achado:
+--
+--   🐛 DEFEITO GRAVE que teria quebrado a produção:
 --      set_crm_updated_at() escreve em `ultima_atualizacao`, não em
 --      `updated_at`. Corrigido com função própria — ver 08-...sql seção 5.
+--      Naquela execução o T2 estava comentado e o EXTRA cobria 1 tabela só;
+--      ambos foram corrigidos e reexecutados em `lotes-v2`.
 --
 -- =====================================================================
 -- HISTÓRICO DE CORREÇÕES DESTE ARQUIVO (posteriores à execução acima)
@@ -383,7 +471,31 @@ rollback;  -- desfaz tudo
 --         NEW.id = auth.uid(). Tratado com o bypass service_role que o
 --         próprio trigger oferece — ver nota 7 do T2.
 --
--- CONSEQUÊNCIA: os resultados acima NÃO valem como prova desta versão.
--- Para provar o arquivo como está hoje, é preciso rodá-lo do zero numa nova
--- branch descartável — aguardando autorização de Duam.
+--   4. RECONCILIAÇÃO DE EVIDÊNCIA (achado do Codex, após `lotes-v2`):
+--      o arquivo versionado ainda trazia o T1 com DOIS selects separados,
+--      mas o que rodou na branch foi uma VARIANTE com temp table. Ou seja:
+--      o resultado era real, mas não vinha deste arquivo — a mesma armadilha
+--      do T2 comentado, em versão menor.
+--
+--      Por que a variante foi necessária (não foi capricho):
+--        · o conector MCP devolve só o resultado do ÚLTIMO select. Com dois
+--          selects, t1a sumia e sobrava "anon lê 0" — que sozinho não prova
+--          nada, porque 0 também é o que se vê quando o insert falhou.
+--        · `raise notice` (usado em T3/T4) não volta pelo conector: o teste
+--          rodaria mudo e o silêncio pareceria sucesso.
+--
+--      AGORA: T1, T2, T3 e T4 no arquivo são EXATAMENTE o SQL executado,
+--      com temp table + SELECT final, e cada um traz o resultado real logo
+--      abaixo. Arquivo e evidência batem.
+--
+-- =====================================================================
+-- ESTADO ATUAL
+-- =====================================================================
+-- Este arquivo FOI executado inteiro na branch `lotes-v2` e passou.
+-- O SQL aqui é o mesmo que rodou (reconciliado no item 4 acima).
+--
+-- O que continua NÃO testado:
+--   · a tela lotes.html contra estas tabelas com dado real;
+--   · os formulários de cadastro de procura/oportunidade (não existem ainda);
+--   · qualquer coisa em celular.
 -- =====================================================================

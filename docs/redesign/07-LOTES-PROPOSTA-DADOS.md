@@ -237,7 +237,11 @@ existe. Os formulários entram junto com as tabelas — **sem botão que finge f
 
 ---
 
-## 11. VALIDAÇÃO EM BRANCH DESCARTÁVEL — 2026-07-29 ✅
+## 11. PRIMEIRA VALIDAÇÃO — branch `teste-lotes` (histórico) — 2026-07-29
+
+> ⚠️ **Esta seção é histórica.** Ela registra a 1ª tentativa, que rodou uma versão
+> pré-correção dos arquivos e serviu para achar o defeito do trigger. A validação
+> que vale é a **seção 12**, feita na branch `lotes-v2` com os arquivos finais.
 
 **Autorizado por Duam.** Branch `teste-lotes` (`pxldvwlzvducninsfavo`) criada, usada e
 **DESTRUÍDA**. Custo confirmado: US$ 0,01344/h. Produção não foi tocada.
@@ -282,12 +286,12 @@ Revisão posterior encontrou **2 problemas no arquivo de teste** e **1 na docume
    `v_lid` e `v_v` no `DECLARE` do bloco, e `v_lid` recebe o id via `RETURNING`.
 
 2. **"3/3 tabelas" era afirmação vazia.** O EXTRA exercitava **uma** tabela só. O teste
-   agora cobre as 3 (`EXTRA 1/3`, `2/3`, `3/3`) — mas essa cobertura ampliada **ainda
-   não foi executada**.
+   passou a cobrir as 3 (`EXTRA 1/3`, `2/3`, `3/3`) — e essa cobertura ampliada foi
+   **executada e aprovada** na seção 12.
 
 3. **Contradição no `08`:** abria com "nada foi executado" e fechava com "validado em
-   branch". Reescrito distinguindo **produção** (nunca tocada) · **branch** (rodou a
-   versão anterior, destruída) · **versão atual** (nunca rodou do início ao fim).
+   branch". Reescrito distinguindo produção · branch · versão atual. Hoje o arquivo
+   registra a execução completa em `lotes-v2` (seção 12).
 
 ### 🐛 Quinto defeito: o T2 não era autossuficiente (achado do Codex, 2026-07-29)
 Dois problemas no mesmo teste:
@@ -315,11 +319,85 @@ dependência de ambiente invisível na leitura, fatal na execução.
 proteção — é a porta que o autor deixou. A leitura que serve de prova continua sendo
 feita como `authenticated`.
 
-**Estado honesto:** os artefatos estão corrigidos, mas **os arquivos finais nunca
-rodaram inteiros**. Provar isso exige uma nova branch descartável.
+**Tratamento:** o setup roda com o claim `role=service_role`, que é o bypass que o
+**próprio trigger** oferece ("necessário pra triggers/cron internos"). Não é contorno da
+proteção — é a porta que o autor deixou. A leitura que serve de prova continua sendo
+feita como `authenticated`. **Confirmado em execução** na seção 12.
 
 ### Produção conferida após destruir a branch
 - Tabelas novas em produção: **0**
 - `crm_lotes`: **31 registros** (intacta)
 - Vínculos família↔lote: **7** (intactos)
 - Sujeira de teste: 1 registro — **de 16/05, auditoria antiga**, não desta sessão.
+
+---
+
+## 12. VALIDAÇÃO DEFINITIVA — branch `lotes-v2` — 2026-07-29 ✅
+
+**Autorizado por Duam.** Branch `lotes-v2` (`lrhpnbvghrfxbjlgvbdt`) criada, usada e
+**DESTRUÍDA**. Produção não foi tocada. Aqui rodaram os **arquivos finais** `08` e `09`.
+
+### 🐛 Causa do `MIGRATIONS_FAILED` — agora CONFIRMADA por log
+
+A branch nasceu falhada de novo, mas desta vez o log foi capturado:
+
+```
+ERROR: relation "adicional_pagamentos" does not exist
+```
+
+no statement `CREATE INDEX idx_adicional_pagamentos_adicional_id`, da migration
+`performance_indexes_edr_system` (17/04 — a **primeira** a rodar). Ela indexa tabelas do
+EDR que nunca foram criadas por migration. Como cada migration roda em transação,
+`migrations_aplicadas = 0` — nada foi registrado.
+
+**Duas afirmações minhas anteriores estavam ERRADAS e ficam corrigidas aqui:**
+
+| Eu dizia | O fato |
+|---|---|
+| "O CRM não usa migrations versionadas" | Usa **15**, incluindo o schema base e os 2 lockdowns de segurança |
+| "A branch nasce sem schema" | A branch **aplica as 46 migrations** e falha na 1ª, que é do **EDR** — não por ausência de migrations |
+
+**Caminho que funcionou:** aplicar à mão, na ordem original, o conteúdo exato das 15
+migrations de CRM. Elas são autossuficientes (só dependem de `auth.users`, `auth.uid()`,
+`gen_random_uuid()`) e passaram **15/15**.
+
+### Resultado dos testes — arquivos finais
+| Teste | Resultado | Evidência |
+|---|---|---|
+| Migrations CRM | **15/15** | cada `apply_migration` → `success: true` |
+| Portão pré-`08` | **4/4** | `crm_profiles`, `crm_clientes`, função e trigger presentes |
+| Estrutura | **OK** | 3 tabelas · dono `postgres` · RLS ativa · 4 policies e 1 trigger por tabela |
+| **GRANT** | **PROVADO** | `has_table_privilege` = true para `anon` **e** `authenticated` (SELECT/INSERT/UPDATE/DELETE), **sem GRANT escrito** — o default ACL aplicou |
+| **T1 anônimo** | **PASSOU** | dono lê **1** · `anon` lê **0**, mesmo dado |
+| **T2 logado** | **PASSOU com contraprova** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0** |
+| **T3 2ª procura ativa** | **PASSOU** | bloqueada; encerrada convive |
+| **T4 2ª aceitação** | **PASSOU** | bloqueada |
+| **Triggers `updated_at`** | **PASSOU 3/3** | `EXTRA 1/3`, `2/3`, `3/3` — agora de verdade nas 3 tabelas |
+| Resíduo na branch | **0** | tudo em `ROLLBACK` |
+
+### 🐛 Sexto achado: evidência que não batia com o arquivo (Codex)
+
+O T1 **executado** usava temp table; o T1 **versionado** ainda tinha dois `select`
+separados. O resultado era real, mas não vinha do arquivo — mesma armadilha do T2
+comentado, em escala menor.
+
+**Por que a variante foi necessária:** o conector MCP devolve só o resultado do **último**
+`select`. Com dois selects, `t1a` sumia e sobrava "anon lê 0" — que sozinho não prova
+nada, porque zero também é o que se vê quando o insert falhou. E `raise notice` (usado em
+T3/T4) não volta pelo conector: o teste rodaria mudo, e silêncio pareceria sucesso.
+
+**Correção:** T1, T2, T3 e T4 no arquivo `09` agora são **exatamente** o SQL executado —
+temp table + `SELECT` final — e cada um traz o resultado real logo abaixo.
+
+### Produção conferida após destruir a branch
+- Tabelas novas: **0** · `crm_lotes`: **31** · vínculos: **7** · migrations: **46**
+- `list_branches` → só a `main`
+
+### O que continua NÃO testado
+- A tela `lotes.html` contra estas tabelas com dado real
+- Os formulários de cadastro de procura/oportunidade — **não existem ainda**
+- Qualquer coisa em celular
+
+### Pendência única para produção
+**Definir a lista de cidades/regiões.** É decisão de negócio de Duam — o banco está
+provado.
