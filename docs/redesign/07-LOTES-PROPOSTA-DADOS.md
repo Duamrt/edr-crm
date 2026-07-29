@@ -1621,3 +1621,56 @@ Diff só de comentário e string; nenhuma linha de lógica alterada.
 - **Celular físico** — emulação apenas.
 - O conteúdo servido em produção **após este commit** (é documental, mas só está
   no ar depois do próximo deploy).
+
+---
+
+## 27. MARCA OFICIAL NA SIDEBAR — 2026-07-29
+
+Ajuste de identidade nas **seis telas redesenhadas** (Dashboard, Clientes, Ficha,
+Kanban, Agenda, Lotes). Não é específico de Lotes, mas fica registrado aqui
+porque é onde mora o histórico do redesenho.
+
+### O problema
+
+A sidebar usava a letra **"E"** desenhada em CSS. Genérico — poderia ser qualquer
+empresa com E no nome, enquanto o Login já exibia a marca real.
+
+### A solução: asset derivado, não redesenhado
+
+`img/edr-logo.svg` tem **15 paths**: 2 são o monograma (y 73–525) e 13 são as
+letras de "EDR ENGENHARIA" (y 598–637), uma por path. A separação é limpa, então
+deu para extrair o símbolo **sem redesenhar nada**:
+
+- `img/edr-simbolo.svg` mantém os **paths 0 e 1 byte a byte**, com o mesmo
+  `transform` do original
+- `viewBox` recortado na caixa do monograma (`2247 940 7911 8412`), com 4% de
+  respiro
+- 5 KB, contra 17 KB do arquivo completo
+
+⚠️ **Não redesenhar este arquivo.** Se a marca mudar, regerar a partir do
+`edr-logo.svg` oficial. Está escrito no cabeçalho do próprio SVG.
+
+### Decisões visuais
+
+| Decisão | Por quê |
+|---|---|
+| Placa **off-white** (`--paper`), não `--lime-soft` | O símbolo tem traço preto + verde escuro da marca. Sobre verde-limão, o verde da marca brigava. |
+| Símbolo a **68%** da placa | Em 76% ficava apertado e virava borrão nos tamanhos menores. Testado em 34/38/44px antes de escolher. |
+| `<img>` dentro de `.brand-logo` | A regra da sidebar compacta esconde `div:not(.brand-logo)` — como o símbolo é `<img>` dentro do span, sobrevive sem regra nova. |
+
+### Evidência
+
+Desktop (1280px): placa 34×34, símbolo 23×23, fundo `rgb(247,246,239)`, SVG
+carregado (`naturalWidth > 0`), texto "EDR CRM / GESTÃO MCMV" ao lado.
+
+Sidebar compacta (760px): sidebar 96px, **símbolo visível e texto escondido** —
+sem corte —, placa contida na sidebar, sem rolagem horizontal.
+
+As seis telas: HTTP 200, `edr-simbolo.svg` presente, **zero** ocorrências do "E"
+genérico. CSS balanceado nos seis arquivos.
+
+### Não testado
+
+- Celular físico.
+- Como o símbolo se comporta em tela de altíssima densidade (é SVG, deve escalar,
+  mas não foi visto).
