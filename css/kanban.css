@@ -188,6 +188,34 @@ button{font:inherit;cursor:pointer}
 }
 .kanban-col[data-status="perdido"] .kanban-col-header::before{content:'—'}
 
+/* ── HISTÓRICO — separa as finalizadas das 6 etapas ativas (Duam, 2026-07-29)
+   Com "Mostrar finalizados" ligado, Concluído e Perdido apareciam coladas na
+   grade e podiam ser lidas como "etapa 07 e 08" — continuação do fluxo.
+
+   Elas SEMPRE ocupam as últimas posições (a ordem vem de COLUNAS em
+   kanban.html:115-124 e o filtro a preserva), então basta abrir espaço acima
+   da primeira delas e escrever o rótulo ali. O `grid-column:1/-1` no ::before
+   faz a faixa atravessar a largura toda, independentemente de onde a coluna
+   caia na grade. Sem tocar no JS. ──────────────────────────────────── */
+.kanban-col[data-status="concluido"],
+.kanban-col[data-status="perdido"]{
+  background:#f1f0ec;border-style:dashed;
+}
+.kanban-col[data-status="concluido"]{
+  margin-top:34px;position:relative;
+}
+.kanban-col[data-status="concluido"]::before{
+  content:'HISTÓRICO — fora do fluxo operacional';
+  position:absolute;top:-30px;left:0;white-space:nowrap;
+  font:10px 'DM Mono',monospace;font-weight:500;letter-spacing:.14em;
+  color:var(--muted);
+}
+/* Perdido acompanha o deslocamento para ficar alinhada com Concluído. */
+.kanban-col[data-status="perdido"]{margin-top:34px}
+/* Cards finalizados: presentes, mas sem competir com o fluxo ativo. */
+.kanban-col[data-status="concluido"] .kanban-card,
+.kanban-col[data-status="perdido"] .kanban-card{opacity:.78}
+
 .kanban-count{
   font:11px 'DM Mono',monospace;font-weight:500;color:var(--ink);
   background:var(--card);border:1px solid var(--line);
