@@ -25,6 +25,13 @@
 -- ---------------------------------------------------------------------
 create table public.crm_procura_lote (
   id                  uuid primary key default gen_random_uuid(),
+  -- RISCO 3 (Duam): apagar a família apaga o histórico de procura junto.
+  -- ✅ VERIFICADO: é o padrão de TODO o CRM. As 6 tabelas filhas de
+  -- crm_clientes usam CASCADE — inclusive crm_documentos e crm_historico.
+  -- Manter CASCADE = coerente com LGPD (apagar a pessoa apaga os rastros dela).
+  -- Se Duam quiser preservar o histórico de procura mesmo após excluir a
+  -- família, trocar por:  on delete set null  (e tirar o `not null`).
+  -- ⚠️ DECISÃO DE NEGÓCIO PENDENTE — mantido CASCADE por ser o padrão vigente.
   cliente_id          uuid not null references public.crm_clientes(id) on delete cascade,
 
   -- Cidade separada da região: "Centro" sozinho pode ser cidades diferentes.
@@ -115,6 +122,9 @@ create table public.crm_procura_oportunidade (
   situacao         text not null default 'sugerida',
   observacao       text,             -- por que recusou, o que faltou
   created_at       timestamptz not null default now(),
+  -- CORREÇÃO 2 (Duam): a situação desta ligação MUDA (sugerida → apresentada →
+  -- aceita/recusada) e era o único registro sem rastro de quando mudou.
+  updated_at       timestamptz not null default now(),
 
   constraint crm_po_situacao_valida check (
     situacao in ('sugerida','apresentada','recusada','aceita')
@@ -122,6 +132,15 @@ create table public.crm_procura_oportunidade (
   -- a mesma oportunidade não é relacionada duas vezes à mesma procura
   constraint crm_po_sem_duplicata unique (procura_id, oportunidade_id)
 );
+
+-- CORREÇÃO 1 (Duam) — BUG REAL: sem isto, a MESMA oportunidade podia ficar
+-- 'aceita' por várias famílias ao mesmo tempo. Um lote só pode ser fechado
+-- com uma família. Índice parcial: várias podem estar 'sugerida' ou
+-- 'apresentada' (é o normal — mostra-se o lote a quem combina), mas só UMA
+-- chega a 'aceita'.
+create unique index crm_po_uma_aceita_por_oportunidade
+  on public.crm_procura_oportunidade (oportunidade_id)
+  where situacao = 'aceita';
 
 create index crm_po_procura      on public.crm_procura_oportunidade (procura_id);
 create index crm_po_oportunidade on public.crm_procura_oportunidade (oportunidade_id);
@@ -185,7 +204,37 @@ create trigger trg_crm_oportunidade_lote_updated_at
   before update on public.crm_oportunidade_lote
   for each row execute function public.set_crm_updated_at();
 
--- crm_procura_oportunidade não tem updated_at (só created_at) — sem trigger.
+-- CORREÇÃO 2 (Duam): a ligação também precisa de rastro — sua situação muda.
+create trigger trg_crm_procura_oportunidade_updated_at
+  before update on public.crm_procura_oportunidade
+  for each row execute function public.set_crm_updated_at();
+
+
+-- ---------------------------------------------------------------------
+-- 6. PERMISSÕES (GRANT) — CORREÇÃO 4 (Duam)
+-- ---------------------------------------------------------------------
+-- ✅ VERIFICADO em information_schema.role_table_grants e pg_default_acl:
+--
+--   Não é preciso escrever GRANT nenhum. O schema `public` tem PRIVILÉGIO
+--   PADRÃO configurado (pg_default_acl, defaclobjtype='r'): toda tabela nova
+--   já nasce com DELETE/INSERT/REFERENCES/SELECT/TRIGGER/TRUNCATE/UPDATE para
+--   anon, authenticated e service_role. É assim que crm_lotes e crm_clientes
+--   têm suas permissões — ninguém as escreveu.
+--
+-- ⚠️ CONSEQUÊNCIA QUE PRECISA ESTAR DITA:
+--   As 3 tabelas novas nascerão com acesso também para `anon` (usuário NÃO
+--   logado). A proteção real fica INTEIRAMENTE por conta do RLS. Se uma
+--   política falhar ou for removida, anon passa direto.
+--   Isso é o padrão já vigente em todo o CRM — não é defeito introduzido aqui.
+--   Mas se Duam quiser endurecer, o caminho é revogar de anon:
+--
+--     -- revoke all on public.crm_procura_lote         from anon;
+--     -- revoke all on public.crm_oportunidade_lote    from anon;
+--     -- revoke all on public.crm_procura_oportunidade from anon;
+--
+--   NÃO incluído por padrão: as tabelas atuais não fazem isso, e divergir do
+--   padrão sem decisão explícita pode quebrar algo que dependa de anon.
+--   DECISÃO DE DUAM PENDENTE.
 
 
 -- =====================================================================
@@ -205,8 +254,24 @@ create trigger trg_crm_oportunidade_lote_updated_at
 --   (nesta ordem, por causa das chaves estrangeiras)
 --   Como nada fora dessas 3 tabelas é tocado, o rollback é limpo.
 --
--- PENDÊNCIA ANTES DE APLICAR:
+-- =====================================================================
+-- REVISÃO DE DUAM (2026-07-29) — 4 achados, todos tratados
+-- =====================================================================
+-- ✅ 1. BUG: mesma oportunidade podia ficar 'aceita' por várias famílias.
+--       Corrigido com índice único parcial (crm_po_uma_aceita_por_oportunidade).
+-- ✅ 2. MELHORIA: ligação sem updated_at. Coluna + trigger adicionados.
+-- ⚠️ 3. RISCO (cascade): verificado que CASCADE é o padrão de todo o CRM —
+--       6 tabelas filhas de crm_clientes usam. Mantido, mas é DECISÃO DE
+--       NEGÓCIO de Duam: manter (LGPD) ou trocar por set null.
+-- ✅ 4. RISCO (grants): verificado — não é preciso GRANT. O schema tem
+--       privilégio padrão (pg_default_acl). Documentado que as tabelas
+--       nascerão acessíveis a `anon`, com a proteção toda no RLS.
+--       DECISÃO DE DUAM: endurecer revogando de anon, ou seguir o padrão?
+--
+-- PENDÊNCIAS ANTES DE APLICAR:
 --   1. Quais cidades/regiões entram na lista inicial? (a validação da lista
 --      fica na aplicação, não no banco — permite ajustar sem migration)
---   ✅ 2. RESOLVIDA: set_crm_updated_at() já existe e foi reusada.
+--   2. Cascade: manter ou preservar histórico? (achado 3)
+--   3. Revogar acesso de `anon`? (achado 4)
+--   ✅ RESOLVIDA: set_crm_updated_at() já existe e foi reusada.
 -- =====================================================================
