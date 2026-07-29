@@ -1481,3 +1481,86 @@ gravação  → 46 passaram, 0 falharam
 - **Celular físico** — medido em emulação 375×812, não em aparelho real.
 - Screenshot: o painel do navegador parou de compor frames nesta rodada; a
   evidência é medição de DOM, que para layout é mais precisa que olhar.
+
+---
+
+## 25. CADASTRO LIBERADO — 2026-07-29 ✅
+
+Duam autorizou ligar a gravação. As duas barreiras caíram juntas:
+`GRAVACAO_IMPLEMENTADA = true` + listeners nos dois Salvar.
+
+### O aceite que faltava mudou de natureza
+
+Eu vinha pedindo "teste com perfil não-admin". **Esse perfil não existe.**
+Consulta em `auth.users` + `crm_profiles`:
+
+| Usuário | Role |
+|---|---|
+| Duam | admin |
+| Elyda | admin |
+| Iannaline | admin |
+| Anderson | sem perfil no CRM |
+
+Os três usuários reais são `admin`, e admin foi provado com escrita e exclusão
+reais (seção 20). O risco que eu apontava — "e se o RLS recusar operador?" — não
+existe hoje.
+
+⚠️ **Fica registrado:** se um dia existir conta não-admin, testar o RLS dela
+ANTES de liberar acesso. Este teste não cobre esse caso.
+
+### Teste pré-deploy (produção, pela tela local autenticada)
+
+Desta vez o registro foi criado por **clique real no botão**, não por chamada
+direta — é o que prova o listener.
+
+| | ID | resultado |
+|---|---|---|
+| Procura | `68efcf24…` | Jupi · R$ 45.000 · `procurando` (DEFAULT) |
+| Oportunidade | `48348e4e…` | Jupi · R$ 40.000 · `disponivel` (DEFAULT) |
+
+E a sugestão apareceu na tela: **"1 família compatível: RAYLANE NATHIELE DE
+SOUZA ARAUJO"** — exatamente o que faltava no teste da manhã, quando o
+cruzamento ainda não existia.
+
+Limpeza: `DELETE` 204 nos dois. Depois: procuras 0, oportunidades 0,
+`crm_lotes` 31, clientes 19, vínculos 7 — nada mais tocado.
+
+### Suítes invertidas, não apagadas
+
+Cinco testes travavam o cadastro DESLIGADO. Com a liberação, viraram o oposto:
+
+- "após erro, botão segue bloqueado" → **"volta a ficar clicável"**. Com cadastro
+  liberado, travar após erro faria a pessoa perder o que digitou.
+- A seção "TRAVA DE SEGURANÇA" virou **"CADASTRO LIGADO"**, garantindo coerência
+  entre as duas barreiras. O erro perigoso agora é o **meio-termo**: constante
+  ligada sem listener (botão que não faz nada) ou listener sem constante (botão
+  morto que parece ativo).
+- Guarda que sobrevive à inversão: **ninguém mexe no `disabled` na mão** — sempre
+  por `restaurarEstadoBotoes()`. Se a trava voltar a `false`, ela bloqueia
+  sozinha.
+
+```
+gravação → 48 passaram, 0 falharam
+compat   → 29 passaram, 0 falharam
+```
+
+**Provado por sabotagem:** voltar a `disabled = false` no `finally` → **46/2**;
+restaurado → **48/0**.
+
+### 🐛 Um teste que quase deu falso-negativo
+
+A asserção "não mexe no disabled na mão" procurava a string `.disabled = false`
+no corpo da função — e casava com um **comentário** que explica o bug antigo.
+Corrigido para ignorar linhas de comentário. Teste que lê texto precisa saber
+distinguir código de prosa.
+
+### Comentário corrigido
+
+`salvarProcura()` dizia *"sbPost devolve OBJETO, não array"*. Falso: devolve o
+que o PostgREST mandar, e `js/data/clientes.js:19` normaliza os dois casos. Aqui
+o retorno não é usado, mas o comentário induziria alguém a desestruturar direto.
+
+### Continua NÃO testado
+
+- **Perfil não-admin** — não existe conta assim hoje.
+- **Celular físico** — medido em emulação 375×812 (seção 24), não em aparelho.

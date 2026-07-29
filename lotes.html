@@ -349,7 +349,7 @@
     //    Ligar a gravação exige os três passos JUNTOS: testar com sessão
     //    real autorizada → adicionar os listeners → virar esta constante.
     //    Nenhum vale sozinho.
-    const GRAVACAO_IMPLEMENTADA = false
+    const GRAVACAO_IMPLEMENTADA = true
 
     const MSG_SEM_ESTRUTURA = 'Disponível após ativação da estrutura'
     const MSG_SEM_GRAVACAO  = 'Cadastro ainda não foi liberado — em implementação'
@@ -799,7 +799,10 @@
       document.getElementById('mp-salvar').disabled = true
       showLoading()
       try {
-        // ⚠️ sbPost devolve OBJETO, não array (gotcha registrado no CLAUDE.md).
+        // ⚠️ sbPost devolve o que o PostgREST mandar: pode ser ARRAY ou
+        // OBJETO (ver js/data/clientes.js:19, que normaliza os dois). Aqui
+        // o retorno não é usado, então não importa — mas não copie este
+        // await supondo que dá para desestruturar direto.
         await sbPost('crm_procura_lote', payloadProcura())
         toast('Procura registrada.', 'success')
         limparModal(['mp-cliente','mp-cidade','mp-regiao','mp-valor','mp-metragem',
@@ -860,23 +863,21 @@
     document.getElementById('btn-nova-oportunidade')
       .addEventListener('click', () => abrirModal('modal-oport'))
 
-    // ⚠️ Os botões Salvar NÃO têm listener. As funções salvarProcura() e
-    // salvarOportunidade() JÁ EXISTEM e chamam sbPost — o que não existe é
-    // o vínculo entre botão e função. Somado a GRAVACAO_IMPLEMENTADA=false,
-    // são duas barreiras: mesmo que alguém ligue um listener por engano, o
-    // botão continua desabilitado.
+    // CADASTRO LIBERADO em 2026-07-29, por decisão de Duam.
     //
-    // TESTE REAL FEITO em 2026-07-29 (autorizado por Duam): os três passos
-    // foram ligados temporariamente, gravou-se uma procura (Raylane/Jupi) e
-    // uma oportunidade (Jupi), ambas confirmadas no banco e apagadas pelos
-    // IDs retornados. Revertido em seguida — a autorização era para provar a
-    // escrita, não para liberar cadastro. Ver seção 20 do doc do módulo.
+    // A escrita foi provada em produção antes de ligar (seção 20 do doc):
+    // gravou-se uma procura (Raylane/Jupi) e uma oportunidade (Jupi), ambas
+    // confirmadas no banco e apagadas pelos IDs retornados.
     //
-    // Para LIGAR de vez, os três passos juntos:
-    //   1. decisão de Duam de liberar o cadastro;
-    //   2. adicionar os listeners aqui;
-    //   3. virar GRAVACAO_IMPLEMENTADA para true.
-    // Nenhum vale sozinho.
+    // Sobre o perfil testado: os três usuários reais do CRM — Duam, Elyda e
+    // Iannaline — são `admin`. Não existe conta `operador` hoje, então a
+    // policy de INSERT foi exercitada pelo perfil que de fato usa a tela.
+    // ⚠️ Se um dia existir usuário não-admin, testar o RLS dele ANTES de
+    // liberar o acesso — este teste não cobre esse caso.
+    document.getElementById('mp-salvar')
+      .addEventListener('click', () => salvarProcura())
+    document.getElementById('mo-salvar')
+      .addEventListener('click', () => salvarOportunidade())
 
     montarSelectsCidade()
     carregarClientes()

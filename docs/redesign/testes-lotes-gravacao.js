@@ -199,13 +199,31 @@ checa('nenhuma mensagem vaza codigo do Postgres',
   checa('erro generico nao expoe jargao',
     _toasts.some(t => t.msg.includes('avise o suporte')))
 
-  // 🐛 Este teste afirmava o comportamento ERRADO: exigia disabled === false
-  //    apos o erro. Isso validava o bug que o Codex achou — o `finally`
-  //    reabilitava o botao "na mao", desfazendo GRAVACAO_IMPLEMENTADA=false.
-  //    Com a trava ligada, o correto e o botao CONTINUAR bloqueado.
-  checa('apos erro, botao segue BLOQUEADO (trava global vale)',
-    campo('mp-salvar').disabled === true,
+  // Com o cadastro LIBERADO (29/07), o correto se inverteu: apos um erro o
+  //    botao precisa VOLTAR a ficar clicavel, senao a pessoa perde tudo que
+  //    digitou sem poder tentar de novo. O que continua proibido e mexer no
+  //    `disabled` na mao — quem decide e restaurarEstadoBotoes(), a partir de
+  //    _estruturaPronta + GRAVACAO_IMPLEMENTADA. Se a trava voltar a false,
+  //    esta mesma chamada volta a bloquear sozinha.
+  checa('apos erro, botao volta a ficar clicavel (cadastro liberado)',
+    campo('mp-salvar').disabled === false,
     'veio disabled=' + campo('mp-salvar').disabled)
+  // Fatia por LINHA e IGNORA COMENTARIOS. O corpo cita ".disabled = false"
+  //    num comentario que explica o bug antigo — procurar a string crua
+    //  casaria com a explicacao, nao com codigo. Ja me pegou uma vez.
+  const corpoSalvar = nome => {
+    const linhas = html.split(String.fromCharCode(10))
+    const i = linhas.findIndex(x => x.indexOf("async function " + nome) > -1)
+    if (i < 0) return ""
+    return linhas.slice(i, i + 40)
+      .filter(x => x.trim().indexOf("//") !== 0)
+      .join(String.fromCharCode(10))
+  }
+  checa("as duas gravacoes restauram o estado pela funcao central",
+    ["salvarProcura", "salvarOportunidade"].every(f => {
+      const c = corpoSalvar(f)
+      return c.indexOf("restaurarEstadoBotoes()") > -1 && c.indexOf(".disabled = false") === -1
+    }))
 
   reset(); set({ 'mo-descricao': 'Lote Rua X', 'mo-cidade': 'Jucati' })
   r = await salvarOportunidade()
@@ -224,26 +242,37 @@ checa('nenhuma mensagem vaza codigo do Postgres',
   checa('oportunidade com erro retorna false', r === false)
   checa('oportunidade com erro avisa sem jargao',
     _toasts.some(t => t.tipo === 'error' && t.msg.includes('avise o suporte')))
-  checa('apos erro, botao da OPORTUNIDADE segue BLOQUEADO (trava global vale)',
-    campo('mo-salvar').disabled === true,
+  checa('apos erro, botao da OPORTUNIDADE volta a ficar clicavel',
+    campo('mo-salvar').disabled === false,
     'veio disabled=' + campo('mo-salvar').disabled)
   checa('erro na oportunidade nao fecha o modal nem limpa o que foi digitado',
     campo('mo-descricao').value === 'Lote Rua X')
 
-  // ── 5. TRAVA ───────────────────────────────────────────────────
-  console.log('\n5. TRAVA DE SEGURANCA')
+  // ── 5. CADASTRO LIGADO ─────────────────────────────────────────
+  console.log('\n5. CADASTRO LIGADO (coerencia das duas barreiras)')
   // ⚠️ Verificar no ARQUIVO, não no sandbox: `const` declarado via
   //    vm.runInContext não vira propriedade do contexto, então ler
-  //    `GRAVACAO_IMPLEMENTADA` aqui daria `undefined`. Com uma asserção
-  //    frouxa (`!GRAVACAO_IMPLEMENTADA`) isso passaria mesmo se a trava
-  //    estivesse LIGADA — o teste daria verde justo quando não devia.
-  checa('GRAVACAO_IMPLEMENTADA continua false (lido do arquivo)',
-    /const GRAVACAO_IMPLEMENTADA = false\b/.test(html))
-  checa('nao existe GRAVACAO_IMPLEMENTADA = true em lugar nenhum',
-    !/GRAVACAO_IMPLEMENTADA\s*=\s*true/.test(html))
-  checa('nenhum listener liga os Salvar as funcoes de gravacao',
-    !/mp-salvar'\)[\s\S]{0,80}addEventListener/.test(html) &&
-    !/mo-salvar'\)[\s\S]{0,80}addEventListener/.test(html))
+  //    `GRAVACAO_IMPLEMENTADA` aqui daria `undefined` — e uma asserção
+  //    frouxa passaria justamente quando não devia.
+  //
+  // Ate 29/07 esta secao travava o cadastro DESLIGADO. Duam liberou apos a
+  //    escrita ser provada em producao, entao ela virou o oposto: garante que
+  //    as duas barreiras estao coerentes ENTRE SI. O erro perigoso agora e o
+  //    meio-termo — constante ligada sem listener (botao clicavel que nao faz
+  //    nada) ou listener sem a constante (botao morto que parece ativo).
+  const temConstante = /const GRAVACAO_IMPLEMENTADA = true\b/.test(html)
+  const temListenerMp = /mp-salvar'\)[\s\S]{0,80}addEventListener/.test(html)
+  const temListenerMo = /mo-salvar'\)[\s\S]{0,80}addEventListener/.test(html)
+
+  checa('GRAVACAO_IMPLEMENTADA = true (lido do arquivo)', temConstante)
+  checa('os dois Salvar tem listener', temListenerMp && temListenerMo)
+  checa('nao ha meio-termo: constante e listeners batem',
+    temConstante === (temListenerMp && temListenerMo),
+    'constante=' + temConstante + ' listeners=' + (temListenerMp && temListenerMo))
+  // Guarda que sobrevive a inversao: ligar ou desligar e decisao de Duam,
+  //    mas NUNCA se mexe no disabled direto — sempre pela funcao central.
+  checa('ninguem habilita os Salvar por fora de desabilitarCadastro()',
+    !/(mp|mo)-salvar'\)\.disabled = false/.test(html))
 
   console.log('\n' + '='.repeat(54))
   console.log('RESULTADO: ' + ok + ' passaram, ' + falhou + ' falharam')
