@@ -247,7 +247,7 @@ existe. Os formulários entram junto com as tabelas — **sem botão que finge f
 |---|---|---|
 | Estrutura | **OK** | 3 tabelas, 12 policies, 3 triggers criados sem erro |
 | **T1 anônimo bloqueado** | **PASSOU** | dono lê **1** linha · `anon` lê **0** (mesmo dado) |
-| **T2 logado liberado** | **PASSOU** | perfil real `c9718eb3…`: função=**true**, leu **1** |
+| **T2 logado liberado** | **PASSOU, com ressalva** | perfil real `c9718eb3…`: função=**true**, leu **1** — mas via SQL digitado à mão, não pelo arquivo `09` (que estava comentado), e sem contraprova |
 | **T3 2ª procura ativa** | **PASSOU** | bloqueada; procura encerrada convive (histórico) |
 | **T4 2ª aceitação** | **PASSOU** | bloqueada — o bug apontado por Duam está resolvido |
 | Triggers `updated_at` | **PASSOU em 1 de 3** | só `crm_procura_oportunidade` foi exercitada — ver correção abaixo |
@@ -288,6 +288,32 @@ Revisão posterior encontrou **2 problemas no arquivo de teste** e **1 na docume
 3. **Contradição no `08`:** abria com "nada foi executado" e fechava com "validado em
    branch". Reescrito distinguindo **produção** (nunca tocada) · **branch** (rodou a
    versão anterior, destruída) · **versão atual** (nunca rodou do início ao fim).
+
+### 🐛 Quinto defeito: o T2 não era autossuficiente (achado do Codex, 2026-07-29)
+Dois problemas no mesmo teste:
+
+1. **Estava inteiramente comentado.** Nunca rodou a partir do arquivo `09`. O "PASSOU,
+   leu 1 linha" veio de SQL que digitei à mão na branch — não do script versionado.
+2. **Pedia um UUID de perfil já existente.** Mas a branch nasce sem dados. O teste
+   travaria por falta de perfil, e isso seria confundido com falha de RLS.
+
+**Correção:** o T2 agora é executável e cria a própria identidade dentro da transação
+(`auth.users` → `crm_profiles`, nessa ordem, porque existe FK entre eles). E prova por
+**contraste**, no mesmo dado: quem tem perfil lê **1**, quem não tem lê **0**. Um número
+sozinho não provaria nada — só o par prova. Nenhuma leitura de superusuário é usada como
+evidência, porque `postgres` tem `BYPASSRLS` e leria tudo mesmo com o RLS quebrado.
+
+### 🐛 Armadilha encontrada ANTES de gastar branch
+Ao preparar o T2, a leitura do catálogo revelou que `crm_profiles` tem o trigger
+`trg_crm_profiles_block_self_escalation`, que em INSERT exige `NEW.id = auth.uid()`.
+Sem sessão, `auth.uid()` é null, e o insert do perfil **abortaria** — o T2 falharia por
+causa do trigger, não por RLS. É o mesmo padrão do defeito do `set_crm_updated_at()`:
+dependência de ambiente invisível na leitura, fatal na execução.
+
+**Tratamento:** o setup roda com o claim `role=service_role`, que é o bypass que o
+**próprio trigger** oferece ("necessário pra triggers/cron internos"). Não é contorno da
+proteção — é a porta que o autor deixou. A leitura que serve de prova continua sendo
+feita como `authenticated`.
 
 **Estado honesto:** os artefatos estão corrigidos, mas **os arquivos finais nunca
 rodaram inteiros**. Provar isso exige uma nova branch descartável.

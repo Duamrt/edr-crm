@@ -347,7 +347,12 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --
 --   Estrutura ....... 3 tabelas, 12 policies, 3 triggers criados sem erro
 --   T1 anônimo ...... PASSOU — dono lê 1 linha, `anon` lê 0
---   T2 logado ....... PASSOU — perfil real: função=true, leu 1 linha
+--   T2 logado ....... PASSOU, com ressalva: o T2 estava COMENTADO no arquivo
+--                     09. O resultado veio de SQL digitado à mão na branch,
+--                     usando um perfil que existia lá, e sem contraprova de
+--                     usuário SEM perfil. O 09 foi corrigido (teste executável,
+--                     cria a própria identidade, prova por contraste) — mas
+--                     essa versão AINDA NÃO RODOU.
 --   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
 --   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
 --   Triggers ........ PASSOU em 1 das 3 tabelas (crm_procura_oportunidade),
