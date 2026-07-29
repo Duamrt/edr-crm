@@ -142,13 +142,15 @@
       const hoje = new Date(); hoje.setHours(0,0,0,0)
       return new Date(iso + 'T00:00:00') < hoje
     }
-    // Região é OPCIONAL (decisão de Duam, 2026-07-29 — não há lista real de
-    // bairros). Sem região, mostra só a cidade: nada de "Garanhuns — ?", que
+    // Região é OPCIONAL e tem FONTE ÚNICA: o campo `regiao`, texto livre.
+    // (Decisão de Duam, 2026-07-29 — não há lista real de bairros. O campo
+    // `regiao_outra` foi removido da proposta: com região livre, ele criaria
+    // duas fontes para o mesmo dado. Não existe regra 'Outra'.)
+    // Sem região, mostra só a cidade: nada de "Garanhuns — ?", que
     // transformaria dado ausente em ruído e sugeriria erro de cadastro.
     function cidadeRegiao(p) {
-      const reg = (p.regiao === 'Outra' && p.regiao_outra) ? p.regiao_outra : p.regiao
-      if (!p.cidade) return reg || '—'
-      return reg ? p.cidade + ' — ' + reg : p.cidade
+      if (!p.cidade) return p.regiao || '—'
+      return p.regiao ? p.cidade + ' — ' + p.regiao : p.cidade
     }
     function moeda(v) {
       if (v === null || v === undefined || v === '') return '—'

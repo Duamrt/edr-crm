@@ -60,8 +60,12 @@ create table public.crm_procura_lote (
   --    A lista de CIDADES é controlada na aplicação — ver comentário no fim
   --    da tabela.
   cidade              text not null,
-  regiao              text,          -- OPCIONAL — ver decisão acima
-  regiao_outra        text,          -- texto livre quando regiao = 'Outra'
+  -- ⚠️ FONTE ÚNICA (achado do Codex, 2026-07-29): existia também um campo
+  --    `regiao_outra`, para quando a região fosse 'Outra'. REMOVIDO — com a
+  --    região virando texto livre opcional, ele criaria DUAS fontes para a
+  --    mesma informação, e o leitor teria de saber qual olhar. Não há regra
+  --    'Outra': se a região é conhecida, escreve-se direto aqui.
+  regiao              text,          -- OPCIONAL, texto livre — ver decisão acima
 
   valor_maximo        numeric(12,2),
   metragem_desejada   numeric(10,2),

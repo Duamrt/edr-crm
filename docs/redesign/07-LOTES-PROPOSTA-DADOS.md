@@ -34,9 +34,8 @@ Uma linha por família que está procurando. **Não duplica** o que já existe e
 |---|---|---|---|
 | `id` | uuid | sim | chave |
 | `cliente_id` | uuid → `crm_clientes` | sim | de quem é a procura |
-| `cidade` | text | sim | **lista controlada** — ver decisão 1 |
-| `regiao` | text | sim | bairro/zona dentro da cidade — lista controlada |
-| `regiao_outra` | text | não | preenchido quando cidade/região = "Outra" |
+| `cidade` | text | **sim** | **lista controlada:** Jupi · Garanhuns · Lajedo · Jucati — ver seção 14 |
+| `regiao` | text | **não** | bairro/zona, **texto livre e opcional** — ver seção 14 |
 | `valor_maximo` | numeric | não | teto que ela suporta |
 | `metragem_desejada` | numeric | não | tamanho pretendido |
 | `preferencias` | text | não | esquina, aclive, perto de escola… (texto livre) |
@@ -73,7 +72,8 @@ uma oportunidade concreta surgir.
 |---|---|---|---|
 | `id` | uuid | sim | chave |
 | `descricao` | text | sim | como identificar ("Lote na Rua X, ao lado do nº 40") |
-| `regiao` | text | sim | para cruzar com a procura |
+| `cidade` | text | **sim** | **lista controlada** (mesma da procura) — é o que cruza com a fila |
+| `regiao` | text | **não** | bairro/zona, **texto livre e opcional** — refina o cruzamento quando existe |
 | `valor` | numeric | não | preço pedido |
 | `metragem` | numeric | não | tamanho |
 | `origem` | text | não | quem ofereceu / onde foi encontrado |
@@ -570,11 +570,22 @@ cidade.** Se a família informou uma região, ela também entra na comparação.
 
 Quando houver lista real de bairros, o campo pode virar obrigatório por migration.
 
-### Mudança de schema que isso exigiu
+### Mudanças de schema que isso exigiu
 
-`regiao` era `text not null` nas **duas** tabelas (`crm_procura_lote` e
-`crm_oportunidade_lote`). Passou a aceitar nulo. Sem essa mudança, o campo obrigatório
+**1. `regiao` passou a aceitar nulo.** Era `text not null` nas **duas** tabelas
+(`crm_procura_lote` e `crm_oportunidade_lote`). Sem essa mudança, o campo obrigatório
 produziria exatamente o dado inventado que a decisão evita.
+
+**2. `regiao_outra` foi REMOVIDO** (achado do Codex, 2026-07-29). Ele existia para o caso
+de a região ser `'Outra'` — uma regra que fazia sentido quando a região vinha de lista
+controlada. Com região virando **texto livre opcional**, o campo passaria a ser uma
+**segunda fonte para o mesmo dado**: quem lê teria de saber qual dos dois olhar, e os
+dois poderiam divergir. Não existe mais regra `'Outra'` — se a região é conhecida,
+escreve-se direto em `regiao`.
+
+⚠️ **Nenhuma das duas mudanças foi executada em banco.** São alterações no arquivo
+`08`, que ainda não foi aplicado em lugar nenhum desde então. Em particular, **inserir
+com `regiao` nula nunca foi testado** — nas três branches a coluna era obrigatória.
 
 **O que isso faz com a validação da seção 13:** quase nada. As 12 policies chamam
 `crm_user_has_profile()`, que não olha coluna nenhuma; os índices únicos parciais
