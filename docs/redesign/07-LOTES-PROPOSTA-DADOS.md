@@ -1,9 +1,13 @@
 # Módulo 6 — Lotes · PROPOSTA DE DADOS (para aprovação)
 
 **Data:** 2026-07-29
-**Status:** proposta em papel. **NENHUM SQL EXECUTADO. NADA CRIADO NO BANCO.**
+**Status:** ✅ **ESTRUTURA APLICADA EM PRODUÇÃO** em 2026-07-29 — as 3 tabelas, RLS,
+índices e triggers existem e foram provados. Ver **seção 16**.
+**A interface NÃO foi publicada** e os botões Salvar continuam desabilitados: gravação
+ainda não existe.
 **Regra travada por Duam:** não mexer nem apagar nada de `crm_lotes`. Os 7 vínculos
-atuais ficam preservados até **Duam** validar caso a caso.
+atuais ficam preservados até **Duam** validar caso a caso — **confirmado intacto** depois
+da aplicação (31 lotes, 7 vínculos).
 
 ## O problema que isto resolve
 A tela Lotes mostra planta, quadras e "disponíveis" de um terreno que não existe mais.
