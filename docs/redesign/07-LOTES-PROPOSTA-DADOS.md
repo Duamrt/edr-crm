@@ -554,7 +554,8 @@ qualquer erro como "bloqueado" e teria aprovado um RLS aberto.
 
 ### O que continua NÃO testado
 - A tela `lotes.html` contra estas tabelas com dado real
-- Os formulários de cadastro de procura/oportunidade — **não existem ainda**
+- ~~Os formulários de cadastro — não existem ainda~~ → **os modais existem** (seção 15);
+  o que não existe é a **gravação** (`sbPost`) — ver seção 17
 - Qualquer coisa em celular
 
 ### Pendência única para produção
@@ -686,8 +687,9 @@ escrita entra junto com a autorização do SQL em produção.
 Os modais **abrem e podem ser preenchidos** — dá para conferir o desenho, a ordem dos
 campos e o comportamento dos selects. O que está travado é só a gravação.
 
-`desabilitarCadastro()` controla os dois botões do topo **e** os dois Salvar pelo mesmo
-estado, então quando as tabelas existirem tudo destrava junto.
+> ⚠️ **Corrigido na seção 17:** este parágrafo dizia que topo e Salvar seguiam o mesmo
+> estado e "tudo destrava junto quando as tabelas existirem". Isso virou um **bug** assim
+> que a estrutura foi aplicada. Hoje são duas travas independentes.
 
 ### CSS
 
@@ -821,3 +823,81 @@ schema, está **fechada** — e agora contra o banco real.
 
 Conectar os dois Salvar (`sbPost`) e publicar a tela. São duas decisões separadas: ligar a
 gravação e fazer o deploy.
+
+---
+
+## 17. TRAVA DE GRAVAÇÃO — 2026-07-29 🐛
+
+### O bug que a aplicação do SQL criou
+
+Achado do Codex, confirmado no código. Enquanto as tabelas não existiam, o desenho
+funcionava por acaso: `desabilitarCadastro(true)` mantinha os Salvar travados, e ninguém
+notava que **não havia handler de gravação**.
+
+Quando a estrutura entrou em produção (seção 16), `sbGet` parou de dar 404 e
+`desabilitarCadastro(false)` passou a rodar de verdade — **liberando os dois Salvar**. Não
+existe `sbPost`, `sbPatch` nem `sbDelete` nesta tela. O usuário preencheria o formulário
+inteiro, clicaria em Salvar e **nada aconteceria**: sem gravação, sem erro, sem aviso.
+
+Botão ativo que não faz nada é pior que botão travado com aviso — o travado ao menos
+explica o estado.
+
+### A correção: duas travas independentes
+
+```js
+const GRAVACAO_IMPLEMENTADA = false
+...
+const bloqueado = semEstrutura || !GRAVACAO_IMPLEMENTADA
+```
+
+Os Salvar ficam desabilitados se **qualquer uma** das condições valer. Hoje a segunda
+basta. O aviso muda conforme o motivo:
+
+| Situação | Aviso |
+|---|---|
+| Tabelas não respondem | *"Disponível após ativação da estrutura"* |
+| Tabelas ok, gravação não escrita | *"Cadastro ainda não foi liberado — em implementação"* |
+
+O aviso do topo passou a acompanhar o **Salvar**, não a estrutura — antes ele sumiria com
+as tabelas no ar enquanto o botão continuava travado, deixando a trava sem explicação.
+
+**Ligar a gravação = escrever os dois `sbPost`, testar com sessão real e só então virar a
+constante para `true`.** Uma coisa não vale sem a outra: a constante existe para que
+liberar seja um ato consciente, num lugar só.
+
+### Evidência — Salvar travado COM a estrutura ativa
+
+Cenário simulado com `sbGet` respondendo OK (o estado real de produção hoje):
+
+| Verificação | Resultado |
+|---|---|
+| Aviso no topo | ✅ *"Cadastro em implementação — dá para conferir os campos, ainda não salvar"* |
+| Botões do topo | ✅ ambos clicáveis |
+| Modal procura abre | ✅ |
+| **`#mp-salvar`** | ✅ **`[disabled]`** lido no DOM |
+| **`#mo-salvar`** | ✅ **`[disabled]`** lido no DOM |
+| Aviso no rodapé dos modais | ✅ *"Cadastro ainda não foi liberado — em implementação"* |
+
+Sintaxe JS: 2 scripts inline, OK.
+
+### Estado real do módulo
+
+| Item | Estado |
+|---|---|
+| Estrutura no banco | ✅ em produção (seção 16) |
+| Modais / formulários | ✅ existem e abrem |
+| Lista de cidades | ✅ fixa no código |
+| **Gravação (`sbPost`)** | ❌ **não existe** |
+| **Interface publicada** | ❌ **não** — produção segue a tela antiga |
+
+**A interface NÃO está pronta para deploy.** Publicar agora entregaria formulário completo
+com Salvar que não salva.
+
+### Próximo passo (autorização própria)
+
+1. Escrever as duas gravações (`sbPost` em `crm_procura_lote` e `crm_oportunidade_lote`)
+2. Validar localmente com sessão real — cadastro de verdade, conferido no banco
+3. Virar `GRAVACAO_IMPLEMENTADA` para `true`
+4. Só então pedir deploy
+
+São passos separados: implementar não é publicar.

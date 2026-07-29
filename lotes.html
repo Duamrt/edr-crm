@@ -31,7 +31,7 @@
       <div class="topbar">
         <span class="topbar-title">Lotes</span>
         <div class="flex gap-8">
-          <span id="aviso-cadastro" class="lt-aviso-cadastro hidden">Cadastro em ativação — dá para conferir os campos, ainda não salvar</span>
+          <span id="aviso-cadastro" class="lt-aviso-cadastro hidden"></span>
           <button id="btn-nova-procura" class="btn btn-secondary btn-sm">+ Registrar procura</button>
           <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm">+ Captar oportunidade</button>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
@@ -334,29 +334,53 @@
       console.error('Lotes — falha ao carregar:', err)
     }
 
-    const MSG_BLOQUEIO = 'Disponível após ativação da estrutura'
+    // ═══════════════════════════════════════════════════════════════
+    // TRAVA DE GRAVAÇÃO — não remover sem implementar sbPost antes
+    // ═══════════════════════════════════════════════════════════════
+    // 🐛 CORREÇÃO (achado do Codex, 2026-07-29): a estrutura JÁ existe em
+    //    produção desde 29/07, então `desabilitarCadastro(false)` passou a
+    //    rodar de verdade — e ele liberava os dois Salvar. Só que NÃO EXISTE
+    //    handler de gravação: nenhum sbPost/sbPatch nesta tela. O usuário
+    //    preencheria tudo, clicaria em Salvar e não aconteceria nada. Botão
+    //    ativo que não faz nada é pior que botão travado com aviso.
+    //
+    //    Enquanto esta constante for `false`, os Salvar ficam desabilitados
+    //    INDEPENDENTE de as tabelas responderem. Ligar a gravação é mudar
+    //    aqui — e só depois de o sbPost existir e ser testado com sessão real.
+    const GRAVACAO_IMPLEMENTADA = false
+
+    const MSG_SEM_ESTRUTURA = 'Disponível após ativação da estrutura'
+    const MSG_SEM_GRAVACAO  = 'Cadastro ainda não foi liberado — em implementação'
 
     // ⚠️ A trava é SÓ na GRAVAÇÃO, não na abertura (correção de UX, Duam
-    //    2026-07-29). Antes, os botões do topo também ficavam desabilitados —
-    //    e aí ninguém conseguia abrir os modais para conferir os campos sem
-    //    recorrer ao Console. Abrir e preencher não escreve nada; o que
-    //    precisa estar travado é o Salvar, porque não existe tabela para
-    //    receber.
-    function desabilitarCadastro(desabilitar) {
-      // Botões do topo: SEMPRE clicáveis. Só o texto de ajuda muda.
+    //    2026-07-29). Abrir e preencher não escreve nada; travar o topo só
+    //    obrigaria a usar o Console para conferir os campos.
+    function desabilitarCadastro(semEstrutura) {
+      // Botões do topo: SEMPRE clicáveis.
       ;['btn-nova-procura','btn-nova-oportunidade'].forEach(id => {
         const b = document.getElementById(id)
         b.disabled = false
-        b.title = desabilitar ? 'Abre para conferência — ' + MSG_BLOQUEIO.toLowerCase() : ''
+        b.title = semEstrutura ? 'Abre para conferência — ' + MSG_SEM_ESTRUTURA.toLowerCase() : ''
       })
-      document.getElementById('aviso-cadastro').classList.toggle('hidden', !desabilitar)
+      // Botões SALVAR: travados por DUAS razões independentes. Basta uma.
+      const bloqueado = semEstrutura || !GRAVACAO_IMPLEMENTADA
+      const motivo = semEstrutura ? MSG_SEM_ESTRUTURA : MSG_SEM_GRAVACAO
 
-      // Botões SALVAR: esses sim seguem o estado da estrutura.
+      // Aviso do topo acompanha o SALVAR, não a estrutura — senão, com as
+      // tabelas no ar, ele sumiria enquanto o botão continua travado.
+      const avisoTopo = document.getElementById('aviso-cadastro')
+      avisoTopo.textContent = semEstrutura
+        ? 'Cadastro em ativação — dá para conferir os campos, ainda não salvar'
+        : 'Cadastro em implementação — dá para conferir os campos, ainda não salvar'
+      avisoTopo.classList.toggle('hidden', !bloqueado)
+
       ;[['mp-salvar','mp-aviso'], ['mo-salvar','mo-aviso']].forEach(([bId, aId]) => {
         const b = document.getElementById(bId)
-        b.disabled = desabilitar
-        b.title = desabilitar ? MSG_BLOQUEIO : ''
-        document.getElementById(aId).classList.toggle('hidden', !desabilitar)
+        b.disabled = bloqueado
+        b.title = bloqueado ? motivo : ''
+        const aviso = document.getElementById(aId)
+        aviso.textContent = motivo
+        aviso.classList.toggle('hidden', !bloqueado)
       })
     }
 
@@ -588,10 +612,16 @@
     document.getElementById('btn-nova-oportunidade')
       .addEventListener('click', () => abrirModal('modal-oport'))
 
-    // ⚠️ Os botões Salvar NÃO têm listener de gravação. Isso é proposital:
-    // enquanto as tabelas não existirem, não há o que gravar, e um handler
-    // que só mostra "em breve" seria um botão fingindo funcionar. O código
-    // de escrita entra junto com a autorização do SQL em produção.
+    // ⚠️ Os botões Salvar NÃO têm listener de gravação — não existe sbPost
+    // nesta tela. É por isso que GRAVACAO_IMPLEMENTADA = false os mantém
+    // desabilitados mesmo com as tabelas no ar (elas existem em produção
+    // desde 29/07). Um handler que só mostrasse "em breve" seria um botão
+    // fingindo funcionar; um botão ativo sem handler é pior ainda — o
+    // usuário preenche tudo, clica e não acontece nada.
+    //
+    // Para LIGAR a gravação: escrever os dois sbPost, testar com sessão real
+    // e só então virar GRAVACAO_IMPLEMENTADA para true. Uma coisa não vale
+    // sem a outra.
 
     montarSelectsCidade()
     carregarClientes()
