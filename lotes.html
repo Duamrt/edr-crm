@@ -774,9 +774,14 @@
     // são duas barreiras: mesmo que alguém ligue um listener por engano, o
     // botão continua desabilitado.
     //
-    // Para LIGAR a gravação, os três passos juntos:
-    //   1. testar salvarProcura/salvarOportunidade com sessão real, gravando
-    //      de verdade (escrita em produção — exige autorização de Duam);
+    // TESTE REAL FEITO em 2026-07-29 (autorizado por Duam): os três passos
+    // foram ligados temporariamente, gravou-se uma procura (Raylane/Jupi) e
+    // uma oportunidade (Jupi), ambas confirmadas no banco e apagadas pelos
+    // IDs retornados. Revertido em seguida — a autorização era para provar a
+    // escrita, não para liberar cadastro. Ver seção 20 do doc do módulo.
+    //
+    // Para LIGAR de vez, os três passos juntos:
+    //   1. decisão de Duam de liberar o cadastro;
     //   2. adicionar os listeners aqui;
     //   3. virar GRAVACAO_IMPLEMENTADA para true.
     // Nenhum vale sozinho.

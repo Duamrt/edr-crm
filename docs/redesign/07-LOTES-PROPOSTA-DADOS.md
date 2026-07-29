@@ -1061,3 +1061,130 @@ escopo próprio de Duam.
 
 Para ligar a gravação, os três passos **juntos**: testar com sessão real → adicionar os
 listeners → virar `GRAVACAO_IMPLEMENTADA` para `true`. Nenhum vale sozinho.
+
+---
+
+## 20. TESTE REAL DE GRAVAÇÃO — 2026-07-29 ✅
+
+Escopo autorizado por Duam: criar **uma** procura (família Raylane) e **uma**
+oportunidade (Jupi) pela tela local autenticada, validar, e apagar exatamente
+esses dois pelos IDs retornados. Sem deploy, sem commit, sem tocar em
+`crm_lotes`, vínculos, clientes ou SQL/RLS.
+
+### Perfil testado
+
+`admin@edreng.com.br` — role **admin**. A conta da Elyda (`operador`) não foi
+usada. ⚠️ Fica não provado se um perfil não-admin consegue gravar; a policy de
+INSERT foi exercitada só por admin.
+
+### Antes / depois
+
+| | antes | depois |
+|---|---|---|
+| `crm_procura_lote` | 0 | 0 |
+| `crm_oportunidade_lote` | 0 | 0 |
+| `crm_lotes` | 31 | 31 |
+| `crm_clientes` | 19 | 19 |
+| vínculos (`lote_id` preenchido) | 7 | 7 |
+
+Raylane intacta, com o `lote_id` original inalterado.
+
+### Escrita — provada
+
+**Procura** `2be3a146-9bbb-4c84-9d82-4324eed28433`
+```json
+{"cliente_id":"b5bfba07-...","cidade":"Jupi","valor_maximo":45000.00,
+ "situacao":"procurando","regiao":null,"metragem_desejada":null}
+```
+
+**Oportunidade** `b617dc10-babb-4698-b42d-23d55dd43d6d`
+```json
+{"descricao":"LOTE TESTE - APAGAR - Rua Projetada, Jupi","cidade":"Jupi",
+ "valor":40000.00,"situacao":"disponivel"}
+```
+
+Confirmações importantes:
+- `situacao` veio do **DEFAULT do banco** nas duas — o payload não envia o campo,
+  como projetado.
+- Campos vazios gravaram `null`, não string vazia.
+- Ambas gravadas com token de sessão real (`authenticated`), não anon nem
+  `service_role`. É a policy que a equipe usa de verdade.
+
+### Renderização — primeira vez com dado real
+
+`renderFila()`: 1 linha — nome, `Jupi`, `R$ 45.000` formatado, vazios como `—`,
+situação como label (`Procurando`, não `procurando`), empty state escondido,
+contador `1 família`, modal fechou sozinho.
+
+`renderOportunidades()`: 1 card — descrição, `Disponível`, `Jupi · R$ 40.000`.
+
+Após a exclusão e novo `carregar()`: 0 linhas, 0 cards, os dois empty states
+visíveis, contador `0 famílias`.
+
+### 🔴 Achado — compatibilidade por cidade NÃO existe
+
+O empty state promete: *"o sistema mostra quais famílias da fila combinam pela
+cidade e pelo valor"*. **Não há código que faça esse cruzamento.**
+`renderOportunidades()` apenas desenha o card.
+
+Não é regressão — nunca foi construído. Mas é promessa visível na tela sem
+função por trás. A oportunidade em Jupi (R$ 40.000) e a procura em Jupi
+(teto R$ 45.000) casariam, e nada apareceu.
+
+**Pendência:** implementar o cruzamento, ou remover a frase até existir.
+
+### Exclusão — provada
+
+`DELETE` por ID: **204** nas duas. Contagens de volta a 0/0, e as tabelas
+vizinhas inalteradas (31/19/7).
+
+### Estado final
+
+`GRAVACAO_IMPLEMENTADA` de volta a `false`, listeners removidos, suíte local
+46/0, e a tela viva reconfirmada: os dois Salvar desabilitados com o aviso
+*"Cadastro ainda não foi liberado — em implementação"*, botões do topo
+clicáveis. A autorização era para **provar a escrita**, não para liberar
+cadastro.
+
+### 🐛 Incidente de ambiente — `npx serve -s`
+
+O login local não passava. **Dois fatos separados**, não confundir:
+
+**Fato 1 — fallback de rota causou a tela errada. Confirmado.**
+`serve -s` (modo SPA) devolve `index.html` para qualquer rota. Então
+`/dashboard` entregava a tela de **Login**, que sem sessão fazia
+`replace('index.html')`, devolvendo Login de novo. Provado por contraste: sem
+`-s`, cada rota passa a devolver a própria página e rota inexistente dá `404`.
+
+**Fato 2 — causa do `EMFILE`: NÃO CONFIRMADA.**
+O servidor morreu com:
+
+```
+Error: EMFILE: too many open files, open 'index.html'
+```
+
+É plausível que as recargas repetidas tenham esgotado os descritores, mas
+**isso não foi provado** — só se observou que os dois ocorreram na mesma
+sessão. O `EMFILE` pode ter vindo do watcher de arquivos do `serve`, de outro
+processo, ou de limite de handles do Windows independente do loop. Correlação
+não é causa; fica como hipótese.
+
+O que **está** provado: nenhuma requisição chegou ao Supabase — no log de rede
+não há `/auth/v1/token`, só `js/auth.js` baixado 10× e depois `ERR_FAILED`.
+
+**O `-s` é errado para este site**, que é multipágina, não SPA. Em produção não
+acontece: o GitHub Pages serve `dashboard.html` como arquivo real.
+
+✅ **Correto:** `npx serve . -l <porta>` — sem `-s`. Prova de que o loop acabou:
+cada rota devolve a própria página (`Login`/`Lotes`/`Dashboard`/`Clientes`) e
+rota inexistente dá `404`, em vez de tudo cair no Login.
+
+### O que continua NÃO testado
+
+- **Perfil não-admin** (Elyda) gravando — a policy de INSERT só foi exercitada
+  por admin.
+- **Celular.** A tela rodou em viewport estreito durante o teste, mas não houve
+  conferência visual de layout mobile.
+- **Erro real de rede/RLS na tela** — o caminho de erro só foi exercitado por
+  stub, nunca com uma recusa de verdade do banco.
+- **UPDATE e DELETE pela interface** — não existem botões para isso ainda.
