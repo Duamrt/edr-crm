@@ -301,3 +301,24 @@ thead th:last-child{position:sticky;right:0;background:var(--paper);box-shadow:-
   .toast{left:16px;right:16px;bottom:16px;max-width:none;text-align:center}
 }
 @media(prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* Sugestão de famílias compatíveis — visual, não vínculo.
+   Separada do resto do card por uma linha: é informação derivada, não
+   dado da oportunidade. Verde discreto para sugerir sem gritar. */
+.lt-oport-compat{
+  margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);
+  font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:baseline
+}
+.lt-oport-compat-vazio{color:#7b8a7f;font-style:italic}
+.lt-compat-titulo{font-weight:700;color:var(--green-2)}
+.lt-compat-lista{display:inline;color:var(--ink)}
+.lt-compat-nome{
+  color:var(--green);font-weight:600;text-decoration:none;
+  border-bottom:1px solid transparent;transition:border-color .15s ease
+}
+.lt-compat-nome:hover,.lt-compat-nome:focus-visible{border-bottom-color:var(--green)}
+/* Alvo de toque em telas pequenas — nomes lado a lado ficam difíceis de acertar */
+@media (max-width:640px){
+  .lt-oport-compat{gap:6px 10px}
+  .lt-compat-nome{display:inline-block;padding:3px 0}
+}

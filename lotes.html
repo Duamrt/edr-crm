@@ -566,6 +566,30 @@
       })
     }
 
+    // ── COMPATIBILIDADE ─────────────────────────────────────────────
+    // Regra combinada com Duam (2026-07-29): mesma cidade E valor da
+    // oportunidade <= teto da família. Sugestão VISUAL — não grava vínculo,
+    // não toca em crm_lotes, não decide nada por ninguém.
+    //
+    // Decisões que valem registrar:
+    //  • Cidade é comparação exata (as 4 vêm de lista fixa, não digitação).
+    //  • Sem teto informado → ENTRA. Valor é campo opcional; excluir puniria
+    //    quem não preencheu, sumindo com a família sem explicação. Marcado
+    //    com title para a pessoa saber que o valor não foi conferido.
+    //  • Oportunidade sem valor → todas da cidade entram (nada a comparar).
+    //  • Região é só contexto por enquanto, não filtra.
+    //  • Só famílias ativas: quem desistiu ou já foi atendida não é sugerida.
+    function familiasCompativeis(oport) {
+      if (!oport || !oport.cidade) return []
+      const ATIVAS = ['procurando', 'em_analise']
+      return _procuras.filter(p => {
+        if (!ATIVAS.includes(p.situacao)) return false
+        if (p.cidade !== oport.cidade) return false
+        if (oport.valor == null || p.valor_maximo == null) return true
+        return Number(oport.valor) <= Number(p.valor_maximo)
+      })
+    }
+
     function renderOportunidades() {
       const wrap = document.getElementById('oport-lista')
       const vazia = document.getElementById('oport-vazia')
@@ -604,6 +628,38 @@
         ].filter(Boolean)
         meta.textContent = partes.join(' · ')
         card.appendChild(meta)
+
+        // Sugestão de famílias compatíveis — visual apenas, NÃO cria vínculo.
+        // Quem decide é a pessoa; a tela só aponta quem vale a pena olhar.
+        const compat = familiasCompativeis(o)
+        const sug = document.createElement('div')
+        sug.className = 'lt-oport-compat' + (compat.length ? '' : ' lt-oport-compat-vazio')
+
+        if (!compat.length) {
+          sug.textContent = 'Nenhuma família da fila combina com esta cidade.'
+        } else {
+          const titulo = document.createElement('span')
+          titulo.className = 'lt-compat-titulo'
+          titulo.textContent = compat.length === 1
+            ? '1 família compatível:'
+            : compat.length + ' famílias compatíveis:'
+          sug.appendChild(titulo)
+
+          const lista = document.createElement('span')
+          lista.className = 'lt-compat-lista'
+          compat.forEach((p, i) => {
+            if (i) lista.appendChild(document.createTextNode(' · '))
+            const a = document.createElement('a')
+            a.className = 'lt-compat-nome'
+            a.href = 'ficha.html?id=' + encodeURIComponent(p.cliente_id)
+            // textContent (não innerHTML): nome vem do banco e pode ter < ou &
+            a.textContent = p.crm_clientes?.nome || '(família removida)'
+            if (p.valor_maximo == null) a.title = 'Não informou valor máximo'
+            lista.appendChild(a)
+          })
+          sug.appendChild(lista)
+        }
+        card.appendChild(sug)
 
         wrap.appendChild(card)
       })

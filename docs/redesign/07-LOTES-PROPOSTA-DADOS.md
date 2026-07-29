@@ -1188,3 +1188,79 @@ rota inexistente dá `404`, em vez de tudo cair no Login.
 - **Erro real de rede/RLS na tela** — o caminho de erro só foi exercitado por
   stub, nunca com uma recusa de verdade do banco.
 - **UPDATE e DELETE pela interface** — não existem botões para isso ainda.
+
+---
+
+## 21. COMPATIBILIDADE IMPLEMENTADA — 2026-07-29
+
+Fecha o achado da seção 20: a tela prometia sugerir famílias compatíveis
+(`lotes.html:93`) e não havia código para isso.
+
+### A regra
+
+Em `familiasCompativeis(oport)` — separada do desenho, para ser testável:
+
+- **mesma cidade** (comparação exata; as 4 vêm de lista fixa, não digitação)
+- **valor da oportunidade ≤ teto da família**
+- **só famílias ativas**: `procurando` e `em_analise`
+
+Sugestão **visual**. Não cria vínculo, não grava nada, não toca em `crm_lotes`.
+Quem decide é a pessoa; a tela só aponta quem vale a pena olhar.
+
+### Decisões que valem registrar
+
+| Situação | Escolha | Por quê |
+|---|---|---|
+| Família **sem teto** informado | **entra** | Valor é opcional no formulário. Excluir sumiria com a família sem explicação nenhuma — falso negativo custa mais que falso positivo numa sugestão. Marcada com `title`. |
+| Oportunidade **sem valor** | todas da cidade entram | Não há o que comparar. |
+| `pausada` / `atendida` / `desistiu` | **fora** | Sugerir quem já desistiu é ruído que faz perder confiança na tela. |
+| Região | só contexto, **não filtra** | Combinado com Duam. O texto do empty state já dizia isso. |
+
+Nomes vão por `textContent`, nunca `innerHTML` — nome de família com `<` ou `&`
+viraria HTML injetado.
+
+### Testes — `docs/redesign/testes-lotes-compat.js`
+
+```
+node docs/redesign/testes-lotes-compat.js
+→ 16 passaram, 0 falharam
+```
+
+Cobre cidade (4), valor (6, incluindo limite inclusivo e comparação numérica),
+situação (4), ausência de efeito colateral (1) e o cenário real de 29/07 (1).
+
+**Provado por sabotagem** — verde só vale se o teste pegar a regressão:
+
+```
+trocar Number(a) <= Number(b) por a <= b      → 15/1  (só o caso de string)
+incluir desistiu/atendida/pausada em ATIVAS   → 12/4
+código restaurado                             → 16/0
+```
+
+A primeira sabotagem é a mais traiçoeira: com string, `'9000' > '10000'` na
+ordem alfabética, e a família some sem erro nenhum.
+
+### Evidência visual — dados controlados em memória, nada gravado
+
+| Oportunidade | Sugestão |
+|---|---|
+| Jupi · R$ 40.000 | **2 famílias:** Raylane (teto 45k) · Maria José (sem teto) |
+| Jupi · R$ 75.000 | **1 família:** Maria José — Raylane sai, 75k > teto de 45k |
+| Lajedo · R$ 35.000 | *Nenhuma família da fila combina com esta cidade.* |
+
+Jonas (teto 30k) não aparece em nenhum: 40k já passa do teto dele. "Quem
+desistiu" (Jupi, teto 90k) e "Outra cidade" (Garanhuns) também não — filtrados
+por situação e por cidade.
+
+### Estado
+
+`GRAVACAO_IMPLEMENTADA` segue `false`, Salvar sem listener. Suítes: compat 16/0,
+gravação 46/0.
+
+### O que continua NÃO testado
+
+- **Gravação com perfil não-admin** (Elyda) — único aceite funcional pendente
+  antes de liberar cadastro.
+- **Celular** — o CSS tem regra de toque em `≤640px`, mas não foi visto.
+- A sugestão com **fila grande** (dezenas de famílias numa cidade): o card
+  listaria todos os nomes em sequência, sem corte. Pode ficar longo.
