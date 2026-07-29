@@ -34,7 +34,9 @@ Uma linha por família que está procurando. **Não duplica** o que já existe e
 |---|---|---|---|
 | `id` | uuid | sim | chave |
 | `cliente_id` | uuid → `crm_clientes` | sim | de quem é a procura |
-| `regiao` | text | sim | onde a família quer morar |
+| `cidade` | text | sim | **lista controlada** — ver decisão 1 |
+| `regiao` | text | sim | bairro/zona dentro da cidade — lista controlada |
+| `regiao_outra` | text | não | preenchido quando cidade/região = "Outra" |
 | `valor_maximo` | numeric | não | teto que ela suporta |
 | `metragem_desejada` | numeric | não | tamanho pretendido |
 | `preferencias` | text | não | esquina, aclive, perto de escola… (texto livre) |
@@ -137,15 +139,35 @@ com a contagem real de `crm_procura_lote` onde `situacao='procurando'`.
 
 ---
 
-## 7. O que NÃO está decidido (perguntas para Duam)
+## 7. DECISÕES DE DUAM (2026-07-29) — conceito aprovado
 
-1. **`regiao` é texto livre ou lista fixa?** Lista evita "Centro"/"centro"/"Centro-PE" como
-   coisas diferentes, mas exige definir as regiões antes.
-2. **Uma família pode ter mais de uma procura ativa?** (ex.: aceita dois bairros com tetos
-   diferentes). O desenho atual permite; se não fizer sentido, vira restrição de 1 por família.
-3. **Quem entra na fila?** Toda família cadastrada, ou só quem manifesta interesse?
-4. **Os 7 vínculos atuais** viram procura, ficam como estão, ou é caso a caso?
-   *(bloqueia a migração, não este desenho)*
+### 1. Cidade e região: lista controlada
+**Lista de cidades/bairros aceitos**, com opção **"Outra região"** + observação livre.
+Evita bagunça sem limitar a operação.
+
+> ⚠️ **Ajuste exigido por Duam antes do banco:** o campo passa a ser **"Cidade / região"**,
+> exibido como **`Petrolina — Centro`**, **`Juazeiro — Zona Norte`**.
+> **"Centro" sozinho pode significar cidades diferentes** — separar evita dado confuso
+> desde o primeiro cadastro. Por isso a tabela tem `cidade` E `regiao`, não um campo só.
+
+### 2. Uma procura ativa por família
+Se a família aceita dois bairros ou duas faixas de valor, isso vira **preferência dentro
+da mesma procura** — não duas procuras. Mudou de ideia: atualiza a procura e **mantém o
+histórico**.
+> Implicação técnica: restrição de unicidade em `cliente_id` para situações ativas
+> (`procurando`, `em_analise`, `pausada`).
+
+### 3. Só entra quem manifestou interesse real
+**Não colocar todo cliente automaticamente na fila.** A entrada é um ato deliberado —
+a família disse que está procurando lote.
+
+### 4. Os 7 vínculos atuais ficam como estão
+**Não viram procura automaticamente.** Cada caso será validado por Duam depois.
+Nada de migração automática.
+
+## 7b. Ainda em aberto (não bloqueiam o SQL)
+- Quais cidades e regiões entram na lista inicial? (Petrolina e Juazeiro já citadas)
+- Critério de ordenação da fila além da entrada.
 
 ---
 
