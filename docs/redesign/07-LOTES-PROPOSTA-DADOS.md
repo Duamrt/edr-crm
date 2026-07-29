@@ -1564,3 +1564,113 @@ o retorno não é usado, mas o comentário induziria alguém a desestruturar dir
 
 - **Perfil não-admin** — não existe conta assim hoje.
 - **Celular físico** — medido em emulação 375×812 (seção 24), não em aparelho.
+
+---
+
+## 26. CORREÇÕES PÓS-DEPLOY — 2026-07-29
+
+Dois achados do Codex depois do release. Nenhum toca a lógica.
+
+### 1. Comentários que mentiam sobre o estado
+
+Três lugares ainda diziam que o cadastro não grava, e um deles é a primeira coisa
+que alguém lê ao abrir o arquivo:
+
+| Onde | Dizia | Agora |
+|---|---|---|
+| Cabeçalho do modal | *"NÃO grava: o Salvar fica desabilitado até as tabelas existirem"* | *"Cadastro no ar desde 2026-07-29"* |
+| Bloco da trava | *"continuam DESLIGADAS: sem listener… sem autorização"* | descreve a chave como jeito de **desligar** em manutenção |
+| `MSG_SEM_GRAVACAO` | *"ainda não foi liberado — em implementação"* | *"Cadastro temporariamente indisponível"* |
+| Aviso do topo | *"Cadastro em implementação"* | *"Cadastro indisponível no momento"* |
+
+As duas últimas não são comentários: são **mensagens vivas**, que aparecem se
+`GRAVACAO_IMPLEMENTADA` voltar a `false`. Foram reescritas, não removidas — o
+mecanismo de desligar continua útil (manutenção, incidente no banco), só que
+"em implementação" virou mentira depois do release.
+
+O bloco da trava também ganhou o aviso que faltava: **não mexer no `disabled`
+fora de `desabilitarCadastro()`** — foi exatamente assim que a trava foi
+contornada uma vez (seção 19).
+
+### 2. Relatório de deploy impreciso
+
+Eu disse *"só dois arquivos mudam em produção"*. **Errado como escrito.** Filtrei
+o diff por `*.html`/`*.css` excluindo `docs/`, vi 2 arquivos e reportei isso como
+o total. O merge levou **17**.
+
+Correto: **apenas Lotes teve mudança funcional** (`lotes.html` + `css/lotes.css`).
+Os outros 15 receberam cache-buster nos `?cb=`, a versão do Service Worker
+(`sw.js`) e `CRM_VERSION` em `js/utils.js` — tudo escrito pelo próprio
+`deploy.sh`, comportamento esperado.
+
+A diferença importa: "dois arquivos mudaram" sugere que o resto ficou intocado no
+Git, o que não é verdade.
+
+### Evidência
+
+```
+gravação → 48 passaram, 0 falharam
+compat   → 29 passaram, 0 falharam
+```
+
+Diff só de comentário e string; nenhuma linha de lógica alterada.
+
+### Continua NÃO testado
+
+- **Perfil não-admin** — não existe conta assim.
+- **Celular físico** — emulação apenas.
+- O conteúdo servido em produção **após este commit** (é documental, mas só está
+  no ar depois do próximo deploy).
+
+---
+
+## 27. MARCA OFICIAL NA SIDEBAR — 2026-07-29
+
+Ajuste de identidade nas **sete telas** do CRM: Dashboard, Clientes, Ficha,
+Kanban, Agenda, Lotes e **familia.html**. Não é específico de Lotes, mas fica
+registrado aqui porque é onde mora o histórico do redesenho.
+
+### O problema
+
+A sidebar usava a letra **"E"** desenhada em CSS. Genérico — poderia ser qualquer
+empresa com E no nome, enquanto o Login já exibia a marca real.
+
+### A solução: asset derivado, não redesenhado
+
+`img/edr-logo.svg` tem **15 paths**: 2 são o monograma (y 73–525) e 13 são as
+letras de "EDR ENGENHARIA" (y 598–637), uma por path. A separação é limpa, então
+deu para extrair o símbolo **sem redesenhar nada**:
+
+- `img/edr-simbolo.svg` mantém os **paths 0 e 1 byte a byte**, com o mesmo
+  `transform` do original
+- `viewBox` recortado na caixa do monograma (`2247 940 7911 8412`), com 4% de
+  respiro
+- 5 KB, contra 17 KB do arquivo completo
+
+⚠️ **Não redesenhar este arquivo.** Se a marca mudar, regerar a partir do
+`edr-logo.svg` oficial. Está escrito no cabeçalho do próprio SVG.
+
+### Decisões visuais
+
+| Decisão | Por quê |
+|---|---|
+| Placa **off-white** (`--paper`), não `--lime-soft` | O símbolo tem traço preto + verde escuro da marca. Sobre verde-limão, o verde da marca brigava. |
+| Símbolo a **68%** da placa | Em 76% ficava apertado e virava borrão nos tamanhos menores. Testado em 34/38/44px antes de escolher. |
+| `<img>` dentro de `.brand-logo` | A regra da sidebar compacta esconde `div:not(.brand-logo)` — como o símbolo é `<img>` dentro do span, sobrevive sem regra nova. |
+
+### Evidência
+
+Desktop (1280px): placa 34×34, símbolo 23×23, fundo `rgb(247,246,239)`, SVG
+carregado (`naturalWidth > 0`), texto "EDR CRM / GESTÃO MCMV" ao lado.
+
+Sidebar compacta (760px): sidebar 96px, **símbolo visível e texto escondido** —
+sem corte —, placa contida na sidebar, sem rolagem horizontal.
+
+As seis telas: HTTP 200, `edr-simbolo.svg` presente, **zero** ocorrências do "E"
+genérico. CSS balanceado nos seis arquivos.
+
+### Não testado
+
+- Celular físico.
+- Como o símbolo se comporta em tela de altíssima densidade (é SVG, deve escalar,
+  mas não foi visto).

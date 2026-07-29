@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Lotes</title>
-  <link rel="stylesheet" href="css/lotes.css?cb=1785330207">
+  <link rel="stylesheet" href="css/lotes.css?cb=1785337451">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="prefetch" href="clientes.html">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
 <body>
   <div class="app-shell">
     <nav class="sidebar">
-      <div class="sidebar-logo"><span class="brand-logo">E</span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
+      <div class="sidebar-logo"><span class="brand-logo"><img src="img/edr-simbolo.svg?cb=1785337451" alt="EDR" width="22" height="22"></span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
         <a href="dashboard.html">Dashboard</a>
         <a href="clientes.html">Clientes</a>
@@ -100,8 +100,8 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        MODAL 1 — REGISTRAR PROCURA
-       Interface local (2026-07-29). NÃO grava: o botão Salvar fica
-       desabilitado até as tabelas existirem no banco. Ver docs/redesign/07.
+       Cadastro no ar desde 2026-07-29 — grava em crm_procura_lote.
+       Ver docs/redesign/07, seção 25.
        ═══════════════════════════════════════════════════════════════ -->
   <div id="modal-procura" class="lt-modal-overlay hidden" onclick="if(event.target===this)fecharModal('modal-procura')">
     <div class="lt-modal" role="dialog" aria-modal="true" aria-labelledby="mp-titulo">
@@ -230,9 +230,9 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1785330207"></script>
-  <script src="js/auth.js?cb=1785330207"></script>
-  <script src="js/utils.js?cb=1785330207"></script>
+  <script src="js/supabase.js?cb=1785337451"></script>
+  <script src="js/auth.js?cb=1785337451"></script>
+  <script src="js/utils.js?cb=1785337451"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
     document.documentElement.style.visibility = ''
@@ -335,24 +335,25 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // TRAVA DE GRAVAÇÃO — não remover sem implementar sbPost antes
+    // CHAVE DE GRAVAÇÃO
     // ═══════════════════════════════════════════════════════════════
-    // ESTADO REAL (2026-07-29): as funções de gravação EXISTEM e chamam
-    //    `sbPost` — `salvarProcura()` e `salvarOportunidade()`, mais abaixo.
-    //    Mas continuam DESLIGADAS: sem listener ligando os botões às funções,
-    //    e sem autorização de Duam para escrita real em produção.
+    // LIBERADO em 2026-07-29 (seção 25 do doc): `salvarProcura()` e
+    //    `salvarOportunidade()` gravam de verdade, e os dois Salvar têm
+    //    listener. A escrita foi provada em produção antes de ligar.
     //
-    //    São duas barreiras independentes, de propósito. Mesmo que alguém
-    //    ligue um listener por engano, esta constante mantém os Salvar
-    //    desabilitados INDEPENDENTE de as tabelas responderem.
+    //    A chave continua aqui porque é o jeito de DESLIGAR o cadastro sem
+    //    tirar a tela do ar — manutenção, incidente no banco, o que for.
+    //    Virar para `false` basta: os dois Salvar voltam a ficar
+    //    desabilitados com aviso, e a tela segue servindo para consulta.
     //
-    //    Ligar a gravação exige os três passos JUNTOS: testar com sessão
-    //    real autorizada → adicionar os listeners → virar esta constante.
-    //    Nenhum vale sozinho.
+    //    ⚠️ Não mexa no `disabled` dos botões em outro lugar. Quem decide é
+    //    desabilitarCadastro(), a partir de _estruturaPronta + esta chave.
+    //    Habilitar "na mão" já contornou esta trava uma vez (seção 19).
     const GRAVACAO_IMPLEMENTADA = true
 
     const MSG_SEM_ESTRUTURA = 'Disponível após ativação da estrutura'
-    const MSG_SEM_GRAVACAO  = 'Cadastro ainda não foi liberado — em implementação'
+    // Só aparece se a chave acima for desligada — hoje o cadastro está no ar.
+    const MSG_SEM_GRAVACAO  = 'Cadastro temporariamente indisponível'
 
     // ⚠️ A trava é SÓ na GRAVAÇÃO, não na abertura (correção de UX, Duam
     //    2026-07-29). Abrir e preencher não escreve nada; travar o topo só
@@ -373,7 +374,7 @@
       const avisoTopo = document.getElementById('aviso-cadastro')
       avisoTopo.textContent = semEstrutura
         ? 'Cadastro em ativação — dá para conferir os campos, ainda não salvar'
-        : 'Cadastro em implementação — dá para conferir os campos, ainda não salvar'
+        : 'Cadastro indisponível no momento — dá para conferir os campos, ainda não salvar'
       avisoTopo.classList.toggle('hidden', !bloqueado)
 
       ;[['mp-salvar','mp-aviso'], ['mo-salvar','mo-aviso']].forEach(([bId, aId]) => {
@@ -883,6 +884,6 @@
     carregarClientes()
     carregar()
   </script>
-  <script src="js/sw-register.js?cb=1785330207"></script>
+  <script src="js/sw-register.js?cb=1785337451"></script>
 </body>
 </html>
