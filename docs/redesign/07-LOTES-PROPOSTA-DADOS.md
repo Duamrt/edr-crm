@@ -369,7 +369,7 @@ migrations de CRM. Elas são autossuficientes (só dependem de `auth.users`, `au
 | Estrutura | **OK** | 3 tabelas · dono `postgres` · RLS ativa · 4 policies e 1 trigger por tabela |
 | **GRANT** | **PROVADO** | `has_table_privilege` = true para `anon` **e** `authenticated` (SELECT/INSERT/UPDATE/DELETE), **sem GRANT escrito** — o default ACL aplicou |
 | **T1 anônimo** | **PASSOU** | dono lê **1** · `anon` lê **0**, mesmo dado |
-| **T2 logado** | **PASSOU só no SELECT de `crm_procura_lote`** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0**. ⚠️ **1 de 12 policies** — ver achados 7 e 8 |
+| **T2 logado** | **PASSOU só no SELECT de `crm_procura_lote`** | com perfil: função=**true**, leu **1** · sem perfil: função=**false**, leu **0**. ⚠️ **1 de 12 policies** — ver achados 7, 8 e 9 |
 | **T3 2ª procura ativa** | **PASSOU** | bloqueada; encerrada convive |
 | **T4 2ª aceitação** | **PASSOU** | bloqueada |
 | **Triggers `updated_at`** | **PASSOU 3/3** | `EXTRA 1/3`, `2/3`, `3/3` — agora de verdade nas 3 tabelas |
@@ -420,12 +420,34 @@ A primeira ampliação media **leitura** em `crm_procura_lote` e **escrita** em
 diferentes em tabelas diferentes dá **aparência** de cobertura sem cobertura: eram 4
 policies de 12, não as 12.
 
-**Correção:** o T2 virou uma **matriz** — um loop percorre as 3 tabelas aplicando as
-mesmas 4 operações, com as 2 identidades, e confere no fim que o dado do setup
-sobreviveu. São 29 vereditos. O loop é proposital: foi escrevendo blocos à mão que a
-divergência apareceu; percorrer as três com o mesmo código torna o descuido impossível.
+**Correção:** o T2 virou uma **matriz** — um loop percorria as 3 tabelas aplicando as
+mesmas 4 operações, com as 2 identidades. São 29 vereditos.
 
-Dois cuidados que o teste precisou ter:
+### 🐛 Nono achado: a matriz em loop tinha dois falso-verdes (Codex, 2026-07-29)
+
+**Defeito 1 — o insert de ligação nunca chegava à policy.** Ele reusava a procura e a
+oportunidade do setup, que **já estavam ligadas**. O par violaria a restrição de
+duplicidade e falharia ali, antes de o RLS ser consultado — a policy apareceria como
+reprovada sem nunca ter sido avaliada.
+
+**Defeito 2 — 🚨 o grave.** A contraprova inseria com `cliente_id` e FKs **inventados**, e
+classificava o resultado com `when others then PASSOU`. O erro real seria de chave
+estrangeira (23503), mas o teste anotava *"policy bloqueou"*. **Um RLS completamente
+aberto passaria nesse teste** — que é o oposto do que a contraprova existe para detectar.
+
+**Correções:**
+
+1. **Loop abandonado.** As três tabelas têm dependências diferentes demais para o mesmo
+   código genérico: a ligação exige duas FKs válidas e um par ainda não usado, a procura
+   exige um cliente, a oportunidade não exige nada. Três blocos explícitos e curtos são
+   mais seguros que uma matriz elegante porém ambígua — e o SQL genérico escondia os dois
+   defeitos atrás de strings.
+2. **Todos os inserts usam IDs válidos** preparados no setup, incluindo uma oportunidade
+   **livre** (sem ligação) só para o insert de teste da ligação.
+3. **A contraprova só aceita `SQLSTATE 42501`** (`insufficient_privilege`) como bloqueio.
+   Qualquer outro erro é **REPROVA por teste mal-montado**, com o código na mensagem.
+
+Outros cuidados mantidos:
 - **`crm_procura_oportunidade` não existe sozinha** — são 2 FKs obrigatórias. O setup
   monta a cadeia inteira: cliente → procura → oportunidade → ligação.
 - **O insert de teste da procura usa `situacao='atendida'`** de propósito. O índice único
@@ -442,6 +464,23 @@ Dois cuidados que o teste precisou ter:
 
 **1 de 12 provada.** O que a execução em `lotes-v2` confirmou é que as 12 policies
 **existem** e estão ativas — não que cada uma se comporta como deve.
+
+### Como cada policy será provada
+
+| Operação | Com perfil (deve funcionar) | Sem perfil (deve barrar) |
+|---|---|---|
+| `SELECT` | conta as linhas do setup e confere o número exato | mesma contagem tem de dar **0** |
+| `INSERT` | insere linha nova com IDs válidos e confere que voltou `id` | tem de falhar com **42501**; outro erro = teste mal-montado |
+| `UPDATE` | altera a linha recém-criada e confere `row_count = 1` | `row_count = 0` (a linha é invisível para ele) |
+| `DELETE` | remove a mesma linha e confere `row_count = 1` | `row_count = 0` |
+
+Duas assimetrias que o teste respeita, porque vêm de como o Postgres aplica RLS:
+- **`INSERT` falha com erro**, porque a policy usa `WITH CHECK` — é uma barreira.
+- **`UPDATE`/`DELETE` afetam zero linhas sem erro**, porque a policy usa `USING` — funciona
+  como filtro: a linha simplesmente não existe para quem não passa.
+
+Por isso o bloco final confere que o dado do setup **sobreviveu**: sem ele, "removeu 0"
+poderia significar apenas "não havia nada para remover".
 
 ### O que continua NÃO testado
 - **CRUD autenticado nas 3 tabelas** — 11 das 12 policies. **Pendente de nova branch**

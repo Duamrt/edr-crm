@@ -377,9 +377,18 @@ create trigger trg_crm_procura_oportunidade_updated_at
 --                       crm_oportunidade_lote     |  ❌ |  ❌ |  ❌ |  ❌
 --                       crm_procura_oportunidade  |  ❌ |  ❌ |  ❌ |  ❌
 --
---                     O T2 no 09 virou matriz e cobre as 12, mas AGUARDA
---                     nova branch. ⇒ CRUD autenticado é PENDÊNCIA.
+--                     O T2 no 09 cobre as 12 (3 blocos explícitos, um por
+--                     tabela), mas AGUARDA nova branch.
+--                     ⇒ CRUD autenticado é PENDÊNCIA.
 --                     ⇒ NÃO declarar "12 policies provadas" antes disso.
+--
+--                     ⚠️ Duas armadilhas já corrigidas no 09, que valem como
+--                     aviso para qualquer teste futuro destas policies:
+--                       · usar IDs INVENTADOS faz o insert falhar por FK
+--                         (23503) antes de o RLS ser consultado;
+--                       · classificar com `when others then PASSOU` aceita
+--                         esse erro como se fosse bloqueio — um RLS ABERTO
+--                         passaria. Exigir SQLSTATE 42501, sempre.
 --   T3 procura ...... PASSOU — 2ª ativa bloqueada; encerrada convive
 --   T4 aceitação .... PASSOU — 2ª aceitação da mesma oportunidade bloqueada
 --   Triggers ........ PASSOU nas 3 tabelas (EXTRA 1/3, 2/3, 3/3), por

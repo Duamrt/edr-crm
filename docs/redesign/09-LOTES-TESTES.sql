@@ -197,9 +197,10 @@ begin;
     -- fixos de propósito — ver nota 6 acima
     v_uid uuid := '11111111-1111-4111-8111-111111111111';  -- COM perfil
     v_sem uuid := '22222222-2222-4222-8222-222222222222';  -- SEM perfil
-    v_cli   uuid;
-    v_proc  uuid;   -- procura criada no setup
-    v_oport uuid;   -- oportunidade criada no setup
+    v_cli         uuid;
+    v_proc        uuid;   -- procura criada no setup
+    v_oport       uuid;   -- oportunidade do setup (já tem ligação)
+    v_oport_livre uuid;   -- oportunidade SEM ligação (alvo do insert de teste)
   begin
     -- ✅ VERIFICADO no catálogo: em auth.users, a ÚNICA coluna NOT NULL sem
     --    default é `id`. is_sso_user e is_anonymous têm default false.
@@ -242,10 +243,28 @@ begin;
     insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
     values (v_proc, v_oport, 'sugerida');
 
-    -- guarda os ids para o UPDATE/DELETE do bloco 2a (o insert de teste do
-    -- 2a cria linhas próprias; estas aqui são as do setup, alvo do 2b)
-    create temp table t2_ids(proc uuid, oport uuid) on commit drop;
-    insert into t2_ids values (v_proc, v_oport);
+    -- ===============================================================
+    -- IDs EXTRAS — para os inserts de teste NÃO baterem em outra regra
+    -- ===============================================================
+    -- 🐛 CORREÇÃO (achado do Codex, 2026-07-29): a versão anterior tentava
+    --    inserir uma ligação reusando v_proc + v_oport, que JÁ estão ligados
+    --    acima. Isso viola `crm_po_sem_duplicata unique (procura_id,
+    --    oportunidade_id)` e falharia ANTES de a policy ser avaliada —
+    --    marcaria "REPROVOU" na policy de INSERT quando o culpado seria a
+    --    restrição de duplicidade. Por isso: uma oportunidade EXTRA, livre,
+    --    para a ligação de teste usar.
+    insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
+    values ('T2 setup - oportunidade LIVRE', 'Petrolina', 'Centro')
+    returning id into v_oport_livre;
+
+    -- guarda os ids para os blocos 2a e 2b.
+    -- ⚠️ `cliente` é essencial para a CONTRAPROVA: sem perfil, o insert de
+    --    procura precisa usar um cliente_id VÁLIDO. Com uuid inventado, o
+    --    erro seria de FK — e o teste marcaria "bloqueado" sem o RLS ter
+    --    sido a causa (o 2º falso-verde apontado pelo Codex).
+    create temp table t2_ids(cliente uuid, proc uuid, oport uuid, oport_livre uuid)
+      on commit drop;
+    insert into t2_ids values (v_cli, v_proc, v_oport, v_oport_livre);
 
     -- temp table: junta todas as medições num resultado só. Mesmo motivo do
     -- T1 — com selects separados, o conector devolve apenas o último e a
@@ -261,23 +280,31 @@ begin;
   grant select on t2_ids to authenticated;
 
   -- ===================================================================
-  -- MATRIZ: 3 TABELAS × 4 OPERAÇÕES × 2 IDENTIDADES = as 12 policies
+  -- AS 12 POLICIES — 3 tabelas × 4 operações, com 2 identidades
   -- ===================================================================
-  -- ⚠️ AMPLIAÇÃO 2 (achado do Codex, 2026-07-29): a versão anterior media
-  --    leitura em crm_procura_lote e escrita em crm_oportunidade_lote, e
-  --    NUNCA tocava crm_procura_oportunidade. Cobria 4 policies de 12.
+  -- 🐛 CORREÇÃO 3 (achados do Codex, 2026-07-29): a versão anterior usava um
+  --    LOOP com EXECUTE/format() sobre uma lista de tabelas. Parecia elegante
+  --    e escondia DOIS FALSO-VERDES:
   --
-  --    O 08 cria 4 POLICIES SEPARADAS **por tabela** — SELECT, INSERT,
-  --    UPDATE e DELETE. São 12 regras independentes: qualquer uma pode
-  --    estar errada sozinha, e a tela vai gravar nas TRÊS tabelas.
-  --    Agora cada tabela é exercitada nas 4 operações, com as 2 identidades.
+  --    (a) o insert de ligação reusava a procura + oportunidade do setup, que
+  --        JÁ estavam ligadas. Falharia pela UNIQUE (procura_id,
+  --        oportunidade_id) — nunca chegaria a exercitar a policy.
   --
-  --    O bloco é escrito com EXECUTE + format() sobre uma lista de tabelas:
-  --    percorrer as 3 com o mesmo código evita a divergência que gerou este
-  --    achado (testar coisas diferentes em tabelas diferentes).
+  --    (b) a contraprova usava `when others then PASSOU`, aceitando QUALQUER
+  --        erro como bloqueio de RLS. Como ela inseria com cliente_id e FKs
+  --        inventados, o erro seria de CHAVE ESTRANGEIRA (23503) e o teste
+  --        marcaria "policy bloqueou" sem o RLS ter sido consultado.
+  --        Este era o defeito grave: um RLS ABERTO passaria no teste.
   --
-  -- ⚠️ Cada tabela tem sua PRÓPRIA forma de inserir (colunas e FKs distintas).
-  --    Por isso a lista carrega, junto do nome, o SQL de insert de teste.
+  --    ⇒ LOOP ABANDONADO. As 3 tabelas têm dependências diferentes demais
+  --      (a ligação exige 2 FKs válidas; a procura exige cliente; a
+  --      oportunidade não exige nada) para o mesmo código genérico. Três
+  --      blocos explícitos e curtos são mais seguros que uma matriz ambígua.
+  --
+  --    ⇒ REGRA NOVA em toda contraprova: só conta como bloqueio o SQLSTATE
+  --      **42501** (insufficient_privilege), que é o erro de RLS. Qualquer
+  --      outro (FK 23503, check 23514, unique 23505) é REPROVA por teste
+  --      mal-montado — não é aprovação disfarçada.
 
   -- ---------- 2a — COM perfil: as 4 operações devem FUNCIONAR ----------
   set local role authenticated;
@@ -288,84 +315,140 @@ begin;
 
   do $$
   declare
-    v_tab   text;
-    v_ins   text;
     v_n     int;
     v_novo  uuid;
+    v_cli   uuid;
     v_proc  uuid;
-    v_oport uuid;
-    -- lista: tabela | SQL de insert (devolvendo id) — uma entrada por tabela
-    v_lista text[][] := array[
-      ['crm_procura_lote',
-       'insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao) '
-       'select cliente_id, ''Juazeiro'', ''Zona Norte'', ''atendida'' '
-       'from public.crm_procura_lote limit 1 returning id'],
-      ['crm_oportunidade_lote',
-       'insert into public.crm_oportunidade_lote (descricao, cidade, regiao) '
-       'values (''T2 escrita autenticada'', ''Petrolina'', ''Centro'') returning id'],
-      ['crm_procura_oportunidade',
-       'insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao) '
-       'select p.id, o.id, ''apresentada'' from t2_ids t '
-       'join public.crm_procura_lote p on p.id = t.proc '
-       'join public.crm_oportunidade_lote o on o.id = t.oport returning id']
-    ];
+    v_olivre uuid;
   begin
-    for i in 1 .. array_length(v_lista, 1) loop
-      v_tab := v_lista[i][1];
-      v_ins := v_lista[i][2];
+    select cliente, proc, oport_livre into v_cli, v_proc, v_olivre from t2_ids;
 
-      -- SELECT: deve enxergar a linha do setup (1 linha em cada tabela)
+    -- =============== TABELA 1/3: crm_procura_lote ===============
+    begin
+      select count(*) into v_n from public.crm_procura_lote;
+      insert into t2_res values ('t2a_procura_1_select',
+        case when v_n = 1 then 'PASSOU leu 1' else 'REPROVOU leu '||v_n end);
+    exception when others then
+      insert into t2_res values ('t2a_procura_1_select', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
+
+    -- ⚠️ situacao='atendida' de propósito: o índice único parcial do T3 só
+    --    cobre situações ATIVAS. Com 'procurando' o insert bateria na regra
+    --    de negócio e pareceria falha de policy.
+    v_novo := null;
+    begin
+      insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
+      values (v_cli, 'Juazeiro', 'Zona Norte', 'atendida') returning id into v_novo;
+      insert into t2_res values ('t2a_procura_2_insert', 'PASSOU inseriu');
+    exception when others then
+      insert into t2_res values ('t2a_procura_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
+
+    if v_novo is not null then
       begin
-        execute format('select count(*) from public.%I', v_tab) into v_n;
-        insert into t2_res values (format('t2a_1_select_%s', v_tab),
-          case when v_n >= 1 then 'PASSOU leu '||v_n else 'REPROVOU leu 0' end);
+        update public.crm_procura_lote set observacao = 'T2 update' where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_procura_3_update',
+          case when v_n = 1 then 'PASSOU alterou 1' else 'REPROVOU alterou '||v_n end);
       exception when others then
-        insert into t2_res values (format('t2a_1_select_%s', v_tab),
-          'REPROVOU '||sqlstate||' '||sqlerrm);
+        insert into t2_res values ('t2a_procura_3_update', 'REPROVOU '||sqlstate||' '||sqlerrm);
       end;
-
-      -- INSERT: cria uma linha NOVA como authenticated
-      -- ⚠️ a 2ª procura do 1º caso usa situacao='atendida' de propósito: o
-      --    índice único parcial só cobre situações ATIVAS, então isto testa
-      --    a policy de INSERT sem esbarrar na regra de negócio do T3.
-      v_novo := null;
       begin
-        execute v_ins into v_novo;
-        insert into t2_res values (format('t2a_2_insert_%s', v_tab),
-          case when v_novo is not null then 'PASSOU inseriu' else 'REPROVOU sem id' end);
+        delete from public.crm_procura_lote where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_procura_4_delete',
+          case when v_n = 1 then 'PASSOU removeu 1' else 'REPROVOU removeu '||v_n end);
       exception when others then
-        insert into t2_res values (format('t2a_2_insert_%s', v_tab),
-          'REPROVOU '||sqlstate||' '||sqlerrm);
+        insert into t2_res values ('t2a_procura_4_delete', 'REPROVOU '||sqlstate||' '||sqlerrm);
       end;
+    else
+      insert into t2_res values ('t2a_procura_3_update', 'REPROVOU insert falhou antes');
+      insert into t2_res values ('t2a_procura_4_delete', 'REPROVOU insert falhou antes');
+    end if;
 
-      -- UPDATE: altera a linha recém-criada e confere que gravou
-      if v_novo is not null then
-        begin
-          execute format('update public.%I set observacao = ''T2 update'' where id = $1', v_tab)
-            using v_novo;
-          get diagnostics v_n = row_count;
-          insert into t2_res values (format('t2a_3_update_%s', v_tab),
-            case when v_n = 1 then 'PASSOU alterou 1' else 'REPROVOU alterou '||v_n end);
-        exception when others then
-          insert into t2_res values (format('t2a_3_update_%s', v_tab),
-            'REPROVOU '||sqlstate||' '||sqlerrm);
-        end;
+    -- =============== TABELA 2/3: crm_oportunidade_lote ===============
+    -- ⚠️ 2 linhas no setup: a do vínculo + a LIVRE. Por isso espera 2.
+    begin
+      select count(*) into v_n from public.crm_oportunidade_lote;
+      insert into t2_res values ('t2a_oport_1_select',
+        case when v_n = 2 then 'PASSOU leu 2' else 'REPROVOU leu '||v_n end);
+    exception when others then
+      insert into t2_res values ('t2a_oport_1_select', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
 
-        -- DELETE: remove a mesma linha
-        begin
-          execute format('delete from public.%I where id = $1', v_tab) using v_novo;
-          get diagnostics v_n = row_count;
-          insert into t2_res values (format('t2a_4_delete_%s', v_tab),
-            case when v_n = 1 then 'PASSOU removeu 1' else 'REPROVOU removeu '||v_n end);
-        exception when others then
-          insert into t2_res values (format('t2a_4_delete_%s', v_tab),
-            'REPROVOU '||sqlstate||' '||sqlerrm);
-        end;
-      else
-        insert into t2_res values (format('t2a_3_update_%s', v_tab), 'REPROVOU insert falhou antes');
-        insert into t2_res values (format('t2a_4_delete_%s', v_tab), 'REPROVOU insert falhou antes');
-      end if;
-    end loop;
+    v_novo := null;
+    begin
+      insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
+      values ('T2 escrita autenticada', 'Petrolina', 'Centro') returning id into v_novo;
+      insert into t2_res values ('t2a_oport_2_insert', 'PASSOU inseriu');
+    exception when others then
+      insert into t2_res values ('t2a_oport_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
+
+    if v_novo is not null then
+      begin
+        update public.crm_oportunidade_lote set observacao = 'T2 update' where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_oport_3_update',
+          case when v_n = 1 then 'PASSOU alterou 1' else 'REPROVOU alterou '||v_n end);
+      exception when others then
+        insert into t2_res values ('t2a_oport_3_update', 'REPROVOU '||sqlstate||' '||sqlerrm);
+      end;
+      begin
+        delete from public.crm_oportunidade_lote where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_oport_4_delete',
+          case when v_n = 1 then 'PASSOU removeu 1' else 'REPROVOU removeu '||v_n end);
+      exception when others then
+        insert into t2_res values ('t2a_oport_4_delete', 'REPROVOU '||sqlstate||' '||sqlerrm);
+      end;
+    else
+      insert into t2_res values ('t2a_oport_3_update', 'REPROVOU insert falhou antes');
+      insert into t2_res values ('t2a_oport_4_delete', 'REPROVOU insert falhou antes');
+    end if;
+
+    -- =============== TABELA 3/3: crm_procura_oportunidade ===============
+    begin
+      select count(*) into v_n from public.crm_procura_oportunidade;
+      insert into t2_res values ('t2a_ligacao_1_select',
+        case when v_n = 1 then 'PASSOU leu 1' else 'REPROVOU leu '||v_n end);
+    exception when others then
+      insert into t2_res values ('t2a_ligacao_1_select', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
+
+    -- 🐛 CORREÇÃO: usa a oportunidade LIVRE (v_olivre), não a do setup.
+    --    Com a do setup, o par (procura, oportunidade) já existiria e o
+    --    insert falharia pela UNIQUE — antes de a policy ser avaliada.
+    v_novo := null;
+    begin
+      insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
+      values (v_proc, v_olivre, 'apresentada') returning id into v_novo;
+      insert into t2_res values ('t2a_ligacao_2_insert', 'PASSOU inseriu');
+    exception when others then
+      insert into t2_res values ('t2a_ligacao_2_insert', 'REPROVOU '||sqlstate||' '||sqlerrm);
+    end;
+
+    if v_novo is not null then
+      begin
+        update public.crm_procura_oportunidade set observacao = 'T2 update' where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_ligacao_3_update',
+          case when v_n = 1 then 'PASSOU alterou 1' else 'REPROVOU alterou '||v_n end);
+      exception when others then
+        insert into t2_res values ('t2a_ligacao_3_update', 'REPROVOU '||sqlstate||' '||sqlerrm);
+      end;
+      begin
+        delete from public.crm_procura_oportunidade where id = v_novo;
+        get diagnostics v_n = row_count;
+        insert into t2_res values ('t2a_ligacao_4_delete',
+          case when v_n = 1 then 'PASSOU removeu 1' else 'REPROVOU removeu '||v_n end);
+      exception when others then
+        insert into t2_res values ('t2a_ligacao_4_delete', 'REPROVOU '||sqlstate||' '||sqlerrm);
+      end;
+    else
+      insert into t2_res values ('t2a_ligacao_3_update', 'REPROVOU insert falhou antes');
+      insert into t2_res values ('t2a_ligacao_4_delete', 'REPROVOU insert falhou antes');
+    end if;
   end $$;
   reset role;
 
@@ -378,89 +461,144 @@ begin;
   insert into t2_res values ('t2b_0_funcao',
     case when crm_user_has_profile() then 'REPROVOU func=true' else 'PASSOU func=false' end);
 
+  -- 🐛 CORREÇÃO DO FALSO-VERDE GRAVE (achado do Codex, 2026-07-29):
+  --    A versão anterior inseria com `cliente_id = gen_random_uuid()` e FKs
+  --    inventadas, e classificava com `when others then PASSOU`. Ou seja:
+  --    o insert falhava por CHAVE ESTRANGEIRA (23503) e o teste anotava
+  --    "policy bloqueou". Um RLS COMPLETAMENTE ABERTO passaria nesse teste.
+  --
+  --    Agora, duas mudanças que se reforçam:
+  --      1. os inserts usam IDs VÁLIDOS, preparados no setup — o único
+  --         motivo possível de falha passa a ser o RLS;
+  --      2. só o SQLSTATE **42501** (insufficient_privilege) conta como
+  --         bloqueio. Qualquer outro erro é REPROVA por teste mal-montado.
   do $$
   declare
-    v_tab  text;
-    v_ins  text;
-    v_n    int;
-    v_lista text[][] := array[
-      ['crm_procura_lote',
-       'insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao) '
-       'values (gen_random_uuid(), ''X'', ''Y'', ''procurando'')'],
-      ['crm_oportunidade_lote',
-       'insert into public.crm_oportunidade_lote (descricao, cidade, regiao) '
-       'values (''T2 sem perfil'', ''X'', ''Y'')'],
-      ['crm_procura_oportunidade',
-       'insert into public.crm_procura_oportunidade (procura_id, oportunidade_id) '
-       'values (gen_random_uuid(), gen_random_uuid())']
-    ];
+    v_n     int;
+    v_cli   uuid;
+    v_proc  uuid;
+    v_olivre uuid;
   begin
-    for i in 1 .. array_length(v_lista, 1) loop
-      v_tab := v_lista[i][1];
-      v_ins := v_lista[i][2];
+    -- IDs VÁLIDOS do setup: sem eles, o erro seria de FK, não de RLS.
+    select cliente, proc, oport_livre into v_cli, v_proc, v_olivre from t2_ids;
 
-      -- SELECT: deve ler ZERO no MESMO dado que o 2a enxergou
-      begin
-        execute format('select count(*) from public.%I', v_tab) into v_n;
-        insert into t2_res values (format('t2b_1_select_%s', v_tab),
-          case when v_n = 0 then 'PASSOU leu 0' else 'REPROVOU leu '||v_n end);
-      exception when others then
-        insert into t2_res values (format('t2b_1_select_%s', v_tab),
-          'PASSOU bloqueado '||sqlstate);
-      end;
+    -- =============== TABELA 1/3: crm_procura_lote ===============
+    select count(*) into v_n from public.crm_procura_lote;
+    insert into t2_res values ('t2b_procura_1_select',
+      case when v_n = 0 then 'PASSOU leu 0' else 'REPROVOU leu '||v_n end);
 
-      -- INSERT: deve ser BLOQUEADO (a policy usa WITH CHECK = barreira, dá erro)
-      begin
-        execute v_ins;
-        insert into t2_res values (format('t2b_2_insert_%s', v_tab),
-          'REPROVOU inseriu sem perfil');
-      exception when others then
-        insert into t2_res values (format('t2b_2_insert_%s', v_tab),
-          'PASSOU bloqueado '||sqlstate);
-      end;
+    begin
+      insert into public.crm_procura_lote (cliente_id, cidade, regiao, situacao)
+      values (v_cli, 'Invasao', 'Sem perfil', 'atendida');
+      insert into t2_res values ('t2b_procura_2_insert', 'REPROVOU inseriu sem perfil');
+    exception
+      when insufficient_privilege then
+        insert into t2_res values ('t2b_procura_2_insert', 'PASSOU bloqueado 42501 (RLS)');
+      when others then
+        insert into t2_res values ('t2b_procura_2_insert',
+          'REPROVOU erro NAO-RLS '||sqlstate||' '||sqlerrm);
+    end;
 
-      -- UPDATE/DELETE: as linhas são INVISÍVEIS (a policy usa USING = filtro),
-      -- então o esperado é 0 linhas afetadas, SEM erro. Zero aqui é o certo.
-      begin
-        execute format('update public.%I set observacao = ''invasao'' where true', v_tab);
-        get diagnostics v_n = row_count;
-        insert into t2_res values (format('t2b_3_update_%s', v_tab),
-          case when v_n = 0 then 'PASSOU alterou 0' else 'REPROVOU alterou '||v_n end);
-      exception when others then
-        insert into t2_res values (format('t2b_3_update_%s', v_tab),
-          'PASSOU bloqueado '||sqlstate);
-      end;
+    update public.crm_procura_lote set observacao = 'invasao' where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_procura_3_update',
+      case when v_n = 0 then 'PASSOU alterou 0' else 'REPROVOU alterou '||v_n end);
 
-      begin
-        execute format('delete from public.%I where true', v_tab);
-        get diagnostics v_n = row_count;
-        insert into t2_res values (format('t2b_4_delete_%s', v_tab),
-          case when v_n = 0 then 'PASSOU removeu 0' else 'REPROVOU removeu '||v_n end);
-      exception when others then
-        insert into t2_res values (format('t2b_4_delete_%s', v_tab),
-          'PASSOU bloqueado '||sqlstate);
-      end;
-    end loop;
+    delete from public.crm_procura_lote where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_procura_4_delete',
+      case when v_n = 0 then 'PASSOU removeu 0' else 'REPROVOU removeu '||v_n end);
+
+    -- =============== TABELA 2/3: crm_oportunidade_lote ===============
+    select count(*) into v_n from public.crm_oportunidade_lote;
+    insert into t2_res values ('t2b_oport_1_select',
+      case when v_n = 0 then 'PASSOU leu 0' else 'REPROVOU leu '||v_n end);
+
+    begin
+      insert into public.crm_oportunidade_lote (descricao, cidade, regiao)
+      values ('T2 sem perfil', 'Invasao', 'Sem perfil');
+      insert into t2_res values ('t2b_oport_2_insert', 'REPROVOU inseriu sem perfil');
+    exception
+      when insufficient_privilege then
+        insert into t2_res values ('t2b_oport_2_insert', 'PASSOU bloqueado 42501 (RLS)');
+      when others then
+        insert into t2_res values ('t2b_oport_2_insert',
+          'REPROVOU erro NAO-RLS '||sqlstate||' '||sqlerrm);
+    end;
+
+    update public.crm_oportunidade_lote set observacao = 'invasao' where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_oport_3_update',
+      case when v_n = 0 then 'PASSOU alterou 0' else 'REPROVOU alterou '||v_n end);
+
+    delete from public.crm_oportunidade_lote where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_oport_4_delete',
+      case when v_n = 0 then 'PASSOU removeu 0' else 'REPROVOU removeu '||v_n end);
+
+    -- =============== TABELA 3/3: crm_procura_oportunidade ===============
+    select count(*) into v_n from public.crm_procura_oportunidade;
+    insert into t2_res values ('t2b_ligacao_1_select',
+      case when v_n = 0 then 'PASSOU leu 0' else 'REPROVOU leu '||v_n end);
+
+    -- FKs VÁLIDAS (procura do setup + oportunidade livre) e par ainda não
+    -- usado: nem FK nem UNIQUE podem mascarar o resultado.
+    begin
+      insert into public.crm_procura_oportunidade (procura_id, oportunidade_id, situacao)
+      values (v_proc, v_olivre, 'sugerida');
+      insert into t2_res values ('t2b_ligacao_2_insert', 'REPROVOU inseriu sem perfil');
+    exception
+      when insufficient_privilege then
+        insert into t2_res values ('t2b_ligacao_2_insert', 'PASSOU bloqueado 42501 (RLS)');
+      when others then
+        insert into t2_res values ('t2b_ligacao_2_insert',
+          'REPROVOU erro NAO-RLS '||sqlstate||' '||sqlerrm);
+    end;
+
+    update public.crm_procura_oportunidade set observacao = 'invasao' where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_ligacao_3_update',
+      case when v_n = 0 then 'PASSOU alterou 0' else 'REPROVOU alterou '||v_n end);
+
+    delete from public.crm_procura_oportunidade where true;
+    get diagnostics v_n = row_count;
+    insert into t2_res values ('t2b_ligacao_4_delete',
+      case when v_n = 0 then 'PASSOU removeu 0' else 'REPROVOU removeu '||v_n end);
   end $$;
   reset role;
 
   -- ---------- 2c — o dado do setup sobreviveu ao 2b? ----------
   -- Sem isto, "removeu 0" poderia significar "não havia nada para remover".
-  -- ⚠️ ARITMÉTICA: cada tabela tem 1 linha do setup. O bloco 2a inseriu 1
-  --    linha nova e apagou a MESMA linha em cada tabela (saldo zero), e o 2b
-  --    não deve ter conseguido nada. Logo o esperado é exatamente 1 em cada.
-  --    Se vier 2, o DELETE do 2a não funcionou; se vier 0, o 2b apagou o
-  --    setup. Os dois casos são falha, e por motivos opostos.
+  --
+  -- ⚠️ ARITMÉTICA (conferir sempre que o setup mudar):
+  --    · crm_procura_lote ......... 1 do setup. O 2a criou 1 e apagou a
+  --                                 mesma (saldo 0) ⇒ esperado 1.
+  --    · crm_oportunidade_lote .... 2 do setup (a do vínculo + a LIVRE).
+  --                                 O 2a criou 1 e apagou a mesma ⇒ esperado 2.
+  --    · crm_procura_oportunidade . 1 do setup. O 2a criou 1 (usando a
+  --                                 oportunidade livre) e apagou ⇒ esperado 1.
+  --    Acima do esperado → o DELETE do 2a não funcionou.
+  --    Abaixo → o 2b conseguiu apagar. Falhas opostas, ambas graves.
   do $$
-  declare v_tab text; v_n int;
+  declare v_n int;
   begin
-    foreach v_tab in array array['crm_procura_lote','crm_oportunidade_lote','crm_procura_oportunidade'] loop
-      execute format('select count(*) from public.%I', v_tab) into v_n;
-      insert into t2_res values (format('t2c_intacto_%s', v_tab),
-        case when v_n = 1 then 'PASSOU 1 linha intacta'
-             when v_n > 1 then 'REPROVOU sobrou '||v_n||' (delete do 2a falhou?)'
-             else 'REPROVOU sobrou 0 (2b apagou o setup!)' end);
-    end loop;
+    select count(*) into v_n from public.crm_procura_lote;
+    insert into t2_res values ('t2c_intacto_procura',
+      case when v_n = 1 then 'PASSOU 1 linha intacta'
+           when v_n > 1 then 'REPROVOU sobrou '||v_n||' (delete do 2a falhou?)'
+           else 'REPROVOU sobrou 0 (2b apagou o setup!)' end);
+
+    select count(*) into v_n from public.crm_oportunidade_lote;
+    insert into t2_res values ('t2c_intacto_oport',
+      case when v_n = 2 then 'PASSOU 2 linhas intactas'
+           when v_n > 2 then 'REPROVOU sobrou '||v_n||' (delete do 2a falhou?)'
+           else 'REPROVOU sobrou '||v_n||' (2b apagou o setup!)' end);
+
+    select count(*) into v_n from public.crm_procura_oportunidade;
+    insert into t2_res values ('t2c_intacto_ligacao',
+      case when v_n = 1 then 'PASSOU 1 linha intacta'
+           when v_n > 1 then 'REPROVOU sobrou '||v_n||' (delete do 2a falhou?)'
+           else 'REPROVOU sobrou 0 (2b apagou o setup!)' end);
   end $$;
 
   select etapa, detalhe,
@@ -471,12 +609,19 @@ rollback;
 --   2 de função (t2a_0, t2b_0)
 --   12 do bloco 2a  → 3 tabelas × 4 operações, todas funcionando
 --   12 do bloco 2b  → 3 tabelas × 4 operações, todas barradas
---   3  do bloco 2c  → a linha do setup intacta em cada tabela
+--   3  do bloco 2c  → o dado do setup intacto em cada tabela
 --
 --   t2a com REPROVOU → RLS fecha demais: a tela não funcionaria
---   t2b com REPROVOU → RLS abre demais: qualquer logado no banco mexeria
---                      nos dados do CRM
---   t2c com REPROVOU → o 2b conseguiu apagar algo: falha grave
+--   t2b com REPROVOU → duas leituras possíveis, e a mensagem distingue:
+--                      · 'REPROVOU inseriu sem perfil'  → RLS ABERTO. Grave.
+--                      · 'REPROVOU erro NAO-RLS 23503'  → o teste está
+--                        mal-montado (FK inválida). NÃO é aprovação: o RLS
+--                        não chegou a ser exercitado. Corrigir o teste.
+--   t2c com REPROVOU → o 2b conseguiu apagar algo, ou o delete do 2a falhou
+--
+-- ⚠️ NENHUM 'PASSOU' pode vir de `when others`. Se aparecer um SQLSTATE que
+--    não seja 42501 numa contraprova, o resultado é REPROVA — foi assim que
+--    a versão anterior mascarou um RLS potencialmente aberto.
 --
 -- ⚠️ STATUS DESTA VERSÃO DO T2: **NÃO EXECUTADA.**
 --    A execução em `lotes-v2` (2026-07-29) rodou uma versão que media
@@ -742,10 +887,21 @@ rollback;  -- desfaz tudo
 --      4 policies de 12. Testar coisas DIFERENTES em tabelas diferentes
 --      dava aparência de cobertura sem cobertura.
 --
---      T2 reescrito como MATRIZ: um loop percorre as 3 tabelas aplicando as
---      mesmas 4 operações, com as 2 identidades, mais a checagem de que o
---      setup sobreviveu. 29 vereditos. O loop é proposital — com blocos
---      escritos à mão foi que a divergência apareceu.
+--   7. 🐛 A MATRIZ EM LOOP tinha DOIS FALSO-VERDES (achado do Codex):
+--
+--      (a) o insert de ligação reusava procura + oportunidade do setup, que
+--          já estavam ligadas ⇒ falharia pela UNIQUE, e a policy de INSERT
+--          apareceria como REPROVADA sem nunca ter sido avaliada.
+--
+--      (b) 🚨 GRAVE: a contraprova inseria com cliente_id e FKs inventados e
+--          classificava com `when others then PASSOU`. O erro real seria
+--          23503 (foreign_key_violation), mas o teste anotava "policy
+--          bloqueou". **Um RLS completamente aberto passaria nesse teste.**
+--
+--      Correções: (i) LOOP ABANDONADO — três blocos explícitos, porque as
+--      dependências das 3 tabelas não cabem no mesmo molde; (ii) todos os
+--      inserts usam IDs VÁLIDOS do setup; (iii) contraprova só aceita
+--      SQLSTATE 42501 como bloqueio — qualquer outro erro REPROVA.
 --      AINDA NÃO EXECUTADO.
 --
 -- =====================================================================
