@@ -604,9 +604,11 @@
     document.getElementById('filtro-cidade').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
     document.getElementById('filtro-situacao').addEventListener('change', () => { if (_estruturaPronta) renderFila() })
 
-    // Os botões nascem desabilitados e só são liberados quando as tabelas
-    // respondem (ver desabilitarCadastro). Sem alert, sem botão que finge
-    // funcionar — o próprio estado do botão comunica.
+    // Estes botões do topo ficam SEMPRE ativos: abrir um modal e preencher
+    // não escreve nada, e travá-los só obrigaria a usar o Console para
+    // conferir os campos. Quem fica bloqueado é o Salvar — ver
+    // desabilitarCadastro() e GRAVACAO_IMPLEMENTADA.
+    // Sem alert, sem botão que finge funcionar: o estado do botão comunica.
     document.getElementById('btn-nova-procura')
       .addEventListener('click', () => abrirModal('modal-procura'))
     document.getElementById('btn-nova-oportunidade')
