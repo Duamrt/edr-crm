@@ -31,9 +31,9 @@
       <div class="topbar">
         <span class="topbar-title">Lotes</span>
         <div class="flex gap-8">
-          <span id="aviso-cadastro" class="lt-aviso-cadastro hidden">Disponível após ativação da estrutura</span>
-          <button id="btn-nova-procura" class="btn btn-secondary btn-sm" disabled>+ Registrar procura</button>
-          <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm" disabled>+ Captar oportunidade</button>
+          <span id="aviso-cadastro" class="lt-aviso-cadastro hidden">Cadastro em ativação — dá para conferir os campos, ainda não salvar</span>
+          <button id="btn-nova-procura" class="btn btn-secondary btn-sm">+ Registrar procura</button>
+          <button id="btn-nova-oportunidade" class="btn btn-primary btn-sm">+ Captar oportunidade</button>
           <button onclick="logout()" class="btn btn-secondary btn-sm">Sair</button>
         </div>
       </div>
@@ -336,17 +336,22 @@
 
     const MSG_BLOQUEIO = 'Disponível após ativação da estrutura'
 
+    // ⚠️ A trava é SÓ na GRAVAÇÃO, não na abertura (correção de UX, Duam
+    //    2026-07-29). Antes, os botões do topo também ficavam desabilitados —
+    //    e aí ninguém conseguia abrir os modais para conferir os campos sem
+    //    recorrer ao Console. Abrir e preencher não escreve nada; o que
+    //    precisa estar travado é o Salvar, porque não existe tabela para
+    //    receber.
     function desabilitarCadastro(desabilitar) {
+      // Botões do topo: SEMPRE clicáveis. Só o texto de ajuda muda.
       ;['btn-nova-procura','btn-nova-oportunidade'].forEach(id => {
         const b = document.getElementById(id)
-        b.disabled = desabilitar
-        b.title = desabilitar ? MSG_BLOQUEIO : ''
+        b.disabled = false
+        b.title = desabilitar ? 'Abre para conferência — ' + MSG_BLOQUEIO.toLowerCase() : ''
       })
       document.getElementById('aviso-cadastro').classList.toggle('hidden', !desabilitar)
 
-      // Os botões de SALVAR dos modais seguem o mesmo estado. O modal pode
-      // ser aberto e preenchido para conferir o desenho; o que fica travado
-      // é a gravação — não existe tabela para receber.
+      // Botões SALVAR: esses sim seguem o estado da estrutura.
       ;[['mp-salvar','mp-aviso'], ['mo-salvar','mo-aviso']].forEach(([bId, aId]) => {
         const b = document.getElementById(bId)
         b.disabled = desabilitar

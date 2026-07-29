@@ -702,14 +702,40 @@ traria a identidade antiga junto.
 | Handler de gravação nos Salvar | **não existe** (correto) |
 | `disabled` no HTML | presente nos dois |
 
-### ⚠️ O que NÃO foi verificado
+### Correção de UX — a trava era ampla demais (Duam, 2026-07-29)
 
-**A renderização.** Tentei abrir a tela no navegador e não consegui: `localhost` está
-bloqueado por política no painel, e o acesso por `file://` deu timeout duas vezes seguidas
-(300s cada), deixando a aba vazia. **Ninguém viu os modais abertos.**
+A primeira versão desabilitava **também** os botões do topo. Resultado: ninguém conseguia
+abrir os modais para conferir os campos sem recorrer ao Console — uma gambiarra para uma
+inspeção que devia ser trivial.
 
-Portanto seguem sem prova visual: o layout dos campos, a grade de duas colunas, o
-espaçamento, o comportamento em tela pequena, e se o modal abre de fato ao clicar —
-embora os botões do topo só destravem quando as tabelas existirem, o que hoje **não**
-acontece. Na prática, **hoje não há como abrir os modais pela interface**: eles só
-destravam com a estrutura no banco.
+**Agora:** os botões do topo abrem os modais **sempre**, mesmo sem as tabelas. Abrir e
+preencher não escreve nada. Só **Salvar procura** e **Salvar oportunidade** ficam
+desabilitados, com o aviso *"Disponível após ativação da estrutura"*.
+
+O aviso do topo passou a dizer *"Cadastro em ativação — dá para conferir os campos, ainda
+não salvar"*, que descreve o estado real.
+
+### ✅ Validação visual — FEITA (2026-07-29)
+
+Servidor estático local + Playwright, com capturas conferidas uma a uma:
+
+| Verificação | Resultado |
+|---|---|
+| Tela carrega no estado sem tabelas | ✅ aviso de ativação; listas vazias com texto próprio |
+| Botões do topo clicáveis | ✅ ambos ativos |
+| Modal **Registrar procura** abre | ✅ 9 campos, grade de 2 colunas |
+| Modal **Captar oportunidade** abre | ✅ 7 campos |
+| Select de cidade | ✅ exatamente Jupi · Garanhuns · Lajedo · Jucati, sem "Outra" |
+| Botões Salvar | ✅ `[disabled]` lido no DOM; cinza, com aviso laranja ao lado |
+| Cancelar fecha o modal | ✅ |
+
+> Nota de método: a tentativa anterior de captura falhou e eu registrei como "timeout do
+> navegador". Era o Duam fechando as abas — diagnóstico meu errado, corrigido aqui.
+
+### ⚠️ O que continua NÃO verificado
+
+- **Tela pequena (mobile).** As capturas foram em viewport de desktop. O CSS tem
+  `@media(max-width:560px)` que empilha a grade, mas isso não foi visto.
+- **Gravação.** Não existe — é a pendência que depende do SQL em produção.
+- **A tela real contra o banco.** O preview usou um *stub* que devolve 404 (o estado de
+  hoje) e duas famílias de exemplo no select. Nenhuma chamada real ao Supabase.
