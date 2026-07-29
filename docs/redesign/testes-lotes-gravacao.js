@@ -213,6 +213,23 @@ checa('nenhuma mensagem vaza codigo do Postgres',
     _sbPostChamadas[0]?.tabela === 'crm_oportunidade_lote')
   checa('oportunidade retorna true', r === true)
 
+  // ⚠️ O caminho de ERRO da oportunidade precisa do seu proprio caso.
+  //    A correcao do `finally` foi aplicada nas DUAS funcoes, mas so a
+  //    procura era exercitada — entao uma regressao em salvarOportunidade
+  //    passaria despercebida. Ordem importa: reset() limpa _sbPostErro,
+  //    entao armar o erro DEPOIS do reset, senao cai no caminho feliz.
+  reset(); set({ 'mo-descricao': 'Lote Rua X', 'mo-cidade': 'Jucati' })
+  _sbPostErro = new Error('POST crm_oportunidade_lote: 500 boom')
+  r = await salvarOportunidade()
+  checa('oportunidade com erro retorna false', r === false)
+  checa('oportunidade com erro avisa sem jargao',
+    _toasts.some(t => t.tipo === 'error' && t.msg.includes('avise o suporte')))
+  checa('apos erro, botao da OPORTUNIDADE segue BLOQUEADO (trava global vale)',
+    campo('mo-salvar').disabled === true,
+    'veio disabled=' + campo('mo-salvar').disabled)
+  checa('erro na oportunidade nao fecha o modal nem limpa o que foi digitado',
+    campo('mo-descricao').value === 'Lote Rua X')
+
   // ── 5. TRAVA ───────────────────────────────────────────────────
   console.log('\n5. TRAVA DE SEGURANCA')
   // ⚠️ Verificar no ARQUIVO, não no sandbox: `const` declarado via

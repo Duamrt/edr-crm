@@ -337,16 +337,18 @@
     // ═══════════════════════════════════════════════════════════════
     // TRAVA DE GRAVAÇÃO — não remover sem implementar sbPost antes
     // ═══════════════════════════════════════════════════════════════
-    // 🐛 CORREÇÃO (achado do Codex, 2026-07-29): a estrutura JÁ existe em
-    //    produção desde 29/07, então `desabilitarCadastro(false)` passou a
-    //    rodar de verdade — e ele liberava os dois Salvar. Só que NÃO EXISTE
-    //    handler de gravação: nenhum sbPost/sbPatch nesta tela. O usuário
-    //    preencheria tudo, clicaria em Salvar e não aconteceria nada. Botão
-    //    ativo que não faz nada é pior que botão travado com aviso.
+    // ESTADO REAL (2026-07-29): as funções de gravação EXISTEM e chamam
+    //    `sbPost` — `salvarProcura()` e `salvarOportunidade()`, mais abaixo.
+    //    Mas continuam DESLIGADAS: sem listener ligando os botões às funções,
+    //    e sem autorização de Duam para escrita real em produção.
     //
-    //    Enquanto esta constante for `false`, os Salvar ficam desabilitados
-    //    INDEPENDENTE de as tabelas responderem. Ligar a gravação é mudar
-    //    aqui — e só depois de o sbPost existir e ser testado com sessão real.
+    //    São duas barreiras independentes, de propósito. Mesmo que alguém
+    //    ligue um listener por engano, esta constante mantém os Salvar
+    //    desabilitados INDEPENDENTE de as tabelas responderem.
+    //
+    //    Ligar a gravação exige os três passos JUNTOS: testar com sessão
+    //    real autorizada → adicionar os listeners → virar esta constante.
+    //    Nenhum vale sozinho.
     const GRAVACAO_IMPLEMENTADA = false
 
     const MSG_SEM_ESTRUTURA = 'Disponível após ativação da estrutura'
