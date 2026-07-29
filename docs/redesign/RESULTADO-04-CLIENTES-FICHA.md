@@ -121,3 +121,40 @@ Não foram investigados — podem ser avisos de terceiros, do navegador ou pré-
 
 ## Rollback
 `git revert <hash>` antes do deploy; `git revert -m 1 <hash-do-merge>` em `main` depois.
+
+---
+
+## 🚀 PRODUÇÃO — deploy 2026-07-29 (Agenda, Clientes, Ficha, Kanban)
+
+**Autorizado por Duam**, com Lotes expressamente fora do escopo.
+`./deploy.sh` — merge `main`: `71ebe1a..3610eb8`. Cache buster: `1785309493`.
+
+### Verificado por `curl` em https://crm.edreng.com.br
+- HTTP **200** em `/`, `/agenda.html`, `/clientes.html`, `/ficha.html`, `/kanban.html`,
+  `/dashboard.html`, `/lotes.html`. ✓
+- **CSS novo publicado nas 6 telas** (login, dashboard, agenda, clientes, ficha, kanban) = 1 cada. ✓
+- Kanban: grade 3 colunas = 1 · `overflow-x:auto` = **0** (rolagem lateral eliminada) ·
+  rótulo "HISTÓRICO" presente. ✓
+- **Domínio `crm.edreng.com.br` respondendo** — CNAME preservado (previsto pelo merge de teste). ✓
+- `lotes.html` e `familia.html` continuam em `css/style.css` — **fora do escopo, como decidido**. ✓
+
+### Alarme falso registrado (para não repetir)
+O `deploy.sh` renumera o cache buster do projeto inteiro, então `lotes.html`, `familia.html`,
+`index.html`, `dashboard.html`, `js/utils.js` e `sw.js` apareceram no diff.
+Minha primeira checagem filtrou por `cb=17852` — mas o buster novo é `cb=1785309493`,
+que **também começa com `1785`**, e o filtro não pegou. Refeito com `cb=[0-9]*`:
+**0 linhas de conteúdo** em todos eles. Só numeração.
+
+### Prova extra antes de publicar
+A linha `html{background:var(--ink)}` adicionada ao `dashboard.css` (tela já no ar) foi
+medida em iframe isolado: fundo do `html` = `rgb(23,53,42)` (idêntico à sidebar) e `body`
+= `rgb(247,246,239)` (papel, inalterado). Confirma que a regra só pinta a área atrás da
+barra lateral — o Dashboard não muda de aparência.
+
+## ⚠️ O QUE CONTINUA SEM TESTE (após o deploy)
+- **Arrastar card no Kanban** — nunca exercitado, em nenhuma versão.
+- **Seleção em lote** — nunca exercitada.
+- **Ações funcionais** em todas as telas: salvar status, documentos, impedimentos, tarefas,
+  WhatsApp, Drive, Desfazer, filtros, ordenação.
+- **Celular real.**
+- **31 Issues no console da Ficha** — não investigados.
