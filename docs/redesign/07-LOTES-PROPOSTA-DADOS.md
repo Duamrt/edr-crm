@@ -740,3 +740,80 @@ Servidor estático local + Playwright, com capturas conferidas uma a uma:
 - **Gravação.** Não existe — é a pendência que depende do SQL em produção.
 - **A tela real contra o banco.** O preview usou um *stub* que devolve 404 (o estado de
   hoje) e duas famílias de exemplo no select. Nenhuma chamada real ao Supabase.
+
+---
+
+## 16. ESTRUTURA APLICADA EM PRODUÇÃO — 2026-07-29 ✅
+
+**Autorizado por Duam**, escopo nomeado: *"aplicar em produção somente a estrutura de Lotes
+descrita em `08-LOTES-SQL-PROPOSTO.sql`... não faça deploy da interface ainda"*.
+
+Migration: `crm_lotes_familias_procurando_oportunidade`.
+
+### Preflight (antes de aplicar)
+
+| Item | Antes |
+|---|---|
+| Tabelas novas | 0 |
+| `crm_lotes` | 31 |
+| Vínculos família↔lote | 7 |
+| `crm_clientes` | 19 |
+| `crm_user_has_profile()` | existe |
+
+Auditoria do SQL antes de rodar: os únicos `alter table` são **nas tabelas novas**, para
+ativar RLS. `crm_lotes` aparece **só em comentário**. A única referência a tabela
+existente é a FK para `crm_clientes(id)` — leitura, não alteração.
+
+### Rollback
+
+```sql
+drop table if exists public.crm_procura_oportunidade;
+drop table if exists public.crm_oportunidade_lote;
+drop table if exists public.crm_procura_lote;
+drop function if exists public.set_lotes_updated_at();
+```
+
+Limpo: as 3 tabelas são isoladas e nada fora delas foi tocado.
+
+### Estrutura criada
+
+| Tabela | Dono | RLS | Policies | Índices | Triggers |
+|---|---|:--:|:--:|:--:|:--:|
+| `crm_procura_lote` | postgres | ✅ | 4 | 5 | 1 |
+| `crm_oportunidade_lote` | postgres | ✅ | 4 | 3 | 1 |
+| `crm_procura_oportunidade` | postgres | ✅ | 4 | 5 | 1 |
+
+`authenticated` com SELECT e INSERT nas três (privilégio padrão do schema, sem GRANT
+escrito).
+
+### Provas em produção (tudo em `ROLLBACK` — nenhum dado deixado)
+
+| Prova | Resultado |
+|---|---|
+| Procura com `regiao` **NULA** | ✅ aceitou nulo |
+| Oportunidade com `regiao` **NULA** | ✅ aceitou nulo |
+| Insert sem `cidade` | ✅ **bloqueado** — cidade continua obrigatória |
+| Trigger `updated_at` (procura) | ✅ sobrescreveu data sabotada |
+| Trigger `updated_at` (oportunidade) | ✅ sobrescreveu |
+| `anon` lendo a fila | ✅ leu **0** — RLS ativa |
+
+A pendência **"inserir com região nula nunca foi testado"**, aberta desde a mudança de
+schema, está **fechada** — e agora contra o banco real.
+
+### Preservação confirmada (depois de aplicar)
+
+- `crm_lotes`: **31** · vínculos: **7** · `crm_clientes`: **19** — idênticos ao preflight
+- As 3 tabelas novas: **0 registros**
+- Único `TESTE%` em `crm_clientes` é de **16/05** (auditoria antiga já documentada), não
+  desta sessão
+
+### ⚠️ O que NÃO foi feito
+
+- **Nenhum deploy de interface.** `lotes.html` em produção segue a versão antiga.
+- **Os botões Salvar continuam desabilitados** — o código de gravação não existe.
+- **Nenhum dado real cadastrado.**
+
+### Próximo passo (exige autorização própria)
+
+Conectar os dois Salvar (`sbPost`) e publicar a tela. São duas decisões separadas: ligar a
+gravação e fazer o deploy.
