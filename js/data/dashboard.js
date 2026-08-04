@@ -297,21 +297,44 @@
 
   function renderQuebrado(q) {
     const el = document.getElementById('quebrado-lista')
-    const linha = (icoClass, ico, label, count) => {
-      const zero = count === 0 ? 'zero' : ''
-      return `<div class="broken-row">
-        <span class="broken-label"><span class="broken-icon ${icoClass}">${ico}</span> ${label}</span>
-        <span class="broken-count ${zero}">${count}</span>
-      </div>`
+    // Linha com count>0 vira atalho pra lista já filtrada (mesma fonte: banco).
+    // Zero fica estático — não há o que abrir.
+    const linha = (icoClass, ico, label, count, recorte) => {
+      const href = count > 0 && typeof pendenciaHref === 'function' ? pendenciaHref(recorte) : null
+      const row = document.createElement(href ? 'a' : 'div')
+      row.className = 'broken-row'
+      if (href) {
+        row.href = href
+        row.title = 'Abrir a lista já filtrada de ' + label.toLowerCase()
+      }
+      const lab = document.createElement('span')
+      lab.className = 'broken-label'
+      const icone = document.createElement('span')
+      icone.className = 'broken-icon ' + icoClass
+      icone.textContent = ico
+      lab.appendChild(icone)
+      lab.appendChild(document.createTextNode(' ' + label))
+      const cnt = document.createElement('span')
+      cnt.className = 'broken-count' + (count === 0 ? ' zero' : '')
+      cnt.textContent = count
+      if (href) {
+        const seta = document.createElement('span')
+        seta.className = 'broken-arrow'
+        seta.textContent = '→'
+        cnt.appendChild(seta)
+      }
+      row.appendChild(lab)
+      row.appendChild(cnt)
+      return row
     }
-    el.innerHTML = [
-      linha('bi-r', '!', 'Docs recusados', q.docs_recusados),
-      linha('bi-y', '⏰', 'Docs vencidos', q.docs_vencidos),
-      linha('bi-r', '🛑', 'Impedimentos', q.impedimentos_ativos),
-      linha('bi-r', '📅', 'Tarefas vencidas', q.tarefas_vencidas),
-      linha('bi-y', '📅', 'Tarefas hoje', q.tarefas_hoje),
-      linha('bi-g', '📅', 'Tarefas amanhã', q.tarefas_amanha)
-    ].join('')
+    el.replaceChildren(
+      linha('bi-r', '!', 'Docs recusados', q.docs_recusados, 'docs_recusados'),
+      linha('bi-y', '⏰', 'Docs vencidos', q.docs_vencidos, 'docs_vencidos'),
+      linha('bi-r', '🛑', 'Impedimentos', q.impedimentos_ativos, 'impedimentos'),
+      linha('bi-r', '📅', 'Tarefas vencidas', q.tarefas_vencidas, 'tarefas_vencidas'),
+      linha('bi-y', '📅', 'Tarefas hoje', q.tarefas_hoje, 'tarefas_hoje'),
+      linha('bi-g', '📅', 'Tarefas amanhã', q.tarefas_amanha, 'tarefas_amanha')
+    )
   }
 
   function renderFunil(f) {

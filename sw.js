@@ -9,6 +9,7 @@ const ASSETS = [
   'js/auth.js?cb=' + VERSION,
   'js/utils.js?cb=' + VERSION,
   'js/preficha.js?cb=' + VERSION,
+  'js/data/pendencias.js?cb=' + VERSION,
   'js/data/clientes.js?cb=' + VERSION,
   'js/data/documentos.js?cb=' + VERSION,
   'js/data/dashboard.js?cb=' + VERSION,
