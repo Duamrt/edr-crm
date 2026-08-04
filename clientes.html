@@ -6,7 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>EDR CRM — Clientes</title>
-  <link rel="stylesheet" href="css/clientes.css?cb=1785857864">
+  <link rel="stylesheet" href="css/clientes.css?cb=1785866845">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,12 +18,24 @@
     // Auth guard: bloqueia FOUC antes do render
     document.documentElement.style.visibility = 'hidden'
   </script>
+  <style>
+    /* Modo pendências (?pendencia=) — ver docs/redesign/11-QUEBRADO-ATALHOS.md */
+    .pend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .pend-titulo{font-size:1.1rem;margin:0}
+    .pend-grupo{padding:14px 16px;margin-bottom:12px}
+    .pend-cliente{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+    .pend-cliente-link{font-weight:700;text-decoration:none;color:inherit}
+    .pend-cliente-link:hover{text-decoration:underline}
+    .pend-itens{margin:0 0 10px;padding-left:20px}
+    .pend-itens li{margin-bottom:4px;font-size:.9rem}
+    .pend-aviso{padding:22px 18px;display:flex;flex-direction:column;gap:8px}
+  </style>
 </head>
 <body>
   <div class="app-shell">
     <!-- Sidebar -->
     <nav class="sidebar">
-      <div class="sidebar-logo"><span class="brand-logo"><img src="img/edr-simbolo.svg?cb=1785857864" alt="EDR" width="22" height="22"></span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
+      <div class="sidebar-logo"><span class="brand-logo"><img src="img/edr-simbolo.svg?cb=1785866845" alt="EDR" width="22" height="22"></span><div><div class="logo-title">EDR CRM</div><div class="logo-sub">Gestão MCMV</div></div></div>
       <div class="sidebar-nav">
         <a href="dashboard.html">Dashboard</a>
         <a href="clientes.html" class="active">Clientes</a>
@@ -44,6 +56,9 @@
       </div>
 
       <div class="page-content">
+        <!-- Modo pendências (?pendencia=) — atalhos do card "O que tá quebrado" -->
+        <div id="pend-view" class="hidden"></div>
+
         <!-- Filtros -->
         <div class="filtros-bar">
           <input type="search" id="busca" placeholder="Buscar por nome ou CPF..." oninput="filtrar()">
@@ -72,7 +87,7 @@
         </div>
 
         <!-- Tabela -->
-        <div class="card" style="padding:0;">
+        <div class="card" id="card-tabela" style="padding:0;">
           <div class="table-wrap">
             <table id="tabela-clientes">
               <thead>
@@ -102,9 +117,10 @@
 
   <div id="loading" class="hidden"><div class="spinner"></div></div>
 
-  <script src="js/supabase.js?cb=1785857864"></script>
-  <script src="js/auth.js?cb=1785857864"></script>
-  <script src="js/utils.js?cb=1785857864"></script>
+  <script src="js/supabase.js?cb=1785866845"></script>
+  <script src="js/auth.js?cb=1785866845"></script>
+  <script src="js/utils.js?cb=1785866845"></script>
+  <script src="js/data/pendencias.js?cb=1785866845"></script>
   <script>
     // Auth guard
     if (!authGuard()) throw new Error('not auth')
@@ -288,15 +304,29 @@
       renderTabela(lista)
     }
 
-    // Suporta URL param: ?prioridade=cobrar_hoje (vindo do dashboard)
+    // Parâmetros de URL formalizados (vindos do dashboard):
+    //   ?pendencia=<recorte>      → modo pendências (card "O que tá quebrado")
+    //   ?status=<etapa>           → pré-seleciona filtro de status (funil)
+    //   ?prioridade=cobrar_hoje   → pré-seleciona filtro de prioridade
     const urlParams = new URLSearchParams(window.location.search)
     const prioParam = urlParams.get('prioridade')
     if (prioParam) {
       document.getElementById('filtro-prioridade').value = prioParam
     }
+    // Corrigido 2026-08-04: o funil linka ?status=, mas este parâmetro era ignorado
+    const statusParam = urlParams.get('status')
+    if (statusParam) {
+      document.getElementById('filtro-status').value = statusParam
+    }
 
-    carregar()
+    const pendParam = urlParams.get('pendencia')
+    if (pendParam) {
+      // Modo pendências substitui a listagem normal (fonte: RPC get_crm_pendencias)
+      iniciarModoPendencias(pendParam)
+    } else {
+      carregar()
+    }
   </script>
-  <script src="js/sw-register.js?cb=1785857864"></script>
+  <script src="js/sw-register.js?cb=1785866845"></script>
 </body>
 </html>
