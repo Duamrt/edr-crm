@@ -12,6 +12,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
   <script>document.documentElement.style.visibility = 'hidden'</script>
+  <style>
+    /* Pré-ficha WhatsApp (cadastro novo) — ver docs/redesign/10-PREFICHA-WHATSAPP.md */
+    .pf-aviso{background:var(--amarelo-pale);border-left:3px solid var(--amarelo);padding:10px 12px;border-radius:0 6px 6px 0;font-size:.85rem;margin-bottom:12px}
+    .pf-textarea{font-family:var(--font-mono);font-size:.82rem;line-height:1.55}
+    .pf-saida{border:1px solid var(--cinza-light);border-radius:8px;padding:2px 14px 12px;margin-top:12px}
+    .pf-saida:empty{display:none}
+    .pf-barra{display:flex;align-items:center;gap:8px;margin:0 -14px 6px;padding:9px 14px;background:var(--verde-surface);border-bottom:1px solid var(--cinza-light);border-radius:8px 8px 0 0;font-size:.82rem}
+    .pf-campo{border-bottom:1px solid var(--neutral-100);padding:9px 0}
+    .pf-campo:last-child{border-bottom:none}
+    .pf-rot{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cinza);font-weight:600;margin-bottom:2px}
+    .pf-val{font-size:.92rem}
+    .pf-forte{font-weight:600}
+    .pf-nao{color:var(--cinza);font-style:italic;font-size:.85rem}
+    .pf-mini{font-size:.75rem;color:var(--cinza);margin-top:4px;line-height:1.45}
+    .pf-docrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--neutral-100)}
+    .pf-docrow:last-of-type{border-bottom:none}
+    .pf-docnome{font-size:.88rem}
+    .pf-evid{font-family:var(--font-mono);font-size:.78rem;background:var(--neutral-100);border:1px solid var(--cinza-light);border-radius:6px;padding:7px 9px;white-space:pre-wrap;word-break:break-word}
+    .pf-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -36,6 +56,28 @@
       </div>
 
       <div class="page-content">
+
+        <!-- Pré-ficha: organizar conversa do WhatsApp (opcional — só cadastro novo) -->
+        <div class="card form-secao" id="card-preficha">
+          <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+            <h3 class="card-title">💬 Organizar conversa do WhatsApp</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="pf-toggle">Colar conversa</button>
+            <span class="text-sm text-muted" style="flex-basis:100%;">Opcional — cole a conversa e receba uma pré-ficha para conferência. Nada é salvo automaticamente.</span>
+          </div>
+          <div id="pf-corpo" class="hidden">
+            <div class="pf-aviso"><strong>Pré-ficha para conferência.</strong> A leitura é feita por regra simples de texto (sem IA) e serve só para adiantar a digitação: tudo que aparecer é sugestão, com a evidência da conversa ao lado. Você confere, corrige e só então continua o cadastro.</div>
+            <div class="form-group" style="margin:0;">
+              <textarea id="pf-entrada" class="pf-textarea" rows="8" spellcheck="false" placeholder="Cole aqui a conversa do WhatsApp — ex.: [14:02] Elyda: Boa tarde…"></textarea>
+            </div>
+            <div class="pf-acoes">
+              <button type="button" class="btn btn-primary btn-sm" id="pf-organizar">Organizar</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="pf-limpar">Limpar</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="pf-transferir" disabled>Transferir para o formulário</button>
+            </div>
+            <div class="pf-saida" id="pf-saida"></div>
+          </div>
+        </div>
+
         <form id="form-familia">
 
           <!-- Dados do titular -->
@@ -176,6 +218,7 @@
   <script src="js/supabase.js?cb=1785337451"></script>
   <script src="js/auth.js?cb=1785337451"></script>
   <script src="js/utils.js?cb=1785337451"></script>
+  <script src="js/preficha.js?cb=1785337451"></script>
   <script src="js/data/clientes.js?cb=1785337451"></script>
   <script>
     if (!authGuard()) throw new Error('not auth')
@@ -497,6 +540,67 @@
         hideLoading()
       }
     })
+
+    // ── Pré-ficha WhatsApp (opcional — só cadastro novo) ─────────────────
+    // Transfere APENAS para campos do formulário; nada é salvo sem "Salvar família".
+    // Segue o precedente do OCR: preenche só campo vazio + toast "Confira antes de salvar".
+    let _pfResultado = null
+    let _pfStatusManual = false    // operadora mexeu no select — decisão humana vence
+    let _pfStatusAplicado = false  // pré-ficha já preencheu a etapa uma vez — não reaplica
+    if (clienteId) {
+      document.getElementById('card-preficha').classList.add('hidden')
+    } else {
+      // Qualquer mudança feita pela operadora no select marca decisão manual
+      // ('change' só dispara em interação humana; .value programático não passa aqui)
+      document.getElementById('status_kanban').addEventListener('change', () => { _pfStatusManual = true })
+      document.getElementById('pf-toggle').addEventListener('click', () => {
+        const corpo = document.getElementById('pf-corpo')
+        corpo.classList.toggle('hidden')
+        if (!corpo.classList.contains('hidden')) document.getElementById('pf-entrada').focus()
+      })
+      document.getElementById('pf-organizar').addEventListener('click', () => {
+        _pfResultado = prefichaOrganizar(document.getElementById('pf-entrada').value)
+        prefichaRenderizar(_pfResultado, document.getElementById('pf-saida'))
+        document.getElementById('pf-transferir').disabled = !_pfResultado
+        if (!_pfResultado) toast('Cole uma conversa primeiro', 'info')
+      })
+      document.getElementById('pf-limpar').addEventListener('click', () => {
+        document.getElementById('pf-entrada').value = ''
+        document.getElementById('pf-saida').replaceChildren()
+        _pfResultado = null
+        document.getElementById('pf-transferir').disabled = true
+        document.getElementById('pf-entrada').focus()
+      })
+      document.getElementById('pf-transferir').addEventListener('click', () => {
+        const r = _pfResultado
+        if (!r) return
+        const $nome = document.getElementById('nome')
+        const $tel = document.getElementById('telefone')
+        const $status = document.getElementById('status_kanban')
+        const $obs = document.getElementById('observacoes')
+        // Decisão do que preencher fica em prefichaTransferencia (js/preficha.js, testada):
+        // humana vence — status só entra se a operadora nunca mexeu e a pré-ficha nunca aplicou
+        const { set, feitos, statusAplicadoPelaPreficha } = prefichaTransferencia(r, {
+          nome: $nome.value, telefone: $tel.value, status: $status.value, observacoes: $obs.value
+        }, { statusManual: _pfStatusManual, statusAplicadoPelaPreficha: _pfStatusAplicado })
+        if (set.nome != null) {
+          $nome.value = set.nome
+          $nome.dispatchEvent(new Event('input'))  // espelha titular na composição
+        }
+        if (set.telefone != null) $tel.value = fmtTel(set.telefone)
+        if (set.status != null) $status.value = set.status
+        if (set.observacoes != null) {
+          $obs.value = set.observacoes
+          // Autoexpande até 320px pra conferir o resumo sem rolagem escondida
+          // (acima disso mantém scroll interno; resize manual continua livre)
+          $obs.style.height = 'auto'
+          $obs.style.height = Math.min($obs.scrollHeight + 4, 320) + 'px'
+        }
+        _pfStatusAplicado = statusAplicadoPelaPreficha
+        if (feitos.length) toast('✓ Transferido: ' + feitos.join(', ') + '. Confira antes de salvar', 'success')
+        else toast('Nada novo pra transferir — campos já preenchidos', 'info')
+      })
+    }
 
     // Inicializar
     maskCpf(document.getElementById('cpf'))
